@@ -1,0 +1,31 @@
+{
+  "name": "admin",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.1.0",
+    "@refinedev/antd": "^5.37.4",
+    "@refinedev/core": "^4.47.1",
+    "@refinedev/nextjs-router": "^6.0.0",
+    "@refinedev/react-hook-form": "^4.8.14",
+    "@refinedev/simple-rest": "^5.0.1",
+    "antd": "^5.12.2",
+    "axios": "^1.6.2",
+    "dayjs": "^1.11.10",
+    "next": "14.0.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "@types/react": "^18.2.46",
+    "@types/react-dom": "^18.2.18",
+    "typescript": "^5.3.3"
+  }
+}

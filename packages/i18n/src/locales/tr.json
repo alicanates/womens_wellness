@@ -1,0 +1,39 @@
+{
+  "auth": {
+    "signIn": "Giriş Yap",
+    "signUp": "Kayıt Ol",
+    "email": "E-posta",
+    "password": "Şifre",
+    "forgotPassword": "Şifremi Unuttum",
+    "continueWithGoogle": "Google ile Devam Et",
+    "emailRequired": "E-posta adresi gerekli",
+    "passwordMinLength": "Şifre en az 8 karakter olmalı"
+  },
+  "home": {
+    "welcome": "Hoş Geldiniz",
+    "todayWater": "Bugünkü Su Tüketimi",
+    "nextPeriod": "Sonraki Regl",
+    "pregnancyWeek": "Hamilelik Haftası"
+  },
+  "chat": {
+    "typeMessage": "Mesajınızı yazın...",
+    "stop": "Durdur",
+    "clearChat": "Sohbeti Temizle",
+    "forgetEverything": "Her Şeyi Unut",
+    "quotaExceeded": "Aylık mesaj limitinize ulaştınız"
+  },
+  "calculators": {
+    "bmi": {
+      "title": "Vücut Kitle İndeksi",
+      "underweight": "Zayıf",
+      "normal": "Normal",
+      "overweight": "Fazla Kilolu",
+      "obese": "Obez"
+    }
+  },
+  "errors": {
+    "networkError": "Bağlantı hatası",
+    "serverError": "Sunucu hatası",
+    "unauthorized": "Yetkisiz erişim"
+  }
+}

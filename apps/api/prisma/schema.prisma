@@ -1,0 +1,324 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // Production tuning (uncomment for prod):
+  // connection_limit = 10
+  // connect_timeout = 10
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum OAuthProvider {
+  google
+}
+
+enum HealthMetricKind {
+  BMI
+  BMR
+  WATER
+  CUSTOM
+}
+
+enum ReminderType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+enum MessageRole {
+  user
+  assistant
+  tool
+}
+
+enum MemoryScope {
+  global
+  conversation
+}
+
+enum SubscriptionPlan {
+  free
+  premium
+}
+
+enum SubscriptionStatus {
+  active
+  expired
+  cancelled
+}
+
+enum AIProvider {
+  openai
+  anthropic
+  google
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// User & Auth
+// ────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String?
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  profile        Profile?
+  oauthAccounts  OAuthAccount[]
+  healthMetrics  HealthMetric[]
+  periodCycles   PeriodCycle[]
+  pregnancy      Pregnancy?
+  waterLogs      WaterLog[]
+  reminders      Reminder[]
+  conversations  Conversation[]
+  memories       Memory[]
+  subscription   Subscription?
+  usageQuota     UsageQuota?
+  auditLogs      AuditLog[]
+
+  @@index([email])
+}
+
+model Profile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  displayName     String
+  birthYear       Int?
+  heightCm        Float?
+  weightKg        Float?
+  country         String?
+  timezone        String   @default("Europe/Istanbul")
+  preferencesJson Json?    // Encrypted field
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OAuthAccount {
+  id             String        @id @default(cuid())
+  userId         String
+  provider       OAuthProvider
+  providerUserId String
+  email          String
+  rawJson        Json
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Health & Tracking
+// ────────────────────────────────────────────────────────────────────────────
+
+model HealthMetric {
+  id         String            @id @default(cuid())
+  userId     String
+  kind       HealthMetricKind
+  valueJson  Json
+  measuredAt DateTime          @default(now())
+  createdAt  DateTime          @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model PeriodCycle {
+  id           String   @id @default(cuid())
+  userId       String
+  startDate    DateTime
+  endDate      DateTime?
+  symptomsJson Json?    // Encrypted field, matches PeriodSymptoms interface
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startDate])
+}
+
+model Pregnancy {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  lmpDate     DateTime? // Last Menstrual Period
+  dueDate     DateTime?
+  doctorNotes String?   // Encrypted field
+  weekCache   Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WaterLog {
+  id        String   @id @default(cuid())
+  userId    String
+  amountMl  Int
+  loggedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, loggedAt])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Reminders & Notifications
+// ────────────────────────────────────────────────────────────────────────────
+
+model Reminder {
+  id          String       @id @default(cuid())
+  userId      String
+  type        ReminderType
+  payloadJson Json
+  nextRunAt   DateTime
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, nextRunAt])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AI Chat & Memory
+// ────────────────────────────────────────────────────────────────────────────
+
+model Conversation {
+  id         String    @id @default(cuid())
+  userId     String
+  title      String    @default("New Conversation")
+  createdAt  DateTime  @default(now())
+  archivedAt DateTime?
+  updatedAt  DateTime  @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([userId, createdAt])
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String      @db.Text
+  tokens         Int?
+  createdAt      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model Memory {
+  id           String      @id @default(cuid())
+  userId       String
+  scope        MemoryScope
+  key          String
+  valueJson    Json        // Encrypted field for sensitive data
+  tags         String[]    @default([])
+  accessCount  Int         @default(0)
+  lastAccessed DateTime    @default(now())
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, scope, key])
+  @@index([userId, scope])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Subscriptions & Quotas
+// ────────────────────────────────────────────────────────────────────────────
+
+model Subscription {
+  id        String             @id @default(cuid())
+  userId    String             @unique
+  plan      SubscriptionPlan   @default(free)
+  status    SubscriptionStatus @default(active)
+  renewsAt  DateTime?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UsageQuota {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  monthKey   String   // Format: YYYY-MM
+  aiRequests Int      @default(0)
+  limit      Int      @default(100)
+  resetsAt   DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, monthKey])
+  @@index([userId, monthKey])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Admin & Configuration
+// ────────────────────────────────────────────────────────────────────────────
+
+model ModelPolicy {
+  id               String           @id @default(cuid())
+  plan             SubscriptionPlan
+  provider         AIProvider
+  modelName        String
+  temperature      Float            @default(0.7)
+  maxTokens        Int              @default(1024)
+  toolsEnabledJson Json             @default("[]")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([plan, provider])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  userId       String?
+  action       String
+  entity       String
+  entityId     String?
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([entity, entityId])
+}
+
+model FeatureFlag {
+  key       String   @id
+  valueJson Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

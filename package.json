@@ -1,0 +1,41 @@
+{
+  "name": "@wellness/monorepo",
+  "version": "1.0.0",
+  "description": "Women's Wellness Companion - Monorepo",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:api": "turbo run dev --filter=@wellness/api",
+    "dev:mobile": "turbo run dev --filter=@wellness/mobile",
+    "dev:admin": "turbo run dev --filter=@wellness/admin",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "lint": "turbo run lint",
+    "db:prep": "cd apps/api && pnpm prisma migrate dev",
+    "db:seed": "cd apps/api && pnpm prisma db seed",
+    "db:studio": "cd apps/api && pnpm prisma studio",
+    "db:generate": "cd apps/api && pnpm prisma generate",
+    "validate:env": "node scripts/validate-env.js",
+    "setup:dev": "bash scripts/dev-setup.sh"
+  },
+  "keywords": [
+    "wellness",
+    "health",
+    "women",
+    "mobile",
+    "ai"
+  ],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.14.0",
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "bcrypt": "^5.1.1",
+    "turbo": "^2.5.8"
+  },
+  "dependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "bcryptjs": "^3.0.2"
+  }
+}
