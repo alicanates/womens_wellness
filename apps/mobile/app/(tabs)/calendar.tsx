@@ -8,6 +8,7 @@ import {
   StyleProp,
   ViewStyle,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cyclesService } from '@/services/api';
@@ -107,10 +108,13 @@ export default function CalendarScreen() {
       styles.push(calendarStyles.predictedDay);
     }
 
+    // Ensure date is a Date object
+    const dayDate = day.date instanceof Date ? day.date : new Date(day.date);
+
     const isToday =
-      day.date.getDate() === today.getDate() &&
-      day.date.getMonth() === today.getMonth() &&
-      day.date.getFullYear() === today.getFullYear();
+      dayDate.getDate() === today.getDate() &&
+      dayDate.getMonth() === today.getMonth() &&
+      dayDate.getFullYear() === today.getFullYear();
 
     if (isToday) {
       styles.push(calendarStyles.today);
@@ -120,7 +124,10 @@ export default function CalendarScreen() {
   };
 
   const handleDayPress = (day: any) => {
-    let message = `${day.date.getDate()} ${monthNames[day.date.getMonth()]}\n\n`;
+    // Ensure date is a Date object
+    const dayDate = day.date instanceof Date ? day.date : new Date(day.date);
+
+    let message = `${dayDate.getDate()} ${monthNames[dayDate.getMonth()]}\n\n`;
 
     if (day.isPeriod) {
       message += `🩸 Regl günü${day.cycleDay ? ` (${day.cycleDay}. gün)` : ''}\n`;
@@ -132,7 +139,42 @@ export default function CalendarScreen() {
       message += '📅 Tahmini regl başlangıcı\n';
     }
 
-    Alert.alert('Gün Detayı', message);
+    const buttons: any[] = [
+      { text: 'Kapat', style: 'cancel' },
+    ];
+
+    // Allow logging period for any day
+    buttons.unshift({
+      text: 'Regl Olarak İşaretle',
+      onPress: () => logPeriodForDate(dayDate),
+    });
+
+    Alert.alert('Gün Detayı', message, buttons);
+  };
+
+  const logPeriodForDate = async (date: Date) => {
+    Alert.alert(
+      'Regl Kaydet',
+      `${date.getDate()} ${monthNames[date.getMonth()]} tarihini regl başlangıcı olarak kaydetmek istiyor musunuz?`,
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Kaydet',
+          onPress: async () => {
+            try {
+              await cyclesService.createCycle({
+                startDate: date.toISOString(),
+              });
+              queryClient.invalidateQueries({ queryKey: ['calendar'] });
+              queryClient.invalidateQueries({ queryKey: ['prediction'] });
+              Alert.alert('Başarılı', 'Regl kaydedildi');
+            } catch (error: any) {
+              Alert.alert('Hata', error.message || 'Kaydedilemedi');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleLogPeriod = () => {
@@ -160,8 +202,37 @@ export default function CalendarScreen() {
     );
   };
 
+  const handleReset = () => {
+    Alert.alert(
+      'Takvimi Sıfırla',
+      'Tüm regl kayıtları silinecek. Bu işlem geri alınamaz. Emin misiniz?',
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Sıfırla',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await cyclesService.deleteAllCycles();
+              queryClient.invalidateQueries({ queryKey: ['calendar'] });
+              queryClient.invalidateQueries({ queryKey: ['prediction'] });
+              Alert.alert('Başarılı', 'Takvim sıfırlandı');
+            } catch (error: any) {
+              Alert.alert('Hata', error.message || 'Sıfırlanamadı');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
       {/* Header with navigation */}
       <View style={styles.header}>
         <TouchableOpacity onPress={goToPreviousMonth} style={styles.navButton}>
@@ -272,14 +343,26 @@ export default function CalendarScreen() {
       <TouchableOpacity style={styles.logButton} onPress={handleLogPeriod}>
         <Text style={styles.logButtonText}>📝 Regl Kaydet</Text>
       </TouchableOpacity>
+
+      {/* Reset button */}
+      <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
+        <Text style={styles.resetButtonText}>🔄 Takvimi Sıfırla</Text>
+      </TouchableOpacity>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 100, // Extra padding for bottom tab bar
   },
   header: {
     flexDirection: 'row',
@@ -389,11 +472,25 @@ const styles = StyleSheet.create({
   logButton: {
     backgroundColor: '#007AFF',
     margin: 16,
+    marginBottom: 8,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
   logButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  resetButton: {
+    backgroundColor: '#FF3B30',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  resetButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

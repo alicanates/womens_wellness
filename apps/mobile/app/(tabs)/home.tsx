@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
@@ -28,7 +29,12 @@ export default function HomeScreen() {
   });
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
       <Text style={styles.title}>Hoş Geldiniz</Text>
       <Text style={styles.subtitle}>
         {(userData as any)?.profile?.displayName || user?.email}
@@ -101,13 +107,20 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 100, // Extra padding for bottom tab bar
   },
   title: {
     fontSize: 28,

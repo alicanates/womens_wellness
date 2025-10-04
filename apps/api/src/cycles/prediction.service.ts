@@ -24,6 +24,12 @@ export class PredictionService {
   /**
    * Predict next period based on historical cycles
    * Algorithm: Moving average of last 6 cycles
+   *
+   * Medical background:
+   * - Average menstrual cycle: 28 days (range: 21-35 days)
+   * - Ovulation: typically 14 days BEFORE next period (luteal phase is constant ~14 days)
+   * - Fertile window: 5 days before ovulation + ovulation day + 1 day after = 7 days total
+   * - In a 28-day cycle: ovulation on day 14, fertile window days 9-15
    */
   predict(cycles: PeriodCycle[]): PredictionResult | null {
     if (cycles.length === 0) {
@@ -38,7 +44,7 @@ export class PredictionService {
     // Take last 6 cycles for moving average
     const recentCycles = sortedCycles.slice(0, 6);
 
-    // Calculate cycle lengths
+    // Calculate cycle lengths (days between period starts)
     const cycleLengths: number[] = [];
     for (let i = 0; i < recentCycles.length - 1; i++) {
       const current = new Date(recentCycles[i].startDate);
@@ -57,7 +63,7 @@ export class PredictionService {
           )
         : 28;
 
-    // Calculate confidence based on data quality
+    // Calculate confidence based on data quality and consistency
     let confidence: 'low' | 'medium' | 'high' = 'low';
     if (cycleLengths.length >= 5) {
       const variance = this.calculateVariance(cycleLengths);
@@ -68,16 +74,25 @@ export class PredictionService {
     }
 
     // Next period start = last period start + average cycle length
-    const lastCycle = new Date(sortedCycles[0].startDate);
-    const nextStart = new Date(lastCycle);
+    const lastCycleStart = new Date(sortedCycles[0].startDate);
+    const nextStart = new Date(lastCycleStart);
     nextStart.setDate(nextStart.getDate() + avgLength);
 
-    // Fertile window: 18-11 days before next period (ovulation ±5 days)
-    const fertileStart = new Date(nextStart);
-    fertileStart.setDate(fertileStart.getDate() - 18);
+    // Fertile window calculation:
+    // Ovulation typically occurs 14 days before next period (luteal phase)
+    // Fertile window: 5 days before ovulation through 1 day after
+    // For current cycle: calculate from last period start
 
-    const fertileEnd = new Date(nextStart);
-    fertileEnd.setDate(fertileEnd.getDate() - 11);
+    // Ovulation day = 14 days before next expected period
+    const ovulationDay = new Date(nextStart);
+    ovulationDay.setDate(ovulationDay.getDate() - 14);
+
+    // Fertile window: 5 days before ovulation to 1 day after
+    const fertileStart = new Date(ovulationDay);
+    fertileStart.setDate(fertileStart.getDate() - 5);
+
+    const fertileEnd = new Date(ovulationDay);
+    fertileEnd.setDate(fertileEnd.getDate() + 1);
 
     return {
       nextStart,
@@ -107,11 +122,18 @@ export class PredictionService {
    * Check if a date falls within fertile window
    */
   isFertileDay(date: Date, prediction: PredictionResult): boolean {
-    const time = date.getTime();
-    return (
-      time >= prediction.fertile.start.getTime() &&
-      time <= prediction.fertile.end.getTime()
-    );
+    // Normalize dates to midnight for proper comparison
+    const normalizeDate = (d: Date) => {
+      const normalized = new Date(d);
+      normalized.setHours(0, 0, 0, 0);
+      return normalized.getTime();
+    };
+
+    const time = normalizeDate(date);
+    const start = normalizeDate(prediction.fertile.start);
+    const end = normalizeDate(prediction.fertile.end);
+
+    return time >= start && time <= end;
   }
 
   /**

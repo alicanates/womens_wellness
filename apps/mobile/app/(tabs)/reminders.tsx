@@ -8,6 +8,7 @@ import {
   Switch,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { remindersService } from '@/services/api';
@@ -119,7 +120,12 @@ export default function RemindersScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.header}>
         <Text style={styles.title}>Hatırlatıcılar</Text>
         <View style={styles.headerButtons}>
@@ -204,6 +210,7 @@ export default function RemindersScreen() {
         />
       )}
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -388,9 +395,15 @@ function CreateReminderModal({ onClose, onSuccess }: CreateReminderModalProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 100, // Extra padding for bottom tab bar
   },
   header: {
     flexDirection: 'row',

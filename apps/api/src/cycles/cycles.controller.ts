@@ -98,4 +98,9 @@ export class CyclesController {
   async deleteCycle(@CurrentUser() user: any, @Param('id') id: string) {
     return this.cyclesService.deleteCycle(user.id, id);
   }
+
+  @Delete()
+  async deleteAllCycles(@CurrentUser() user: any) {
+    return this.cyclesService.deleteAllCycles(user.id);
+  }
 }

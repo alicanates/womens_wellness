@@ -52,13 +52,40 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       if (accessToken && refreshToken && userStr) {
         const user = JSON.parse(userStr);
-        set({
-          user,
-          accessToken,
-          refreshToken,
-          isAuthenticated: true,
-          isLoading: false,
-        });
+
+        // Validate token by trying to fetch user data
+        try {
+          const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:4000';
+          const response = await fetch(`${API_BASE_URL}/me`, {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+            },
+          });
+
+          if (response.ok) {
+            // Token is valid
+            set({
+              user,
+              accessToken,
+              refreshToken,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+          } else {
+            // Token is invalid, clear auth
+            await SecureStore.deleteItemAsync('accessToken');
+            await SecureStore.deleteItemAsync('refreshToken');
+            await SecureStore.deleteItemAsync('user');
+            set({ isLoading: false, isAuthenticated: false });
+          }
+        } catch (error) {
+          // Network error or API not available, clear auth to be safe
+          console.warn('Could not validate token, clearing auth:', error);
+          await SecureStore.deleteItemAsync('accessToken');
+          await SecureStore.deleteItemAsync('refreshToken');
+          await SecureStore.deleteItemAsync('user');
+          set({ isLoading: false, isAuthenticated: false });
+        }
       } else {
         set({ isLoading: false });
       }

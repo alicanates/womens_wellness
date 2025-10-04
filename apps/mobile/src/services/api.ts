@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import type { AuthResponse, AuthTokens } from '@/types/auth';
 import { useAuthStore } from '@/store/authStore';
 
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:4000';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:4000';
 
 class ApiClient {
   private baseURL: string;
@@ -11,11 +11,15 @@ class ApiClient {
     this.baseURL = baseURL;
   }
 
-  private async getHeaders(includeAuth = true): Promise<HeadersInit> {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    includeAuth = true,
+  ): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`;
+    const headers: HeadersInit = {};
 
+    // Only add Authorization header if needed
     if (includeAuth) {
       const token = await SecureStore.getItemAsync('accessToken');
       if (token) {
@@ -23,16 +27,10 @@ class ApiClient {
       }
     }
 
-    return headers;
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {},
-    includeAuth = true,
-  ): Promise<T> {
-    const headers = await this.getHeaders(includeAuth);
-    const url = `${this.baseURL}${endpoint}`;
+    // Only add Content-Type if there's a body
+    if (options.body) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     const response = await fetch(url, {
       ...options,
@@ -48,11 +46,19 @@ class ApiClient {
       const refreshed = await this.refreshToken();
       if (refreshed) {
         // Retry request with new token
-        const newHeaders = await this.getHeaders(includeAuth);
+        const retryHeaders: HeadersInit = {};
+        const newToken = await SecureStore.getItemAsync('accessToken');
+        if (newToken) {
+          retryHeaders['Authorization'] = `Bearer ${newToken}`;
+        }
+        if (options.body) {
+          retryHeaders['Content-Type'] = 'application/json';
+        }
+
         const retryResponse = await fetch(url, {
           ...options,
           headers: {
-            ...newHeaders,
+            ...retryHeaders,
             ...options.headers,
           },
         });
@@ -249,6 +255,8 @@ export const cyclesService = {
   ) => api.patch(`/cycles/${id}`, data),
 
   deleteCycle: (id: string) => api.delete(`/cycles/${id}`),
+
+  deleteAllCycles: () => api.delete('/cycles'),
 
   getPrediction: () => api.get('/cycles/prediction'),
 

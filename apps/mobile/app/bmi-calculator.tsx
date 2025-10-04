@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -13,7 +14,7 @@ export default function BMICalculatorScreen() {
 
   const calculateBMIMutation = useMutation({
     mutationFn: (data: { heightCm: number; weightKg: number }) =>
-      metricsService.calculateBMI(data.heightCm, data.weightKg),
+      metricsService.calculateBMI(data),
     onSuccess: (data) => {
       setResult(data);
       queryClient.invalidateQueries({ queryKey: ['metrics'] });
@@ -55,7 +56,12 @@ export default function BMICalculatorScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
       <Text style={styles.title}>BMI Hesaplama</Text>
       <Text style={styles.subtitle}>Vücut Kitle İndeksi</Text>
 
@@ -108,12 +114,62 @@ export default function BMICalculatorScreen() {
             {getCategoryInfo(result.category).text}
           </Text>
 
+          <View style={styles.idealWeightCard}>
+            <Text style={styles.idealWeightTitle}>İdeal Kilo Aralığınız</Text>
+            <View style={styles.idealWeightContent}>
+              <View style={styles.weightRangeBox}>
+                <Text style={styles.weightValue}>
+                  {((18.5 * Math.pow(result.heightCm || parseFloat(height), 2)) / 10000).toFixed(1)}
+                </Text>
+                <Text style={styles.weightUnit}>kg</Text>
+              </View>
+              <View style={styles.rangeDivider}>
+                <View style={styles.dividerLine} />
+              </View>
+              <View style={styles.weightRangeBox}>
+                <Text style={styles.weightValue}>
+                  {((24.9 * Math.pow(result.heightCm || parseFloat(height), 2)) / 10000).toFixed(1)}
+                </Text>
+                <Text style={styles.weightUnit}>kg</Text>
+              </View>
+            </View>
+            <Text style={styles.idealWeightSubtext}>
+              {parseFloat(height)} cm boy için normal BMI aralığı
+            </Text>
+          </View>
+
           <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>BMI Aralıkları:</Text>
-            <Text style={styles.infoText}>• Zayıf: &lt; 18.5</Text>
-            <Text style={styles.infoText}>• Normal: 18.5 - 24.9</Text>
-            <Text style={styles.infoText}>• Fazla Kilolu: 25.0 - 29.9</Text>
-            <Text style={styles.infoText}>• Obez: ≥ 30.0</Text>
+            <Text style={styles.infoTitle}>BMI Aralıkları</Text>
+            <View style={styles.rangesList}>
+              <View style={[styles.rangeItem, styles.rangeUnderweight]}>
+                <View style={styles.rangeIndicator} />
+                <View style={styles.rangeContent}>
+                  <Text style={styles.rangeLabel}>Zayıf</Text>
+                  <Text style={styles.rangeValue}>&lt; 18.5</Text>
+                </View>
+              </View>
+              <View style={[styles.rangeItem, styles.rangeNormal]}>
+                <View style={styles.rangeIndicator} />
+                <View style={styles.rangeContent}>
+                  <Text style={styles.rangeLabel}>Normal</Text>
+                  <Text style={styles.rangeValue}>18.5 - 24.9</Text>
+                </View>
+              </View>
+              <View style={[styles.rangeItem, styles.rangeOverweight]}>
+                <View style={styles.rangeIndicator} />
+                <View style={styles.rangeContent}>
+                  <Text style={styles.rangeLabel}>Fazla Kilolu</Text>
+                  <Text style={styles.rangeValue}>25.0 - 29.9</Text>
+                </View>
+              </View>
+              <View style={[styles.rangeItem, styles.rangeObese]}>
+                <View style={styles.rangeIndicator} />
+                <View style={styles.rangeContent}>
+                  <Text style={styles.rangeLabel}>Obez</Text>
+                  <Text style={styles.rangeValue}>≥ 30.0</Text>
+                </View>
+              </View>
+            </View>
           </View>
         </View>
       )}
@@ -125,14 +181,20 @@ export default function BMICalculatorScreen() {
       >
         <Text style={styles.backButtonText}>Geri Dön</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
     padding: 20,
   },
   title: {
@@ -213,21 +275,130 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 20,
   },
-  infoBox: {
+  idealWeightCard: {
     width: '100%',
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    marginTop: 20,
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  infoTitle: {
+  idealWeightTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4CAF50',
+    textAlign: 'center',
+    marginBottom: 20,
+    letterSpacing: 0.5,
+  },
+  idealWeightContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  weightRangeBox: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  weightValue: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    marginBottom: 4,
+  },
+  weightUnit: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 14,
     color: '#666',
-    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  rangeDivider: {
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  dividerLine: {
+    width: 32,
+    height: 3,
+    backgroundColor: '#4CAF50',
+    borderRadius: 2,
+  },
+  idealWeightSubtext: {
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  infoBox: {
+    width: '100%',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 20,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 16,
+    color: '#1a1a1a',
+    textAlign: 'center',
+  },
+  rangesList: {
+    gap: 12,
+  },
+  rangeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 14,
+    borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  rangeUnderweight: {
+    borderLeftColor: '#FFA500',
+  },
+  rangeNormal: {
+    borderLeftColor: '#4CAF50',
+  },
+  rangeOverweight: {
+    borderLeftColor: '#FF9800',
+  },
+  rangeObese: {
+    borderLeftColor: '#F44336',
+  },
+  rangeIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'currentColor',
+    marginRight: 12,
+  },
+  rangeContent: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  rangeLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  rangeValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
   },
   backButton: {
     backgroundColor: '#fff',
