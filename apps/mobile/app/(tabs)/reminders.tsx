@@ -7,12 +7,17 @@ import {
   Alert,
   Switch,
   TextInput,
+  Modal,
+  Animated,
+  Dimensions,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { remindersService } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface Reminder {
   id: string;
@@ -27,10 +32,20 @@ interface Reminder {
   nextRunAt: string;
 }
 
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const ITEM_HEIGHT = 50;
+const VISIBLE_ITEMS = 5;
+
 export default function RemindersScreen() {
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const {
+    expoPushToken,
+    permissionStatus,
+    requestPermissions,
+    scheduleLocalNotification
+  } = useNotifications();
 
   const { data: reminders, isLoading } = useQuery({
     queryKey: ['reminders'],
@@ -63,6 +78,67 @@ export default function RemindersScreen() {
       Alert.alert('Hata', 'Bildirim gönderilemedi. Push token kaydedilmiş mi?');
     },
   });
+
+  const handleTestNotification = async () => {
+    // First check if we have permissions
+    if (permissionStatus !== 'granted') {
+      Alert.alert(
+        'Bildirim İzni Gerekli',
+        'Test bildirimi göndermek için bildirim izni vermeniz gerekiyor.',
+        [
+          { text: 'İptal', style: 'cancel' },
+          {
+            text: 'İzin Ver',
+            onPress: async () => {
+              const granted = await requestPermissions();
+              if (granted) {
+                sendTestNotification();
+              }
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    sendTestNotification();
+  };
+
+  const sendTestNotification = async () => {
+    // Send a local notification for immediate feedback
+    await scheduleLocalNotification(
+      '🔔 Test Bildirimi',
+      'Bu bir yerel test bildirimidir. Bildirimler çalışıyor!',
+      { screen: 'reminders', test: true }
+    );
+
+    // Also try to send via server if we have a push token
+    if (expoPushToken) {
+      Alert.alert(
+        'Bildirim Türü',
+        'Hangi türde test bildirimi göndermek istersiniz?',
+        [
+          {
+            text: 'Sadece Yerel',
+            onPress: () => {
+              Alert.alert('Başarılı', 'Yerel bildirim gönderildi!');
+            },
+          },
+          {
+            text: 'Sunucu Üzerinden',
+            onPress: () => testPushMutation.mutate(),
+          },
+          { text: 'İptal', style: 'cancel' },
+        ]
+      );
+    } else {
+      Alert.alert(
+        'Yerel Bildirim Gönderildi',
+        'Push token bulunamadı, sadece yerel bildirim gönderildi. Sunucu bildirimleri için token kaydı gerekiyor.',
+        [{ text: 'Tamam' }]
+      );
+    }
+  };
 
   const handleToggle = (id: string, currentActive: boolean) => {
     toggleMutation.mutate({ id, active: !currentActive });
@@ -121,84 +197,105 @@ export default function RemindersScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-      <View style={styles.header}>
-        <Text style={styles.title}>Hatırlatıcılar</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity
-            style={[styles.addButton, { marginRight: 8 }]}
-            onPress={() => testPushMutation.mutate()}
-            disabled={testPushMutation.isPending}
-          >
-            <Text style={styles.addButtonText}>🔔 Test</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowCreateForm(true)}
-          >
-            <Text style={styles.addButtonText}>+ Yeni Ekle</Text>
-          </TouchableOpacity>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Hatırlatıcılar</Text>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              style={[styles.addButton, { marginRight: 8 }]}
+              onPress={handleTestNotification}
+              disabled={testPushMutation.isPending}
+            >
+              <Text style={styles.addButtonText}>🔔 Test</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowCreateForm(true)}
+            >
+              <Text style={styles.addButtonText}>+ Yeni Ekle</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
 
-      {isLoading ? (
-        <Text style={styles.loadingText}>Yükleniyor...</Text>
-      ) : (reminders as any)?.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>Henüz hatırlatıcı eklemediniz</Text>
-          <Text style={styles.emptySubtext}>
-            Düzenli hatırlatmalar almak için yeni bir hatırlatıcı ekleyin
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.remindersList}>
-          {((reminders as any) || []).map((reminder: Reminder) => (
-            <View key={reminder.id} style={styles.reminderCard}>
-              <View style={styles.reminderHeader}>
-                <View style={styles.reminderInfo}>
-                  <Text style={styles.reminderTitle}>
-                    {(reminder.payloadJson as any).title}
-                  </Text>
-                  <Text style={styles.reminderType}>
-                    {getTypeLabel(reminder.type)} • {(reminder.payloadJson as any).time}
-                  </Text>
-                  {(reminder.payloadJson as any).days && (
-                    <Text style={styles.reminderDays}>
-                      {getDaysLabel(reminder.type, (reminder.payloadJson as any).days)}
-                    </Text>
-                  )}
-                </View>
-                <Switch
-                  value={reminder.active}
-                  onValueChange={() => handleToggle(reminder.id, reminder.active)}
-                  trackColor={{ false: '#ccc', true: '#007AFF' }}
-                />
-              </View>
+        {/* Push Token Status Indicator */}
+        {permissionStatus === 'granted' && (
+          <View style={styles.statusBar}>
+            <Text style={styles.statusText}>
+              {expoPushToken
+                ? `✅ Bildirimler aktif • Token: ${expoPushToken.substring(0, 20)}...`
+                : '⚠️ Push token bekleniyor...'}
+            </Text>
+          </View>
+        )}
+        {permissionStatus === 'denied' && (
+          <View style={[styles.statusBar, styles.statusBarError]}>
+            <Text style={styles.statusTextError}>
+              ❌ Bildirim izni reddedildi. Ayarlardan izin verin.
+            </Text>
+          </View>
+        )}
 
-              <Text style={styles.reminderMessage}>
-                {(reminder.payloadJson as any).message}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {isLoading ? (
+            <Text style={styles.loadingText}>Yükleniyor...</Text>
+          ) : (reminders as any)?.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>Henüz hatırlatıcı eklemediniz</Text>
+              <Text style={styles.emptySubtext}>
+                Düzenli hatırlatmalar almak için yeni bir hatırlatıcı ekleyin
               </Text>
-
-              <View style={styles.reminderFooter}>
-                <Text style={styles.nextRunText}>
-                  Sonraki: {formatNextRun(reminder.nextRunAt)}
-                </Text>
-                <TouchableOpacity
-                  onPress={() =>
-                    handleDelete(reminder.id, (reminder.payloadJson as any).title)
-                  }
-                >
-                  <Text style={styles.deleteText}>Sil</Text>
-                </TouchableOpacity>
-              </View>
             </View>
-          ))}
-        </View>
-      )}
+          ) : (
+            <View style={styles.remindersList}>
+              {((reminders as any) || []).map((reminder: Reminder) => (
+                <View key={reminder.id} style={styles.reminderCard}>
+                  <View style={styles.reminderHeader}>
+                    <View style={styles.reminderInfo}>
+                      <Text style={styles.reminderTitle}>
+                        {(reminder.payloadJson as any).title}
+                      </Text>
+                      <Text style={styles.reminderType}>
+                        {getTypeLabel(reminder.type)} • {(reminder.payloadJson as any).time}
+                      </Text>
+                      {(reminder.payloadJson as any).days && (
+                        <Text style={styles.reminderDays}>
+                          {getDaysLabel(reminder.type, (reminder.payloadJson as any).days)}
+                        </Text>
+                      )}
+                    </View>
+                    <Switch
+                      value={reminder.active}
+                      onValueChange={() => handleToggle(reminder.id, reminder.active)}
+                      trackColor={{ false: '#ccc', true: '#007AFF' }}
+                    />
+                  </View>
+
+                  <Text style={styles.reminderMessage}>
+                    {(reminder.payloadJson as any).message}
+                  </Text>
+
+                  <View style={styles.reminderFooter}>
+                    <Text style={styles.nextRunText}>
+                      Sonraki: {formatNextRun(reminder.nextRunAt)}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() =>
+                        handleDelete(reminder.id, (reminder.payloadJson as any).title)
+                      }
+                    >
+                      <Text style={styles.deleteText}>Sil</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      </View>
 
       {showCreateForm && (
         <CreateReminderModal
@@ -209,7 +306,6 @@ export default function RemindersScreen() {
           }}
         />
       )}
-    </ScrollView>
     </SafeAreaView>
   );
 }
@@ -219,12 +315,288 @@ interface CreateReminderModalProps {
   onSuccess: () => void;
 }
 
+// Modern Time Picker Component
+function TimePickerWheel({ value, onChange }: { value: string; onChange: (time: string) => void }) {
+  const [showPicker, setShowPicker] = useState(false);
+  const [hour, minute] = value.split(':').map(Number);
+  const [selectedHour, setSelectedHour] = useState(hour);
+  const [selectedMinute, setSelectedMinute] = useState(minute);
+
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const minutes = Array.from({ length: 60 }, (_, i) => i);
+
+  useEffect(() => {
+    if (showPicker) {
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 65,
+        friction: 11,
+      }).start();
+    }
+  }, [showPicker]);
+
+  const handleClose = () => {
+    Animated.timing(slideAnim, {
+      toValue: SCREEN_HEIGHT,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => setShowPicker(false));
+  };
+
+  const handleConfirm = () => {
+    const formattedTime = `${String(selectedHour).padStart(2, '0')}:${String(selectedMinute).padStart(2, '0')}`;
+    onChange(formattedTime);
+    handleClose();
+  };
+
+  return (
+    <>
+      <TouchableOpacity style={styles.timePickerButton} onPress={() => setShowPicker(true)}>
+        <Text style={styles.timePickerButtonText}>{value}</Text>
+        <Text style={styles.timePickerIcon}>🕐</Text>
+      </TouchableOpacity>
+
+      <Modal visible={showPicker} transparent animationType="fade">
+        <View style={styles.pickerModalOverlay}>
+          <TouchableOpacity style={styles.pickerBackdrop} activeOpacity={1} onPress={handleClose} />
+          <Animated.View
+            style={[
+              styles.pickerContainer,
+              { transform: [{ translateY: slideAnim }] },
+            ]}
+          >
+            <View style={styles.pickerHeader}>
+              <TouchableOpacity onPress={handleClose}>
+                <Text style={styles.pickerCancelText}>İptal</Text>
+              </TouchableOpacity>
+              <Text style={styles.pickerTitle}>Saat Seçin</Text>
+              <TouchableOpacity onPress={handleConfirm}>
+                <Text style={styles.pickerConfirmText}>Tamam</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.wheelContainer}>
+              <ScrollPicker
+                items={hours}
+                selectedValue={selectedHour}
+                onValueChange={setSelectedHour}
+                formatter={(val) => String(val).padStart(2, '0')}
+              />
+              <Text style={styles.wheelSeparator}>:</Text>
+              <ScrollPicker
+                items={minutes}
+                selectedValue={selectedMinute}
+                onValueChange={setSelectedMinute}
+                formatter={(val) => String(val).padStart(2, '0')}
+              />
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
+// Reusable Scroll Picker Component
+function ScrollPicker({
+  items,
+  selectedValue,
+  onValueChange,
+  formatter = (val) => String(val),
+}: {
+  items: number[];
+  selectedValue: number;
+  onValueChange: (value: number) => void;
+  formatter?: (value: number) => string;
+}) {
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    if (!initialized && scrollViewRef.current) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({
+          y: selectedValue * ITEM_HEIGHT,
+          animated: false,
+        });
+        setInitialized(true);
+      }, 100);
+    }
+  }, [initialized, selectedValue]);
+
+  const handleScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    if (index >= 0 && index < items.length && items[index] !== selectedValue) {
+      onValueChange(items[index]);
+    }
+  };
+
+  return (
+    <View style={styles.scrollPickerContainer}>
+      <View style={styles.scrollPickerHighlight} />
+      <ScrollView
+        ref={scrollViewRef}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={ITEM_HEIGHT}
+        decelerationRate="fast"
+        onMomentumScrollEnd={handleScroll}
+        contentContainerStyle={{
+          paddingVertical: ITEM_HEIGHT * 2,
+        }}
+      >
+        {items.map((item) => (
+          <View key={item} style={styles.scrollPickerItem}>
+            <Text
+              style={[
+                styles.scrollPickerItemText,
+                item === selectedValue && styles.scrollPickerItemTextSelected,
+              ]}
+            >
+              {formatter(item)}
+            </Text>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+// Modern Day Selector Component
+function DaySelector({
+  type,
+  selectedDays,
+  onChange,
+}: {
+  type: 'WEEKLY' | 'MONTHLY';
+  selectedDays: number[];
+  onChange: (days: number[]) => void;
+}) {
+  const [showPicker, setShowPicker] = useState(false);
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+
+  const weekDays = [
+    { value: 0, label: 'Pazar' },
+    { value: 1, label: 'Pazartesi' },
+    { value: 2, label: 'Salı' },
+    { value: 3, label: 'Çarşamba' },
+    { value: 4, label: 'Perşembe' },
+    { value: 5, label: 'Cuma' },
+    { value: 6, label: 'Cumartesi' },
+  ];
+
+  const monthDays = Array.from({ length: 31 }, (_, i) => ({
+    value: i + 1,
+    label: `${i + 1}. Gün`,
+  }));
+
+  const options = type === 'WEEKLY' ? weekDays : monthDays;
+
+  useEffect(() => {
+    if (showPicker) {
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 65,
+        friction: 11,
+      }).start();
+    }
+  }, [showPicker]);
+
+  const handleClose = () => {
+    Animated.timing(slideAnim, {
+      toValue: SCREEN_HEIGHT,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => setShowPicker(false));
+  };
+
+  const toggleDay = (day: number) => {
+    if (selectedDays.includes(day)) {
+      onChange(selectedDays.filter((d) => d !== day));
+    } else {
+      onChange([...selectedDays, day].sort((a, b) => a - b));
+    }
+  };
+
+  const getDisplayText = () => {
+    if (selectedDays.length === 0) {
+      return type === 'WEEKLY' ? 'Gün seçin' : 'Tarih seçin';
+    }
+    if (type === 'WEEKLY') {
+      const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+      return selectedDays.map((d) => dayNames[d]).join(', ');
+    }
+    return selectedDays.join(', ');
+  };
+
+  return (
+    <>
+      <TouchableOpacity style={styles.daySelectorButton} onPress={() => setShowPicker(true)}>
+        <Text style={styles.daySelectorButtonText}>{getDisplayText()}</Text>
+        <Text style={styles.daySelectorIcon}>▼</Text>
+      </TouchableOpacity>
+
+      <Modal visible={showPicker} transparent animationType="fade">
+        <View style={styles.pickerModalOverlay}>
+          <TouchableOpacity style={styles.pickerBackdrop} activeOpacity={1} onPress={handleClose} />
+          <Animated.View
+            style={[
+              styles.daySelectorContainer,
+              { transform: [{ translateY: slideAnim }] },
+            ]}
+          >
+            <View style={styles.pickerHeader}>
+              <View style={{ width: 60 }} />
+              <Text style={styles.pickerTitle}>
+                {type === 'WEEKLY' ? 'Günler' : 'Ayın Günleri'}
+              </Text>
+              <TouchableOpacity onPress={handleClose}>
+                <Text style={styles.pickerConfirmText}>Tamam</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.daySelectorList} showsVerticalScrollIndicator={false}>
+              {options.map((option) => {
+                const isSelected = selectedDays.includes(option.value);
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.daySelectorOption,
+                      isSelected && styles.daySelectorOptionSelected,
+                    ]}
+                    onPress={() => toggleDay(option.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.daySelectorOptionText,
+                        isSelected && styles.daySelectorOptionTextSelected,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
 function CreateReminderModal({ onClose, onSuccess }: CreateReminderModalProps) {
   const [type, setType] = useState<'DAILY' | 'WEEKLY' | 'MONTHLY'>('DAILY');
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [time, setTime] = useState('09:00');
-  const [daysInput, setDaysInput] = useState('');
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
 
   const createMutation = useMutation({
     mutationFn: (data: any) => remindersService.createReminder(data),
@@ -243,37 +615,9 @@ function CreateReminderModal({ onClose, onSuccess }: CreateReminderModalProps) {
       return;
     }
 
-    const timePattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
-    if (!timePattern.test(time)) {
-      Alert.alert('Hata', 'Saat HH:MM formatında olmalıdır (örn. 09:00)');
+    if (type !== 'DAILY' && selectedDays.length === 0) {
+      Alert.alert('Hata', 'Lütfen en az bir gün seçin');
       return;
-    }
-
-    let parsedDays: number[] | undefined;
-    if (type !== 'DAILY' && daysInput.trim()) {
-      parsedDays = daysInput
-        .split(',')
-        .map((part) => parseInt(part.trim(), 10))
-        .filter((value) => !Number.isNaN(value));
-
-      if (parsedDays.length === 0) {
-        Alert.alert('Hata', 'Gün listesini doğru formatta girin');
-        return;
-      }
-
-      const isInvalid = parsedDays.some((value) =>
-        type === 'WEEKLY' ? value < 0 || value > 6 : value < 1 || value > 31,
-      );
-
-      if (isInvalid) {
-        Alert.alert(
-          'Hata',
-          type === 'WEEKLY'
-            ? 'Haftalık günler 0 (Paz) - 6 (Cmt) arasında olmalıdır'
-            : 'Aylık günler 1 - 31 arasında olmalıdır',
-        );
-        return;
-      }
     }
 
     createMutation.mutate({
@@ -281,116 +625,108 @@ function CreateReminderModal({ onClose, onSuccess }: CreateReminderModalProps) {
       title: title.trim(),
       message: message.trim(),
       time,
-      days: parsedDays,
+      days: type === 'DAILY' ? undefined : selectedDays,
       active: true,
     });
   };
 
   const isSubmitting = createMutation.isPending;
 
-  // Simplified modal - in production, use a proper modal library
   return (
-    <View style={styles.modal}>
-      <View style={styles.modalContent}>
-        <Text style={styles.modalTitle}>Yeni Hatırlatıcı</Text>
+    <Modal visible transparent animationType="fade">
+      <View style={styles.modal}>
+        <View style={styles.modalContent}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={styles.modalTitle}>Yeni Hatırlatıcı</Text>
 
-        <Text style={styles.label}>Sıklık</Text>
-        <View style={styles.typeSelector}>
-          {(['DAILY', 'WEEKLY', 'MONTHLY'] as const).map((option) => (
-            <TouchableOpacity
-              key={option}
-              style={[
-                styles.typeChip,
-                type === option && styles.typeChipActive,
-              ]}
-              onPress={() => setType(option)}
-              disabled={isSubmitting}
-            >
-              <Text
-                style={[
-                  styles.typeChipText,
-                  type === option && styles.typeChipTextActive,
-                ]}
-              >
-                {option === 'DAILY'
-                  ? 'Günlük'
-                  : option === 'WEEKLY'
-                  ? 'Haftalık'
-                  : 'Aylık'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+            <Text style={styles.label}>Sıklık</Text>
+            <View style={styles.typeSelector}>
+              {(['DAILY', 'WEEKLY', 'MONTHLY'] as const).map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.typeChip,
+                    type === option && styles.typeChipActive,
+                  ]}
+                  onPress={() => {
+                    setType(option);
+                    setSelectedDays([]);
+                  }}
+                  disabled={isSubmitting}
+                >
+                  <Text
+                    style={[
+                      styles.typeChipText,
+                      type === option && styles.typeChipTextActive,
+                    ]}
+                  >
+                    {option === 'DAILY'
+                      ? 'Günlük'
+                      : option === 'WEEKLY'
+                      ? 'Haftalık'
+                      : 'Aylık'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-        <Text style={styles.label}>Başlık</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="Örn. Su içmeyi unutma"
-          value={title}
-          onChangeText={setTitle}
-          editable={!isSubmitting}
-        />
+            {type !== 'DAILY' && (
+              <>
+                <Text style={styles.label}>
+                  {type === 'WEEKLY' ? 'Hangi günler?' : 'Ayın hangi günleri?'}
+                </Text>
+                <DaySelector
+                  type={type}
+                  selectedDays={selectedDays}
+                  onChange={setSelectedDays}
+                />
+              </>
+            )}
 
-        <Text style={styles.label}>Mesaj</Text>
-        <TextInput
-          style={[styles.textInput, styles.multilineInput]}
-          placeholder="Örn. Bugünkü su hedefini tamamla"
-          value={message}
-          onChangeText={setMessage}
-          editable={!isSubmitting}
-          multiline
-        />
+            <Text style={styles.label}>Saat</Text>
+            <TimePickerWheel value={time} onChange={setTime} />
 
-        <Text style={styles.label}>Saat (HH:MM)</Text>
-        <TextInput
-          style={styles.textInput}
-          placeholder="09:00"
-          value={time}
-          onChangeText={setTime}
-          editable={!isSubmitting}
-          keyboardType="numbers-and-punctuation"
-        />
-
-        {type !== 'DAILY' && (
-          <>
-            <Text style={styles.label}>
-              {type === 'WEEKLY'
-                ? 'Günler (0=Paz, 6=Cmt)'
-                : 'Günler (1-31)'}
-            </Text>
+            <Text style={styles.label}>Başlık</Text>
             <TextInput
               style={styles.textInput}
-              placeholder={type === 'WEEKLY' ? '1,3,5' : '1,15'}
-              value={daysInput}
-              onChangeText={setDaysInput}
+              placeholder="Örn. Su içmeyi unutma"
+              value={title}
+              onChangeText={setTitle}
               editable={!isSubmitting}
             />
-            <Text style={styles.helperText}>
-              Virgülle ayrılmış değerler girin
-            </Text>
-          </>
-        )}
 
-        <View style={styles.modalButtons}>
-          <TouchableOpacity
-            style={styles.modalButton}
-            onPress={onClose}
-            disabled={isSubmitting}
-          >
-            <Text>İptal</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.modalButton, styles.modalButtonPrimary]}
-            onPress={handleCreate}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.modalButtonPrimaryText}>
-              {isSubmitting ? 'Kaydediliyor…' : 'Oluştur'}
-            </Text>
-          </TouchableOpacity>
+            <Text style={styles.label}>Mesaj</Text>
+            <TextInput
+              style={[styles.textInput, styles.multilineInput]}
+              placeholder="Örn. Bugünkü su hedefini tamamla"
+              value={message}
+              onChangeText={setMessage}
+              editable={!isSubmitting}
+              multiline
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={onClose}
+                disabled={isSubmitting}
+              >
+                <Text>İptal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonPrimary]}
+                onPress={handleCreate}
+                disabled={isSubmitting}
+              >
+                <Text style={styles.modalButtonPrimaryText}>
+                  {isSubmitting ? 'Kaydediliyor…' : 'Oluştur'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
       </View>
-    </View>
+    </Modal>
   );
 }
 
@@ -402,14 +738,40 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  contentContainer: {
-    paddingBottom: 100, // Extra padding for bottom tab bar
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
+    paddingBottom: 12,
+    backgroundColor: '#f5f5f5',
+  },
+  statusBar: {
+    backgroundColor: '#e7f3ff',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#d0e8ff',
+  },
+  statusBarError: {
+    backgroundColor: '#ffe7e7',
+    borderBottomColor: '#ffc4c4',
+  },
+  statusText: {
+    fontSize: 12,
+    color: '#0066cc',
+    textAlign: 'center',
+  },
+  statusTextError: {
+    fontSize: 12,
+    color: '#cc0000',
+    textAlign: 'center',
   },
   title: {
     fontSize: 28,
@@ -509,11 +871,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   modal: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -521,27 +879,30 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 24,
     width: '100%',
     maxWidth: 400,
+    maxHeight: SCREEN_HEIGHT * 0.85,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 12,
+    marginBottom: 20,
   },
   typeSelector: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: 16,
+    gap: 8,
   },
   typeChip: {
+    flex: 1,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginRight: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    alignItems: 'center',
   },
   typeChipActive: {
     backgroundColor: '#007AFF',
@@ -549,47 +910,43 @@ const styles = StyleSheet.create({
   },
   typeChipText: {
     color: '#555',
-    fontWeight: '500',
+    fontWeight: '600',
+    fontSize: 14,
   },
   typeChipTextActive: {
     color: '#fff',
   },
   label: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    marginBottom: 6,
-    marginTop: 12,
+    marginBottom: 8,
+    marginTop: 16,
     color: '#333',
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+    borderColor: '#e0e0e0',
+    borderRadius: 12,
+    padding: 14,
     fontSize: 16,
     backgroundColor: '#fff',
   },
   multilineInput: {
-    minHeight: 80,
+    minHeight: 100,
     textAlignVertical: 'top',
-  },
-  helperText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 12,
-    marginTop: 8,
+    marginTop: 24,
   },
   modalButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#e0e0e0',
   },
   modalButtonPrimary: {
     backgroundColor: '#007AFF',
@@ -598,5 +955,161 @@ const styles = StyleSheet.create({
   modalButtonPrimaryText: {
     color: '#fff',
     fontWeight: '600',
+  },
+  // Time Picker Styles
+  timePickerButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 12,
+    padding: 14,
+  },
+  timePickerButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  timePickerIcon: {
+    fontSize: 20,
+  },
+  pickerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  pickerBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  pickerContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  pickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  pickerCancelText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  pickerConfirmText: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  wheelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: ITEM_HEIGHT * VISIBLE_ITEMS,
+    paddingVertical: 20,
+  },
+  wheelSeparator: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginHorizontal: 20,
+  },
+  scrollPickerContainer: {
+    height: ITEM_HEIGHT * VISIBLE_ITEMS,
+    width: 80,
+    position: 'relative',
+  },
+  scrollPickerHighlight: {
+    position: 'absolute',
+    top: ITEM_HEIGHT * 2,
+    left: 0,
+    right: 0,
+    height: ITEM_HEIGHT,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 122, 255, 0.3)',
+  },
+  scrollPickerItem: {
+    height: ITEM_HEIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollPickerItemText: {
+    fontSize: 24,
+    color: '#999',
+  },
+  scrollPickerItemTextSelected: {
+    fontSize: 28,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  // Day Selector Styles
+  daySelectorButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 12,
+    padding: 14,
+  },
+  daySelectorButtonText: {
+    fontSize: 16,
+    color: '#333',
+    flex: 1,
+  },
+  daySelectorIcon: {
+    fontSize: 12,
+    color: '#999',
+  },
+  daySelectorContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: SCREEN_HEIGHT * 0.7,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+  },
+  daySelectorList: {
+    padding: 16,
+  },
+  daySelectorOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#f8f8f8',
+  },
+  daySelectorOptionSelected: {
+    backgroundColor: '#007AFF',
+  },
+  daySelectorOptionText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  daySelectorOptionTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  checkmark: {
+    fontSize: 20,
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
