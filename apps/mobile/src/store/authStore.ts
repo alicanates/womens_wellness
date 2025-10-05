@@ -76,9 +76,12 @@ export const useAuthStore = create<AuthState>((set) => ({
           });
 
           if (response.ok) {
-            // Token is valid
+            // Token is valid, use fresh data from /me endpoint
+            const freshUserData = await response.json();
+            // Update cached user in SecureStore with fresh data
+            await SecureStore.setItemAsync('user', JSON.stringify(freshUserData));
             set({
-              user,
+              user: freshUserData,
               accessToken,
               refreshToken,
               isAuthenticated: true,

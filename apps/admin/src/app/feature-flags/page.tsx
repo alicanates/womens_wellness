@@ -3,7 +3,10 @@
 import { List, useTable, EditButton } from '@refinedev/antd';
 import { Table, Space, Switch } from 'antd';
 import { useState } from 'react';
-import { useUpdate } from '@refinedev/core';
+import { useInvalidate } from '@refinedev/core';
+import axios from 'axios';
+
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
 
 export default function FeatureFlagList() {
   const { tableProps } = useTable({
@@ -11,19 +14,33 @@ export default function FeatureFlagList() {
     syncWithLocation: true,
   });
 
-  const { mutate } = useUpdate();
+  const invalidate = useInvalidate();
 
-  const handleToggle = (record: any) => {
+  const handleToggle = async (record: any) => {
     const currentValue = record.valueJson;
     const newValue = typeof currentValue === 'boolean' ? !currentValue : true;
 
-    mutate({
-      resource: 'feature-flags',
-      id: record.key,
-      values: {
-        valueJson: newValue,
-      },
-    });
+    try {
+      const token = localStorage.getItem('accessToken');
+      await axios.patch(
+        `${API_URL}/feature-flags/${record.key}`,
+        { valueJson: newValue },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      // Invalidate the list to refetch
+      invalidate({
+        resource: 'feature-flags',
+        invalidates: ['list'],
+      });
+    } catch (error) {
+      console.error('Failed to update feature flag:', error);
+    }
   };
 
   return (

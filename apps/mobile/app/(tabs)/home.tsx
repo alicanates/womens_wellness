@@ -17,6 +17,8 @@ export default function HomeScreen() {
     queryKey: ['me'],
     queryFn: () => userService.getMe(),
     enabled: isAuthenticated,
+    staleTime: 0, // Always consider data stale
+    refetchOnMount: true, // Refetch on component mount
   });
 
   const { data: waterToday } = useQuery({

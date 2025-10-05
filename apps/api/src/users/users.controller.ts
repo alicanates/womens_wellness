@@ -45,6 +45,12 @@ export class UsersController {
     return this.usersService.updateProfile(user.id, dto);
   }
 
+  @Delete('me')
+  @ApiOperation({ summary: 'Delete current user account' })
+  async deleteMe(@CurrentUser() user: any) {
+    return this.usersService.deleteUser(user.id);
+  }
+
   // Admin endpoints
   @Get('users')
   @ApiOperation({ summary: 'Get all users (Admin)' })

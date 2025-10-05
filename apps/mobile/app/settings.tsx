@@ -39,6 +39,8 @@ export default function SettingsScreen() {
   const { data: userData, isLoading } = useQuery({
     queryKey: ['me'],
     queryFn: () => userService.getMe(),
+    staleTime: 0, // Always consider data stale
+    refetchOnMount: true, // Refetch on component mount
   });
 
   // Sync local state with query data
@@ -59,8 +61,17 @@ export default function SettingsScreen() {
 
   const updateProfileMutation = useMutation({
     mutationFn: (data: any) => userService.updateMe(data),
-    onSuccess: () => {
+    onSuccess: (updatedData) => {
       queryClient.invalidateQueries({ queryKey: ['me'] });
+      // Update the user in authStore with fresh data
+      if (user && updatedData) {
+        useAuthStore.setState({
+          user: {
+            ...user,
+            profile: (updatedData as any).profile,
+          },
+        });
+      }
       setIsEditingProfile(false);
       Alert.alert('Başarılı', 'Profil güncellendi');
     },
@@ -201,18 +212,28 @@ export default function SettingsScreen() {
     );
   };
 
+  const deleteAccountMutation = useMutation({
+    mutationFn: () => userService.deleteMe(),
+    onSuccess: () => {
+      logout();
+      router.replace('/(auth)/signin');
+    },
+    onError: (error: any) => {
+      Alert.alert('Hata', error.message || 'Hesap silinemedi');
+    },
+  });
+
   const handleDeleteAccount = () => {
     Alert.alert(
       'Hesabı Sil',
-      'Hesabınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+      'Hesabınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve tüm verileriniz silinecektir.',
       [
         { text: 'İptal', style: 'cancel' },
         {
           text: 'Hesabı Sil',
           style: 'destructive',
           onPress: () => {
-            // TODO: Implement account deletion
-            Alert.alert('Bilgi', 'Hesap silme özelliği yakında eklenecek');
+            deleteAccountMutation.mutate();
           },
         },
       ]

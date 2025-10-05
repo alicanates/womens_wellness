@@ -161,6 +161,7 @@ export const authService = {
 export const userService = {
   getMe: () => api.get('/me'),
   updateMe: (data: any) => api.patch('/me', data),
+  deleteMe: () => api.delete('/me'),
 
   uploadProfilePicture: async (fileUri: string): Promise<{ profilePictureUrl: string }> => {
     const token = await SecureStore.getItemAsync('accessToken');
