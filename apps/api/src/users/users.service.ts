@@ -26,19 +26,110 @@ export class UsersService {
   }
 
   async updateProfile(userId: string, data: any) {
+    const updateData: any = {};
+
+    if (data.displayName) updateData.displayName = data.displayName;
+    if (data.heightCm) updateData.heightCm = data.heightCm;
+    if (data.weightKg) updateData.weightKg = data.weightKg;
+    if (data.timezone) updateData.timezone = data.timezone;
+    if (data.profilePictureUrl !== undefined) updateData.profilePictureUrl = data.profilePictureUrl;
+    if (data.preferencesJson) updateData.preferencesJson = data.preferencesJson;
+
+    // Handle birth date - support both old format (birthDate) and new format (birthDay/birthMonth/birthYear)
+    if (data.birthDate) {
+      const date = new Date(data.birthDate);
+      updateData.birthDate = date;
+      updateData.birthDay = date.getDate();
+      updateData.birthMonth = date.getMonth() + 1;
+      updateData.birthYear = date.getFullYear();
+    } else if (data.birthDay !== undefined || data.birthMonth !== undefined || data.birthYear !== undefined) {
+      if (data.birthDay !== undefined) updateData.birthDay = data.birthDay;
+      if (data.birthMonth !== undefined) updateData.birthMonth = data.birthMonth;
+      if (data.birthYear !== undefined) updateData.birthYear = data.birthYear;
+
+      // Also update birthDate for backward compatibility if all fields are provided
+      if (data.birthDay && data.birthMonth && data.birthYear) {
+        updateData.birthDate = new Date(data.birthYear, data.birthMonth - 1, data.birthDay);
+      }
+    }
+
     const profile = await this.prisma.profile.update({
       where: { userId },
-      data: {
-        ...(data.displayName && { displayName: data.displayName }),
-        ...(data.birthYear && { birthYear: data.birthYear }),
-        ...(data.heightCm && { heightCm: data.heightCm }),
-        ...(data.weightKg && { weightKg: data.weightKg }),
-        ...(data.timezone && { timezone: data.timezone }),
-        ...(data.profilePictureUrl !== undefined && { profilePictureUrl: data.profilePictureUrl }),
-        ...(data.preferencesJson && { preferencesJson: data.preferencesJson }),
-      },
+      data: updateData,
     });
 
     return this.getUserWithProfile(userId);
+  }
+
+  // Admin methods
+  async getAllUsers(page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        skip,
+        take: limit,
+        include: {
+          profile: true,
+          subscription: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      this.prisma.user.count(),
+    ]);
+
+    // Remove passwords from response
+    const usersWithoutPasswords = users.map(({ password, ...user }) => user);
+
+    return {
+      data: usersWithoutPasswords,
+      total,
+      page,
+      limit,
+    };
+  }
+
+  async getUserById(userId: string) {
+    return this.getUserWithProfile(userId);
+  }
+
+  async updateUser(userId: string, data: any) {
+    const updateData: any = {};
+
+    // Check for email uniqueness if email is being updated
+    if (data.email) {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: data.email },
+      });
+
+      if (existingUser && existingUser.id !== userId) {
+        throw new Error('Email already exists');
+      }
+
+      updateData.email = data.email;
+    }
+
+    if (data.status) updateData.status = data.status;
+    if (data.password) {
+      const bcrypt = require('bcrypt');
+      updateData.password = await bcrypt.hash(data.password, 10);
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+    });
+
+    return this.getUserWithProfile(userId);
+  }
+
+  async deleteUser(userId: string) {
+    await this.prisma.user.delete({
+      where: { id: userId },
+    });
+
+    return { success: true };
   }
 }

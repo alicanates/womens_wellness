@@ -9,8 +9,8 @@ export default function LoginPage() {
       title="Wellness Admin"
       formProps={{
         initialValues: {
-          email: process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@wellness.local',
-          password: process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin123',
+          email: 'test123@test.com',
+          password: 'testpass123',
         },
       }}
     />

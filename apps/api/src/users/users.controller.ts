@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body, UseGuards, Post, BadRequestException, Req } from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, Post, BadRequestException, Req, Query, Param, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
@@ -20,6 +20,12 @@ class UpdateProfileDto {
   preferencesJson?: any;
 }
 
+class UpdateUserDto {
+  email?: string;
+  status?: string;
+  password?: string;
+}
+
 @ApiTags('users')
 @Controller()
 @UseGuards(AuthGuard('jwt'))
@@ -37,6 +43,36 @@ export class UsersController {
   @ApiOperation({ summary: 'Update current user profile' })
   async updateMe(@CurrentUser() user: any, @Body() dto: UpdateProfileDto) {
     return this.usersService.updateProfile(user.id, dto);
+  }
+
+  // Admin endpoints
+  @Get('users')
+  @ApiOperation({ summary: 'Get all users (Admin)' })
+  async getAllUsers(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 10;
+    return this.usersService.getAllUsers(pageNum, limitNum);
+  }
+
+  @Get('users/:id')
+  @ApiOperation({ summary: 'Get user by ID (Admin)' })
+  async getUserById(@Param('id') id: string) {
+    return this.usersService.getUserById(id);
+  }
+
+  @Patch('users/:id')
+  @ApiOperation({ summary: 'Update user (Admin)' })
+  async updateUser(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.usersService.updateUser(id, dto);
+  }
+
+  @Delete('users/:id')
+  @ApiOperation({ summary: 'Delete user (Admin)' })
+  async deleteUser(@Param('id') id: string) {
+    return this.usersService.deleteUser(id);
   }
 
   @Post('me/profile-picture')

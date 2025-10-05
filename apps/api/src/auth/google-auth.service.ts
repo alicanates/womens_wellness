@@ -42,66 +42,147 @@ export class GoogleAuthService {
   async exchangeIdToken(idToken: string) {
     const googlePayload = await this.verifyIdToken(idToken);
 
-    // Find or create user
-    let user = await this.prisma.user.findUnique({
-      where: { email: googlePayload.email! },
-      include: { profile: true },
-    });
-
-    if (!user) {
-      // Create new user
-      user = await this.prisma.user.create({
-        data: {
-          email: googlePayload.email!,
-          profile: {
-            create: {
-              displayName: googlePayload.name || googlePayload.email!.split('@')[0],
-              timezone: 'Europe/Istanbul',
-            },
-          },
-          subscription: {
-            create: {
-              plan: 'free',
-              status: 'active',
-            },
-          },
-          usageQuota: {
-            create: {
-              monthKey: new Date().toISOString().slice(0, 7),
-              aiRequests: 0,
-              limit: 100,
-              resetsAt: new Date(
-                new Date().getFullYear(),
-                new Date().getMonth() + 1,
-                1,
-              ),
-            },
-          },
-        },
-        include: { profile: true },
-      });
-    }
-
-    // Create or update OAuth account
-    await this.prisma.oAuthAccount.upsert({
+    // Use upsert to handle race conditions and ensure idempotency
+    // First, try to find existing OAuth account
+    const existingOAuth = await this.prisma.oAuthAccount.findUnique({
       where: {
         provider_providerUserId: {
           provider: 'google',
           providerUserId: googlePayload.sub!,
         },
       },
-      update: {
-        email: googlePayload.email!,
-        rawJson: googlePayload as any,
-      },
-      create: {
-        userId: user.id,
-        provider: 'google',
-        providerUserId: googlePayload.sub!,
-        email: googlePayload.email!,
-        rawJson: googlePayload as any,
+      include: {
+        user: {
+          include: { profile: true },
+        },
       },
     });
+
+    let user: any;
+
+    if (existingOAuth) {
+      // User already exists via Google OAuth
+      user = existingOAuth.user;
+
+      // Update OAuth account data
+      await this.prisma.oAuthAccount.update({
+        where: {
+          provider_providerUserId: {
+            provider: 'google',
+            providerUserId: googlePayload.sub!,
+          },
+        },
+        data: {
+          email: googlePayload.email!,
+          rawJson: googlePayload as any,
+        },
+      });
+    } else {
+      // Check if user exists with this email
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: googlePayload.email! },
+        include: { profile: true },
+      });
+
+      if (existingUser) {
+        // Link existing user to Google OAuth
+        user = existingUser;
+
+        await this.prisma.oAuthAccount.create({
+          data: {
+            userId: user.id,
+            provider: 'google',
+            providerUserId: googlePayload.sub!,
+            email: googlePayload.email!,
+            rawJson: googlePayload as any,
+          },
+        });
+      } else {
+        // Create new user with Google OAuth in a transaction
+        try {
+          const result = await this.prisma.$transaction(async (tx) => {
+            const newUser = await tx.user.create({
+              data: {
+                email: googlePayload.email!,
+                profile: {
+                  create: {
+                    displayName: googlePayload.name || googlePayload.email!.split('@')[0],
+                    timezone: 'Europe/Istanbul',
+                  },
+                },
+                subscription: {
+                  create: {
+                    plan: 'free',
+                    status: 'active',
+                  },
+                },
+                usageQuota: {
+                  create: {
+                    monthKey: new Date().toISOString().slice(0, 7),
+                    aiRequests: 0,
+                    limit: 100,
+                    resetsAt: new Date(
+                      new Date().getFullYear(),
+                      new Date().getMonth() + 1,
+                      1,
+                    ),
+                  },
+                },
+              },
+              include: { profile: true },
+            });
+
+            await tx.oAuthAccount.create({
+              data: {
+                userId: newUser.id,
+                provider: 'google',
+                providerUserId: googlePayload.sub!,
+                email: googlePayload.email!,
+                rawJson: googlePayload as any,
+              },
+            });
+
+            return newUser;
+          });
+
+          user = result;
+        } catch (error: any) {
+          // Handle race condition: if user was created by another request, fetch and link
+          if (error.code === 'P2002') {
+            const existingUser = await this.prisma.user.findUnique({
+              where: { email: googlePayload.email! },
+              include: { profile: true },
+            });
+
+            if (existingUser) {
+              user = existingUser;
+
+              // Try to create OAuth account if it doesn't exist
+              try {
+                await this.prisma.oAuthAccount.create({
+                  data: {
+                    userId: user.id,
+                    provider: 'google',
+                    providerUserId: googlePayload.sub!,
+                    email: googlePayload.email!,
+                    rawJson: googlePayload as any,
+                  },
+                });
+              } catch (oauthError: any) {
+                // OAuth account might have been created by another request, ignore
+                if (oauthError.code !== 'P2002') {
+                  throw oauthError;
+                }
+              }
+            } else {
+              throw error;
+            }
+          } else {
+            throw error;
+          }
+        }
+      }
+    }
 
     return this.authService.login(user);
   }

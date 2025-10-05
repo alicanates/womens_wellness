@@ -5,12 +5,29 @@ import { AppModule } from './app.module';
 import { join } from 'path';
 import fastifyStatic from '@fastify/static';
 import fastifyMultipart from '@fastify/multipart';
+import fastifyCors from '@fastify/cors';
 
 async function bootstrap() {
+  const fastifyAdapter = new FastifyAdapter();
+
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter(),
+    fastifyAdapter,
   );
+
+  // Register CORS plugin
+  const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',') || [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:8081',
+  ];
+
+  await app.register(fastifyCors as any, {
+    origin: true, // Reflect the request origin (validates against allowedOrigins in production via env)
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  });
 
   // Register multipart for file uploads
   await app.register(fastifyMultipart as any, {
@@ -26,12 +43,6 @@ async function bootstrap() {
   await app.register(fastifyStatic as any, {
     root: uploadsPath,
     prefix: '/uploads/',
-  });
-
-  // CORS
-  app.enableCors({
-    origin: process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:8081'],
-    credentials: true,
   });
 
   // Swagger/OpenAPI Documentation

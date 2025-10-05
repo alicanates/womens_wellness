@@ -1,12 +1,10 @@
 import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-// Simple hash function for seed data (not for production use)
-async function hash(password: string, _rounds?: number): Promise<string> {
-  // For seed data only - actual auth will use bcrypt properly
-  // In production, the API will hash passwords with bcrypt
-  return `$2b$10$${password.padEnd(53, '0')}`; // Fake bcrypt format for testing
+async function hash(password: string, rounds = 10): Promise<string> {
+  return bcrypt.hash(password, rounds);
 }
 
 async function main() {

@@ -98,7 +98,10 @@ model Profile {
   id                 String   @id @default(cuid())
   userId             String   @unique
   displayName        String
-  birthYear          Int?
+  birthDate          DateTime? // Keep for backward compatibility
+  birthDay           Int?      // 1-31
+  birthMonth         Int?      // 1-12
+  birthYear          Int?      // e.g., 1990
   heightCm           Float?
   weightKg           Float?
   country            String?
