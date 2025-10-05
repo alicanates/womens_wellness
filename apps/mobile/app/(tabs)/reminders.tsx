@@ -18,6 +18,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { remindersService } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
 import { useNotifications } from '@/hooks/useNotifications';
+import { theme } from '@/utils/theme';
 
 interface Reminder {
   id: string;
@@ -270,7 +271,8 @@ export default function RemindersScreen() {
                     <Switch
                       value={reminder.active}
                       onValueChange={() => handleToggle(reminder.id, reminder.active)}
-                      trackColor={{ false: '#ccc', true: '#007AFF' }}
+                      trackColor={{ false: '#ccc', true: theme.colors.primary }}
+                      thumbColor={reminder.active ? '#fff' : '#f4f3f4'}
                     />
                   </View>
 
@@ -733,7 +735,7 @@ function CreateReminderModal({ onClose, onSuccess }: CreateReminderModalProps) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   container: {
     flex: 1,
@@ -748,53 +750,60 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: theme.spacing.lg,
     paddingBottom: 12,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   statusBar: {
-    backgroundColor: '#e7f3ff',
-    paddingHorizontal: 20,
+    backgroundColor: theme.colors.info,
+    paddingHorizontal: theme.spacing.lg,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#d0e8ff',
+    borderBottomColor: theme.colors.border,
   },
   statusBarError: {
-    backgroundColor: '#ffe7e7',
-    borderBottomColor: '#ffc4c4',
+    backgroundColor: theme.colors.error,
+    borderBottomColor: theme.colors.border,
   },
   statusText: {
     fontSize: 12,
-    color: '#0066cc',
+    color: theme.colors.text,
     textAlign: 'center',
+    fontWeight: '600',
   },
   statusTextError: {
     fontSize: 12,
-    color: '#cc0000',
+    color: theme.colors.textOnPrimary,
     textAlign: 'center',
+    fontWeight: '600',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    ...theme.typography.title,
+    color: theme.colors.text,
   },
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   addButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: theme.button.borderRadius,
+    shadowColor: theme.button.shadowColor,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   addButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: theme.colors.textOnPrimary,
+    fontWeight: '700',
   },
   loadingText: {
     textAlign: 'center',
     padding: 20,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   emptyState: {
     alignItems: 'center',
@@ -802,28 +811,30 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 8,
-    color: '#333',
+    color: theme.colors.text,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.textSecondary,
     textAlign: 'center',
   },
   remindersList: {
-    padding: 16,
+    padding: theme.spacing.md,
   },
   reminderCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: theme.colors.backgroundCard,
+    borderRadius: theme.card.borderRadius,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    shadowColor: theme.card.shadowColor,
+    shadowOffset: theme.card.shadowOffset,
+    shadowOpacity: theme.card.shadowOpacity,
+    shadowRadius: theme.card.shadowRadius,
+    elevation: theme.card.elevation,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   reminderHeader: {
     flexDirection: 'row',
@@ -836,39 +847,44 @@ const styles = StyleSheet.create({
   },
   reminderTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 4,
+    color: theme.colors.text,
   },
   reminderType: {
     fontSize: 12,
-    color: '#666',
+    color: theme.colors.textSecondary,
     marginBottom: 2,
+    fontWeight: '500',
   },
   reminderDays: {
     fontSize: 12,
-    color: '#007AFF',
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
   reminderMessage: {
     fontSize: 14,
-    color: '#333',
+    color: theme.colors.text,
     marginBottom: 12,
+    lineHeight: 20,
   },
   reminderFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: theme.colors.border,
     paddingTop: 12,
   },
   nextRunText: {
     fontSize: 12,
-    color: '#666',
+    color: theme.colors.textSecondary,
+    fontWeight: '500',
   },
   deleteText: {
     fontSize: 14,
-    color: '#FF3B30',
-    fontWeight: '600',
+    color: theme.colors.error,
+    fontWeight: '700',
   },
   modal: {
     flex: 1,
@@ -878,21 +894,22 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: theme.colors.backgroundCard,
+    borderRadius: 20,
+    padding: theme.spacing.lg,
     width: '100%',
     maxWidth: 400,
     maxHeight: SCREEN_HEIGHT * 0.85,
   },
   modalTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '800',
     marginBottom: 20,
+    color: theme.colors.text,
   },
   typeSelector: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
     gap: 8,
   },
   typeChip: {
@@ -901,20 +918,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
     alignItems: 'center',
+    backgroundColor: theme.colors.background,
   },
   typeChipActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   typeChipText: {
-    color: '#555',
-    fontWeight: '600',
+    color: theme.colors.text,
+    fontWeight: '700',
     fontSize: 14,
   },
   typeChipTextActive: {
-    color: '#fff',
+    color: theme.colors.textOnPrimary,
   },
   label: {
     fontSize: 15,
@@ -949,12 +967,12 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
   },
   modalButtonPrimary: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   modalButtonPrimaryText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: theme.colors.textOnPrimary,
+    fontWeight: '700',
   },
   // Time Picker Styles
   timePickerButton: {
@@ -969,8 +987,8 @@ const styles = StyleSheet.create({
   },
   timePickerButtonText: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#007AFF',
+    fontWeight: '700',
+    color: theme.colors.primary,
   },
   timePickerIcon: {
     fontSize: 20,
@@ -1011,8 +1029,8 @@ const styles = StyleSheet.create({
   },
   pickerConfirmText: {
     fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
+    color: theme.colors.primary,
+    fontWeight: '700',
   },
   wheelContainer: {
     flexDirection: 'row',
@@ -1053,8 +1071,8 @@ const styles = StyleSheet.create({
   },
   scrollPickerItemTextSelected: {
     fontSize: 28,
-    color: '#007AFF',
-    fontWeight: '600',
+    color: theme.colors.primary,
+    fontWeight: '700',
   },
   // Day Selector Styles
   daySelectorButton: {
@@ -1096,16 +1114,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f8f8',
   },
   daySelectorOptionSelected: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary,
   },
   daySelectorOptionText: {
     fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
+    color: theme.colors.text,
+    fontWeight: '600',
   },
   daySelectorOptionTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
+    color: theme.colors.textOnPrimary,
+    fontWeight: '700',
   },
   checkmark: {
     fontSize: 20,

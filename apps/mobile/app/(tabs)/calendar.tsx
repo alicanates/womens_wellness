@@ -13,6 +13,7 @@ import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cyclesService } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
+import { theme } from '@/utils/theme';
 
 export default function CalendarScreen() {
   const queryClient = useQueryClient();
@@ -256,15 +257,15 @@ export default function CalendarScreen() {
       {/* Legend */}
       <View style={styles.legend}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendColor, { backgroundColor: '#FF6B6B' }]} />
+          <View style={[styles.legendColor, { backgroundColor: '#FF1493' }]} />
           <Text style={styles.legendText}>Regl</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendColor, { backgroundColor: '#FFD93D' }]} />
+          <View style={[styles.legendColor, { backgroundColor: '#9C27B0' }]} />
           <Text style={styles.legendText}>Verimli</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendColor, { backgroundColor: '#A8DADC' }]} />
+          <View style={[styles.legendColor, { backgroundColor: '#FF69B4' }]} />
           <Text style={styles.legendText}>Tahmin</Text>
         </View>
       </View>
@@ -356,144 +357,161 @@ export default function CalendarScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   container: {
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 100, // Extra padding for bottom tab bar
+    paddingBottom: 100,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.backgroundCard,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.colors.border,
   },
   navButton: {
-    padding: 8,
+    padding: theme.spacing.sm,
   },
   navButtonText: {
     fontSize: 24,
-    color: '#007AFF',
+    color: theme.colors.primary,
   },
   headerCenter: {
     alignItems: 'center',
   },
   monthText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: theme.colors.text,
   },
   todayButton: {
     fontSize: 12,
-    color: '#007AFF',
+    color: theme.colors.primary,
     marginTop: 4,
+    fontWeight: '600',
   },
   legend: {
     flexDirection: 'row',
     justifyContent: 'center',
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.backgroundCard,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.colors.border,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 8,
+    marginHorizontal: theme.spacing.sm,
   },
   legendColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     marginRight: 4,
   },
   legendText: {
     fontSize: 12,
-    color: '#666',
+    color: theme.colors.textSecondary,
+    fontWeight: '500',
   },
   predictionCard: {
-    backgroundColor: '#fff',
-    margin: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: theme.colors.backgroundCard,
+    margin: theme.spacing.md,
+    padding: theme.card.padding,
+    borderRadius: theme.card.borderRadius,
+    shadowColor: theme.card.shadowColor,
+    shadowOffset: theme.card.shadowOffset,
+    shadowOpacity: theme.card.shadowOpacity,
+    shadowRadius: theme.card.shadowRadius,
+    elevation: theme.card.elevation,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   predictionTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.sm,
   },
   predictionDate: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 8,
+    fontSize: 22,
+    fontWeight: '800',
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.sm,
   },
   predictionMeta: {
     fontSize: 12,
-    color: '#666',
+    color: theme.colors.textSecondary,
     marginTop: 4,
   },
   calendar: {
-    backgroundColor: '#fff',
-    margin: 16,
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: theme.colors.backgroundCard,
+    margin: theme.spacing.md,
+    borderRadius: theme.card.borderRadius,
+    padding: theme.spacing.md,
+    shadowColor: theme.card.shadowColor,
+    shadowOffset: theme.card.shadowOffset,
+    shadowOpacity: theme.card.shadowOpacity,
+    shadowRadius: theme.card.shadowRadius,
+    elevation: theme.card.elevation,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   weekRow: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   dayHeader: {
     flex: 1,
     textAlign: 'center',
     fontSize: 12,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
   },
   daysContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
   logButton: {
-    backgroundColor: '#007AFF',
-    margin: 16,
-    marginBottom: 8,
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: theme.colors.primary,
+    margin: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    padding: theme.button.padding,
+    borderRadius: theme.button.borderRadius,
     alignItems: 'center',
+    shadowColor: theme.button.shadowColor,
+    shadowOffset: theme.button.shadowOffset,
+    shadowOpacity: theme.button.shadowOpacity,
+    shadowRadius: theme.button.shadowRadius,
+    elevation: theme.button.elevation,
   },
   logButtonText: {
-    color: '#fff',
+    color: theme.colors.textOnPrimary,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   resetButton: {
-    backgroundColor: '#FF3B30',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: theme.colors.error,
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    padding: theme.button.padding,
+    borderRadius: theme.button.borderRadius,
     alignItems: 'center',
+    shadowColor: theme.colors.error,
+    shadowOffset: theme.button.shadowOffset,
+    shadowOpacity: 0.2,
+    shadowRadius: theme.button.shadowRadius,
+    elevation: theme.button.elevation,
   },
   resetButtonText: {
-    color: '#fff',
+    color: theme.colors.textOnPrimary,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
 
@@ -507,32 +525,34 @@ const calendarStyles = StyleSheet.create({
     marginVertical: 2,
   },
   periodDay: {
-    backgroundColor: '#FF6B6B',
-    borderRadius: 8,
+    backgroundColor: '#FF1493', // Deep pink for period - very distinctive
+    borderRadius: 12,
   },
   fertileDay: {
-    backgroundColor: '#FFD93D',
-    borderRadius: 8,
+    backgroundColor: '#9C27B0', // Purple for fertile - clearly different
+    borderRadius: 12,
   },
   predictedDay: {
-    backgroundColor: '#A8DADC',
-    borderRadius: 8,
+    backgroundColor: '#FF69B4', // Hot pink for predicted - medium tone
+    borderRadius: 12,
   },
   today: {
     borderWidth: 2,
-    borderColor: '#007AFF',
+    borderColor: theme.colors.primaryDark,
   },
   dayText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
+    color: theme.colors.text,
   },
   dayTextHighlight: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   cycleDayText: {
     fontSize: 9,
     color: '#fff',
     marginTop: 2,
+    fontWeight: '600',
   },
 });

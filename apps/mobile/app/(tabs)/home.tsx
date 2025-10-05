@@ -3,7 +3,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
-import { waterService, userService, remindersService } from '@/services/api';
+import { waterService, userService } from '@/services/api';
+import { getGreetingMessage } from '@/utils/greeting';
+import { theme } from '@/utils/theme';
 
 export default function HomeScreen() {
   const { user } = useAuthStore();
@@ -22,11 +24,8 @@ export default function HomeScreen() {
     enabled: isAuthenticated,
   });
 
-  const { data: reminders } = useQuery({
-    queryKey: ['reminders'],
-    queryFn: () => remindersService.getReminders(),
-    enabled: isAuthenticated,
-  });
+  const displayName = (userData as any)?.profile?.displayName || user?.email?.split('@')[0] || 'Misafir';
+  const greetingMessage = getGreetingMessage(displayName);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -35,14 +34,18 @@ export default function HomeScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-      <Text style={styles.title}>Hoş Geldiniz</Text>
-      <Text style={styles.subtitle}>
-        {(userData as any)?.profile?.displayName || user?.email}
-      </Text>
+      {/* Welcome Header */}
+      <View style={styles.welcomeContainer}>
+        <Text style={styles.greeting}>{greetingMessage}</Text>
+        <Text style={styles.question}>Bugün nasılsın? 💕</Text>
+      </View>
 
       {/* Water Card */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Bugünkü Su Tüketimi</Text>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardIcon}>💧</Text>
+          <Text style={styles.cardTitle}>Bugünkü Su Tüketimi</Text>
+        </View>
         <Text style={styles.cardValue}>
           {(waterToday as any)?.totalL || 0} L
         </Text>
@@ -59,51 +62,16 @@ export default function HomeScreen() {
 
       {/* BMI Card */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Vücut Kitle İndeksi</Text>
-        <Text style={styles.cardSubtitle}>Hesapla</Text>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardIcon}>⚖️</Text>
+          <Text style={styles.cardTitle}>Vücut Kitle İndeksi</Text>
+        </View>
+        <Text style={styles.cardSubtitle}>Sağlık hedeflerine ulaşmak için BMI'nı hesapla</Text>
         <TouchableOpacity
           style={styles.cardButton}
           onPress={() => router.push('/bmi-calculator')}
         >
           <Text style={styles.cardButtonText}>BMI Hesapla</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Period Card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Regl Takvimi</Text>
-        <Text style={styles.cardSubtitle}>Takip et</Text>
-        <TouchableOpacity
-          style={styles.cardButton}
-          onPress={() => router.push('/(tabs)/calendar')}
-        >
-          <Text style={styles.cardButtonText}>Takvime Git</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Reminders Card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Hatırlatıcılar</Text>
-        <Text style={styles.cardSubtitle}>
-          {(reminders as any)?.length || 0} aktif hatırlatıcı
-        </Text>
-        <TouchableOpacity
-          style={styles.cardButton}
-          onPress={() => router.push('/(tabs)/reminders')}
-        >
-          <Text style={styles.cardButtonText}>Hatırlatıcıları Yönet</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* AI Companion Card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>NOVA - AI Arkadaşın</Text>
-        <Text style={styles.cardSubtitle}>Sohbet et</Text>
-        <TouchableOpacity
-          style={styles.cardButton}
-          onPress={() => router.push('/(tabs)/chat')}
-        >
-          <Text style={styles.cardButtonText}>Sohbeti Aç</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -114,63 +82,85 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   container: {
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 100, // Extra padding for bottom tab bar
+    paddingBottom: 100,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    padding: 20,
-    paddingBottom: 8,
+  welcomeContainer: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.xl,
+    paddingBottom: theme.spacing.lg,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+  greeting: {
+    ...theme.typography.title,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
+  },
+  question: {
+    ...theme.typography.subtitle,
+    color: theme.colors.textSecondary,
+    fontWeight: '500',
   },
   card: {
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: theme.colors.backgroundCard,
+    marginHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    borderRadius: theme.card.borderRadius,
+    padding: theme.card.padding,
+    shadowColor: theme.card.shadowColor,
+    shadowOffset: theme.card.shadowOffset,
+    shadowOpacity: theme.card.shadowOpacity,
+    shadowRadius: theme.card.shadowRadius,
+    elevation: theme.card.elevation,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  cardIcon: {
+    fontSize: 24,
+    marginRight: theme.spacing.sm,
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
+    fontWeight: '700',
+    color: theme.colors.text,
+    flex: 1,
   },
   cardValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 4,
+    fontSize: 36,
+    fontWeight: '800',
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.xs,
   },
   cardSubtitle: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.md,
+    lineHeight: 20,
   },
   cardButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.button.borderRadius,
+    padding: theme.button.padding,
     alignItems: 'center',
+    shadowColor: theme.button.shadowColor,
+    shadowOffset: theme.button.shadowOffset,
+    shadowOpacity: theme.button.shadowOpacity,
+    shadowRadius: theme.button.shadowRadius,
+    elevation: theme.button.elevation,
   },
   cardButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    color: theme.colors.textOnPrimary,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });
