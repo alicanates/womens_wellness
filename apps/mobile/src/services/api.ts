@@ -161,6 +161,44 @@ export const authService = {
 export const userService = {
   getMe: () => api.get('/me'),
   updateMe: (data: any) => api.patch('/me', data),
+
+  uploadProfilePicture: async (fileUri: string): Promise<{ profilePictureUrl: string }> => {
+    const token = await SecureStore.getItemAsync('accessToken');
+
+    if (!token) {
+      throw new Error('No authentication token found. Please log in again.');
+    }
+
+    // Create form data
+    const formData = new FormData();
+    const filename = fileUri.split('/').pop() || 'profile.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+    formData.append('file', {
+      uri: fileUri,
+      name: filename,
+      type,
+    } as any);
+
+    // Upload with multipart/form-data
+    // Note: Don't set Content-Type header - it will be set automatically with boundary
+    const response = await fetch(`${API_BASE_URL}/me/profile-picture`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      const errorMessage = error.message || error.error || `Upload failed with status ${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  },
 };
 
 // Metrics endpoints

@@ -1,8 +1,14 @@
-import { Controller, Get, Patch, Body, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Patch, Body, UseGuards, Post, BadRequestException, Req } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import * as fs from 'fs';
+import * as path from 'path';
+import { promisify } from 'util';
+import { pipeline } from 'stream';
+
+const pump = promisify(pipeline);
 
 class UpdateProfileDto {
   displayName?: string;
@@ -10,6 +16,7 @@ class UpdateProfileDto {
   heightCm?: number;
   weightKg?: number;
   timezone?: string;
+  profilePictureUrl?: string;
   preferencesJson?: any;
 }
 
@@ -30,5 +37,65 @@ export class UsersController {
   @ApiOperation({ summary: 'Update current user profile' })
   async updateMe(@CurrentUser() user: any, @Body() dto: UpdateProfileDto) {
     return this.usersService.updateProfile(user.id, dto);
+  }
+
+  @Post('me/profile-picture')
+  @ApiOperation({ summary: 'Upload profile picture' })
+  @ApiConsumes('multipart/form-data')
+  async uploadProfilePicture(@CurrentUser() user: any, @Req() req: any) {
+    try {
+      const data = await req.file();
+
+      if (!data) {
+        throw new BadRequestException('File is required');
+      }
+
+      // Validate file type
+      const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedMimeTypes.includes(data.mimetype)) {
+        throw new BadRequestException('Only image files are allowed (jpg, jpeg, png, gif, webp)');
+      }
+
+      // Generate unique filename
+      const fileExtension = path.extname(data.filename);
+      const randomName = Array(32)
+        .fill(null)
+        .map(() => Math.round(Math.random() * 16).toString(16))
+        .join('');
+      const filename = `${randomName}${fileExtension}`;
+
+      // Ensure upload directory exists
+      const uploadDir = path.join(process.cwd(), 'uploads', 'profiles');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      // Save file
+      const filePath = path.join(uploadDir, filename);
+      await pump(data.file, fs.createWriteStream(filePath));
+
+      // Generate public URL (in production, this would be an S3 URL)
+      const baseUrl = process.env.API_BASE_URL || 'http://localhost:4000';
+      const profilePictureUrl = `${baseUrl}/uploads/profiles/${filename}`;
+
+      console.log('Updating profile with URL:', profilePictureUrl, 'for user:', user.id);
+
+      // Update user profile with new picture URL
+      try {
+        const updatedUser = await this.usersService.updateProfile(user.id, { profilePictureUrl });
+        console.log('Profile updated successfully, new URL:', updatedUser?.profile?.profilePictureUrl);
+      } catch (updateError) {
+        console.error('Failed to update profile:', updateError);
+        throw new BadRequestException('Failed to update profile with picture URL');
+      }
+
+      return { profilePictureUrl };
+    } catch (error) {
+      console.error('Upload error:', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to upload profile picture');
+    }
   }
 }

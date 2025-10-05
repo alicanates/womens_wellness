@@ -43,7 +43,12 @@ export default function SettingsScreen() {
   const { data: userData, isLoading } = useQuery({
     queryKey: ['me'],
     queryFn: () => userService.getMe(),
-    onSuccess: (data: any) => {
+  });
+
+  // Sync local state with query data
+  useEffect(() => {
+    if (userData) {
+      const data = userData as any;
       setDisplayName(data?.profile?.displayName || '');
       if (data?.profile?.birthYear) {
         // If we have birthYear, create a date from it (January 1st of that year)
@@ -54,8 +59,8 @@ export default function SettingsScreen() {
       if (data?.profile?.profilePictureUrl) {
         setProfilePictureUri(data.profile.profilePictureUrl);
       }
-    },
-  });
+    }
+  }, [userData]);
 
   const updateProfileMutation = useMutation({
     mutationFn: (data: any) => userService.updateMe(data),
@@ -85,8 +90,19 @@ export default function SettingsScreen() {
     });
 
     if (!result.canceled && result.assets[0]) {
-      setProfilePictureUri(result.assets[0].uri);
-      // TODO: Upload image to server and get URL
+      const localUri = result.assets[0].uri;
+      setProfilePictureUri(localUri);
+
+      try {
+        // Upload image to server
+        const response = await userService.uploadProfilePicture(localUri);
+        setProfilePictureUri(response.profilePictureUrl);
+        queryClient.invalidateQueries({ queryKey: ['me'] });
+        Alert.alert('Başarılı', 'Profil fotoğrafı güncellendi');
+      } catch (error: any) {
+        Alert.alert('Hata', error.message || 'Fotoğraf yüklenemedi');
+        setProfilePictureUri((userData as any)?.profile?.profilePictureUrl || null);
+      }
     }
   };
 
@@ -105,8 +121,19 @@ export default function SettingsScreen() {
     });
 
     if (!result.canceled && result.assets[0]) {
-      setProfilePictureUri(result.assets[0].uri);
-      // TODO: Upload image to server and get URL
+      const localUri = result.assets[0].uri;
+      setProfilePictureUri(localUri);
+
+      try {
+        // Upload image to server
+        const response = await userService.uploadProfilePicture(localUri);
+        setProfilePictureUri(response.profilePictureUrl);
+        queryClient.invalidateQueries({ queryKey: ['me'] });
+        Alert.alert('Başarılı', 'Profil fotoğrafı güncellendi');
+      } catch (error: any) {
+        Alert.alert('Hata', error.message || 'Fotoğraf yüklenemedi');
+        setProfilePictureUri((userData as any)?.profile?.profilePictureUrl || null);
+      }
     }
   };
 
@@ -119,9 +146,16 @@ export default function SettingsScreen() {
         {
           text: 'Sil',
           style: 'destructive',
-          onPress: () => {
-            setProfilePictureUri(null);
-            // TODO: Delete from server
+          onPress: async () => {
+            try {
+              // Delete from server by setting to null
+              await userService.updateMe({ profilePictureUrl: null });
+              setProfilePictureUri(null);
+              queryClient.invalidateQueries({ queryKey: ['me'] });
+              Alert.alert('Başarılı', 'Profil fotoğrafı silindi');
+            } catch (error: any) {
+              Alert.alert('Hata', error.message || 'Fotoğraf silinemedi');
+            }
           },
         },
       ]
@@ -336,10 +370,10 @@ export default function SettingsScreen() {
               <TouchableOpacity
                 style={[styles.button, styles.primaryButton]}
                 onPress={handleSaveProfile}
-                disabled={updateProfileMutation.isLoading}
+                disabled={updateProfileMutation.isPending}
               >
                 <Text style={styles.primaryButtonText}>
-                  {updateProfileMutation.isLoading ? 'Kaydediliyor...' : 'Kaydet'}
+                  {updateProfileMutation.isPending ? 'Kaydediliyor...' : 'Kaydet'}
                 </Text>
               </TouchableOpacity>
             </View>

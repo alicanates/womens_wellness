@@ -34,6 +34,7 @@ export class UsersService {
         ...(data.heightCm && { heightCm: data.heightCm }),
         ...(data.weightKg && { weightKg: data.weightKg }),
         ...(data.timezone && { timezone: data.timezone }),
+        ...(data.profilePictureUrl !== undefined && { profilePictureUrl: data.profilePictureUrl }),
         ...(data.preferencesJson && { preferencesJson: data.preferencesJson }),
       },
     });

@@ -2,12 +2,31 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { join } from 'path';
+import fastifyStatic from '@fastify/static';
+import fastifyMultipart from '@fastify/multipart';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter(),
   );
+
+  // Register multipart for file uploads
+  await app.register(fastifyMultipart as any, {
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB
+    },
+  });
+
+  // Serve static files (profile pictures, etc.)
+  // In development: __dirname is dist/, so .. goes to project root
+  // In production: adjust path as needed
+  const uploadsPath = join(process.cwd(), 'uploads');
+  await app.register(fastifyStatic as any, {
+    root: uploadsPath,
+    prefix: '/uploads/',
+  });
 
   // CORS
   app.enableCors({

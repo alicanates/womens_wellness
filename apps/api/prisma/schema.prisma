@@ -95,17 +95,18 @@ model User {
 }
 
 model Profile {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  displayName     String
-  birthYear       Int?
-  heightCm        Float?
-  weightKg        Float?
-  country         String?
-  timezone        String   @default("Europe/Istanbul")
-  preferencesJson Json?    // Encrypted field
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  displayName        String
+  birthYear          Int?
+  heightCm           Float?
+  weightKg           Float?
+  country            String?
+  timezone           String   @default("Europe/Istanbul")
+  profilePictureUrl  String?
+  preferencesJson    Json?    // Encrypted field
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
