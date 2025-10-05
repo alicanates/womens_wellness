@@ -17,7 +17,7 @@ import { useAuthStore } from '@/store/authStore';
 import { chatService, quotaService } from '@/services/api';
 import { SSEClient } from '@/lib/sse';
 import * as SecureStore from 'expo-secure-store';
-import { theme } from '@/utils/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 interface Message {
   id: string;
@@ -28,6 +28,7 @@ interface Message {
 }
 
 export default function ChatScreen() {
+  const theme = useTheme();
   const { user } = useAuthStore();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const queryClient = useQueryClient();
@@ -199,6 +200,8 @@ export default function ChatScreen() {
     }
   }, [messages]);
 
+  const styles = createStyles(theme);
+
   const renderMessage = ({ item }: { item: Message }) => {
     const isUser = item.role === 'user';
 
@@ -279,6 +282,7 @@ export default function ChatScreen() {
             <TextInput
               style={styles.input}
               placeholder="Mesajınızı yazın..."
+              placeholderTextColor={theme.colors.textLight}
               value={inputText}
               onChangeText={setInputText}
               multiline
@@ -307,7 +311,7 @@ export default function ChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,

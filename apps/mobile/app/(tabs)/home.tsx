@@ -1,13 +1,14 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { waterService, userService } from '@/services/api';
 import { getGreetingMessage } from '@/utils/greeting';
-import { theme } from '@/utils/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function HomeScreen() {
+  const theme = useTheme();
   const { user } = useAuthStore();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const router = useRouter();
@@ -27,6 +28,8 @@ export default function HomeScreen() {
   const displayName = (userData as any)?.profile?.displayName || user?.email?.split('@')[0] || 'Misafir';
   const greetingMessage = getGreetingMessage(displayName);
 
+  const styles = createStyles(theme);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
@@ -34,10 +37,29 @@ export default function HomeScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-      {/* Welcome Header */}
-      <View style={styles.welcomeContainer}>
-        <Text style={styles.greeting}>{greetingMessage}</Text>
-        <Text style={styles.question}>Bugün nasılsın? 💕</Text>
+      {/* Header with Profile Picture */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.greeting}>{greetingMessage}</Text>
+          <Text style={styles.question}>Bugün nasılsın? 💕</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() => router.push('/settings')}
+        >
+          {(userData as any)?.profile?.profilePictureUrl ? (
+            <Image
+              source={{ uri: (userData as any).profile.profilePictureUrl }}
+              style={styles.profileImage}
+            />
+          ) : (
+            <View style={styles.profilePlaceholder}>
+              <Text style={styles.profilePlaceholderText}>
+                {displayName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Water Card */}
@@ -79,7 +101,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -90,10 +112,41 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingBottom: 100,
   },
-  welcomeContainer: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.xl,
     paddingBottom: theme.spacing.lg,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  profileButton: {
+    marginLeft: theme.spacing.md,
+  },
+  profileImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+  },
+  profilePlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+  },
+  profilePlaceholderText: {
+    color: theme.colors.textOnPrimary,
+    fontSize: 20,
+    fontWeight: '700',
   },
   greeting: {
     ...theme.typography.title,

@@ -13,9 +13,10 @@ import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cyclesService } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
-import { theme } from '@/utils/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function CalendarScreen() {
+  const theme = useTheme();
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const today = new Date();
@@ -99,14 +100,15 @@ export default function CalendarScreen() {
   };
 
   const getDayStyle = (day: any): StyleProp<ViewStyle>[] => {
-    const styles: StyleProp<ViewStyle>[] = [calendarStyles.day];
+    const calStyles = createCalendarStyles(theme);
+    const styles: StyleProp<ViewStyle>[] = [calStyles.day];
 
     if (day.isPeriod) {
-      styles.push(calendarStyles.periodDay);
+      styles.push(calStyles.periodDay);
     } else if (day.isFertile) {
-      styles.push(calendarStyles.fertileDay);
+      styles.push(calStyles.fertileDay);
     } else if (day.isPredicted) {
-      styles.push(calendarStyles.predictedDay);
+      styles.push(calStyles.predictedDay);
     }
 
     // Ensure date is a Date object
@@ -118,7 +120,7 @@ export default function CalendarScreen() {
       dayDate.getFullYear() === today.getFullYear();
 
     if (isToday) {
-      styles.push(calendarStyles.today);
+      styles.push(calStyles.today);
     }
 
     return styles;
@@ -226,6 +228,9 @@ export default function CalendarScreen() {
       ]
     );
   };
+
+  const styles = createStyles(theme);
+  const calendarStyles = createCalendarStyles(theme);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -354,7 +359,7 @@ export default function CalendarScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -515,7 +520,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const calendarStyles = StyleSheet.create({
+const createCalendarStyles = (theme: ReturnType<typeof useTheme>) => StyleSheet.create({
   day: {
     width: '14.28%',
     aspectRatio: 1,

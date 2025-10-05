@@ -1,18 +1,27 @@
 import { Tabs } from 'expo-router';
 import { Platform, Text } from 'react-native';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function TabLayout() {
+  const theme = useTheme();
+
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#007AFF',
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textSecondary,
         headerShown: false,
-        tabBarStyle: Platform.select({
-          ios: {
-            position: 'absolute',
-          },
-          default: {},
-        }),
+        tabBarStyle: {
+          backgroundColor: theme.colors.backgroundCard,
+          borderTopColor: theme.colors.border,
+          borderTopWidth: 1,
+          ...Platform.select({
+            ios: {
+              position: 'absolute',
+            },
+            default: {},
+          }),
+        },
       }}
     >
       <Tabs.Screen

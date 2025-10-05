@@ -18,7 +18,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { remindersService } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
 import { useNotifications } from '@/hooks/useNotifications';
-import { theme } from '@/utils/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 interface Reminder {
   id: string;
@@ -38,6 +38,7 @@ const ITEM_HEIGHT = 50;
 const VISIBLE_ITEMS = 5;
 
 export default function RemindersScreen() {
+  const theme = useTheme();
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -196,6 +197,8 @@ export default function RemindersScreen() {
     return '';
   };
 
+  const styles = createStyles(theme);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
@@ -319,12 +322,14 @@ interface CreateReminderModalProps {
 
 // Modern Time Picker Component
 function TimePickerWheel({ value, onChange }: { value: string; onChange: (time: string) => void }) {
+  const theme = useTheme();
   const [showPicker, setShowPicker] = useState(false);
   const [hour, minute] = value.split(':').map(Number);
   const [selectedHour, setSelectedHour] = useState(hour);
   const [selectedMinute, setSelectedMinute] = useState(minute);
 
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const styles = createStyles(theme);
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const minutes = Array.from({ length: 60 }, (_, i) => i);
@@ -414,8 +419,10 @@ function ScrollPicker({
   onValueChange: (value: number) => void;
   formatter?: (value: number) => string;
 }) {
+  const theme = useTheme();
   const scrollViewRef = useRef<ScrollView>(null);
   const [initialized, setInitialized] = useState(false);
+  const styles = createStyles(theme);
 
   useEffect(() => {
     if (!initialized && scrollViewRef.current) {
@@ -477,8 +484,10 @@ function DaySelector({
   selectedDays: number[];
   onChange: (days: number[]) => void;
 }) {
+  const theme = useTheme();
   const [showPicker, setShowPicker] = useState(false);
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const styles = createStyles(theme);
 
   const weekDays = [
     { value: 0, label: 'Pazar' },
@@ -594,6 +603,7 @@ function DaySelector({
 }
 
 function CreateReminderModal({ onClose, onSuccess }: CreateReminderModalProps) {
+  const theme = useTheme();
   const [type, setType] = useState<'DAILY' | 'WEEKLY' | 'MONTHLY'>('DAILY');
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -633,6 +643,7 @@ function CreateReminderModal({ onClose, onSuccess }: CreateReminderModalProps) {
   };
 
   const isSubmitting = createMutation.isPending;
+  const styles = createStyles(theme);
 
   return (
     <Modal visible transparent animationType="fade">
@@ -692,6 +703,7 @@ function CreateReminderModal({ onClose, onSuccess }: CreateReminderModalProps) {
             <TextInput
               style={styles.textInput}
               placeholder="Örn. Su içmeyi unutma"
+              placeholderTextColor={theme.colors.textLight}
               value={title}
               onChangeText={setTitle}
               editable={!isSubmitting}
@@ -701,6 +713,7 @@ function CreateReminderModal({ onClose, onSuccess }: CreateReminderModalProps) {
             <TextInput
               style={[styles.textInput, styles.multilineInput]}
               placeholder="Örn. Bugünkü su hedefini tamamla"
+              placeholderTextColor={theme.colors.textLight}
               value={message}
               onChangeText={setMessage}
               editable={!isSubmitting}
@@ -713,7 +726,7 @@ function CreateReminderModal({ onClose, onSuccess }: CreateReminderModalProps) {
                 onPress={onClose}
                 disabled={isSubmitting}
               >
-                <Text>İptal</Text>
+                <Text style={styles.modalButtonText}>İptal</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonPrimary]}
@@ -732,7 +745,7 @@ function CreateReminderModal({ onClose, onSuccess }: CreateReminderModalProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -939,15 +952,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
     marginTop: 16,
-    color: '#333',
+    color: theme.colors.text,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     padding: 14,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.backgroundCard,
+    color: theme.colors.text,
   },
   multilineInput: {
     minHeight: 100,
@@ -964,7 +978,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.backgroundCard,
+  },
+  modalButtonText: {
+    color: theme.colors.text,
+    fontWeight: '600',
+    fontSize: 16,
   },
   modalButtonPrimary: {
     backgroundColor: theme.colors.primary,
@@ -979,9 +999,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.backgroundCard,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     padding: 14,
   },
@@ -1006,7 +1026,7 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   pickerContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.backgroundCard,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
@@ -1017,15 +1037,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.colors.border,
   },
   pickerTitle: {
     fontSize: 18,
     fontWeight: '600',
+    color: theme.colors.text,
   },
   pickerCancelText: {
     fontSize: 16,
-    color: '#666',
+    color: theme.colors.textSecondary,
   },
   pickerConfirmText: {
     fontSize: 16,
@@ -1043,6 +1064,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     marginHorizontal: 20,
+    color: theme.colors.text,
   },
   scrollPickerContainer: {
     height: ITEM_HEIGHT * VISIBLE_ITEMS,
@@ -1067,7 +1089,7 @@ const styles = StyleSheet.create({
   },
   scrollPickerItemText: {
     fontSize: 24,
-    color: '#999',
+    color: theme.colors.textSecondary,
   },
   scrollPickerItemTextSelected: {
     fontSize: 28,
@@ -1079,23 +1101,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.backgroundCard,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.colors.border,
     borderRadius: 12,
     padding: 14,
   },
   daySelectorButtonText: {
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.text,
     flex: 1,
   },
   daySelectorIcon: {
     fontSize: 12,
-    color: '#999',
+    color: theme.colors.textSecondary,
   },
   daySelectorContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.backgroundCard,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: SCREEN_HEIGHT * 0.7,
@@ -1111,7 +1133,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: theme.colors.backgroundSecondary,
   },
   daySelectorOptionSelected: {
     backgroundColor: theme.colors.primary,
@@ -1127,7 +1149,7 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     fontSize: 20,
-    color: '#fff',
+    color: theme.colors.textOnPrimary,
     fontWeight: 'bold',
   },
 });

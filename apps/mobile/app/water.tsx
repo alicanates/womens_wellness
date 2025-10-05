@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { waterService } from '@/services/api';
-import { theme } from '@/utils/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function WaterScreen() {
+  const theme = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [amount, setAmount] = useState('');
@@ -35,6 +36,8 @@ export default function WaterScreen() {
     }
     addWaterMutation.mutate(ml);
   };
+
+  const styles = createStyles(theme);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -90,6 +93,7 @@ export default function WaterScreen() {
         <TextInput
           style={styles.input}
           placeholder="Miktar (ml)"
+          placeholderTextColor={theme.colors.textLight}
           keyboardType="numeric"
           value={amount}
           onChangeText={setAmount}
@@ -118,7 +122,7 @@ export default function WaterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,

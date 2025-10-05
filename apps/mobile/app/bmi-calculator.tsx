@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { metricsService } from '@/services/api';
-import { theme } from '@/utils/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function BMICalculatorScreen() {
+  const theme = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [height, setHeight] = useState('');
@@ -56,6 +57,8 @@ export default function BMICalculatorScreen() {
     }
   };
 
+  const styles = createStyles(theme);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <ScrollView
@@ -72,6 +75,7 @@ export default function BMICalculatorScreen() {
           <TextInput
             style={styles.input}
             placeholder="örn: 170"
+            placeholderTextColor={theme.colors.textLight}
             keyboardType="numeric"
             value={height}
             onChangeText={setHeight}
@@ -84,6 +88,7 @@ export default function BMICalculatorScreen() {
           <TextInput
             style={styles.input}
             placeholder="örn: 65"
+            placeholderTextColor={theme.colors.textLight}
             keyboardType="numeric"
             value={weight}
             onChangeText={setWeight}
@@ -187,7 +192,7 @@ export default function BMICalculatorScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: ReturnType<typeof useTheme>) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
