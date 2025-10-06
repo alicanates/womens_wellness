@@ -112,9 +112,14 @@ export default function TourStep() {
       // If user provided last period date, create cycle
       if (data.lastPeriodDate) {
         try {
+          // Create a date at midnight in local timezone to avoid timezone issues
+          const localDate = new Date(data.lastPeriodDate);
+          localDate.setHours(0, 0, 0, 0);
+          console.log('Creating cycle with date:', localDate.toISOString());
           await cyclesService.createCycle({
-            startDate: data.lastPeriodDate.toISOString(),
+            startDate: localDate.toISOString(),
           });
+          console.log('Cycle created successfully');
         } catch (error) {
           console.error('Failed to create initial cycle:', error);
           // Don't block registration if cycle creation fails

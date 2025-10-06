@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -44,7 +44,7 @@ export class UsersService {
           where: { username: data.username.toLowerCase() },
         });
         if (existing && existing.userId !== userId) {
-          throw new Error('Username already taken');
+          throw new ConflictException('Bu kullanıcı adı zaten kullanılıyor');
         }
         updateData.username = data.username.toLowerCase();
       } else {
@@ -127,7 +127,7 @@ export class UsersService {
       });
 
       if (existingUser && existingUser.id !== userId) {
-        throw new Error('Email already exists');
+        throw new ConflictException('Bu e-posta adresi zaten kullanılıyor');
       }
 
       updateData.email = data.email;
