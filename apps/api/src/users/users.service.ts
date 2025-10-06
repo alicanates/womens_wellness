@@ -5,6 +5,14 @@ import { PrismaService } from '../prisma/prisma.service';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async isUsernameAvailable(username: string): Promise<boolean> {
+    const profile = await this.prisma.profile.findUnique({
+      where: { username: username.toLowerCase() },
+    });
+
+    return !profile;
+  }
+
   async getUserWithProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -29,6 +37,20 @@ export class UsersService {
     const updateData: any = {};
 
     if (data.displayName) updateData.displayName = data.displayName;
+    if (data.username !== undefined) {
+      // Check if username is available (if changing)
+      if (data.username) {
+        const existing = await this.prisma.profile.findUnique({
+          where: { username: data.username.toLowerCase() },
+        });
+        if (existing && existing.userId !== userId) {
+          throw new Error('Username already taken');
+        }
+        updateData.username = data.username.toLowerCase();
+      } else {
+        updateData.username = null;
+      }
+    }
     if (data.heightCm) updateData.heightCm = data.heightCm;
     if (data.weightKg) updateData.weightKg = data.weightKg;
     if (data.timezone) updateData.timezone = data.timezone;

@@ -43,6 +43,16 @@ export class AuthController {
     private readonly mailService: MailService,
   ) {}
 
+  @Get('check-email')
+  @ApiOperation({ summary: 'Check if email is available' })
+  async checkEmail(@Query('email') email: string) {
+    if (!email) {
+      return { available: false };
+    }
+    const available = await this.authService.isEmailAvailable(email);
+    return { available };
+  }
+
   @Post('register')
   @ApiOperation({ summary: 'Register with email and password' })
   async register(@Body() dto: RegisterDto) {

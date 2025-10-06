@@ -13,6 +13,13 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
+  async isEmailAvailable(email: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+    return !user;
+  }
+
   async validateUser(email: string, password: string) {
     const user = await this.prisma.user.findUnique({
       where: { email },

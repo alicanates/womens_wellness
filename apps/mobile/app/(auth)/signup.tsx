@@ -1,142 +1,79 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useAuthStore } from '@/store/authStore';
-import { authService } from '@/services/api';
 import { useTheme } from '@/hooks/useTheme';
+import { useOnboardingStore } from '@/store/onboardingStore';
 
 export default function SignUpScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { setAuth } = useAuthStore();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { loadDraft } = useOnboardingStore();
 
-  const handleSignUp = async () => {
-    if (!email || !password) {
-      Alert.alert('Hata', 'Lütfen e-posta ve şifrenizi girin');
-      return;
-    }
+  useEffect(() => {
+    // Load any saved draft when screen mounts
+    loadDraft();
+  }, []);
 
-    if (password.length < 8) {
-      Alert.alert('Hata', 'Şifre en az 8 karakter olmalıdır');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await authService.register({
-        email,
-        password,
-        displayName: displayName || undefined,
-      });
-      await setAuth(response.user, {
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-      });
-      router.replace('/(tabs)/home');
-    } catch (error: any) {
-      Alert.alert('Kayıt Hatası', error.message || 'Bir hata oluştu');
-    } finally {
-      setLoading(false);
-    }
+  const handleStartOnboarding = () => {
+    router.push('/(auth)/onboarding/identity');
   };
 
   const styles = createStyles(theme);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.emoji}>🌸</Text>
-              <Text style={styles.title}>Sana Hoş Geldin!</Text>
-              <Text style={styles.subtitle}>
-                Sağlıklı yaşam yolculuğuna başlamak için hesap oluştur
-              </Text>
-            </View>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.emoji}>🌸</Text>
+          <Text style={styles.title}>Sana Hoş Geldin!</Text>
+          <Text style={styles.subtitle}>
+            Sağlıklı yaşam yolculuğuna başlamak için hesap oluştur
+          </Text>
+        </View>
 
-            {/* Form */}
-            <View style={styles.form}>
-              <TextInput
-                style={styles.input}
-                placeholder="Ad Soyad (İsteğe bağlı)"
-                placeholderTextColor={theme.colors.textLight}
-                value={displayName}
-                onChangeText={setDisplayName}
-                editable={!loading}
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="E-posta"
-                placeholderTextColor={theme.colors.textLight}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                editable={!loading}
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Şifre (en az 8 karakter)"
-                placeholderTextColor={theme.colors.textLight}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                editable={!loading}
-              />
-
-              <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
-                onPress={handleSignUp}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color={theme.colors.textOnPrimary} />
-                ) : (
-                  <Text style={styles.buttonText}>Hesap Oluştur</Text>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => router.back()}
-                disabled={loading}
-                style={styles.linkContainer}
-              >
-                <Text style={styles.linkText}>
-                  Zaten hesabın var mı?{' '}
-                  <Text style={styles.linkTextBold}>Giriş yap</Text>
-                </Text>
-              </TouchableOpacity>
-            </View>
+        {/* Welcome Cards */}
+        <View style={styles.featuresContainer}>
+          <View style={styles.featureCard}>
+            <Text style={styles.featureEmoji}>📅</Text>
+            <Text style={styles.featureText}>Adet döngüsü takibi</Text>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          <View style={styles.featureCard}>
+            <Text style={styles.featureEmoji}>💬</Text>
+            <Text style={styles.featureText}>AI asistan desteği</Text>
+          </View>
+          <View style={styles.featureCard}>
+            <Text style={styles.featureEmoji}>⏰</Text>
+            <Text style={styles.featureText}>Akıllı hatırlatmalar</Text>
+          </View>
+        </View>
+
+        {/* CTA */}
+        <View style={styles.ctaContainer}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleStartOnboarding}
+          >
+            <Text style={styles.buttonText}>Başla 🚀</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.linkContainer}
+          >
+            <Text style={styles.linkText}>
+              Zaten hesabın var mı?{' '}
+              <Text style={styles.linkTextBold}>Giriş yap</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -147,31 +84,26 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       flex: 1,
       backgroundColor: theme.colors.background,
     },
-    keyboardView: {
-      flex: 1,
-    },
-    scrollContent: {
-      flexGrow: 1,
-    },
     container: {
       flex: 1,
       paddingHorizontal: theme.spacing.lg,
       paddingVertical: theme.spacing.xl,
-      justifyContent: 'center',
+      justifyContent: 'space-between',
     },
     header: {
       alignItems: 'center',
-      marginBottom: theme.spacing.xxl,
+      marginTop: theme.spacing.xxl,
     },
     emoji: {
-      fontSize: 64,
-      marginBottom: theme.spacing.md,
+      fontSize: 80,
+      marginBottom: theme.spacing.lg,
     },
     title: {
       ...theme.typography.title,
       color: theme.colors.text,
       marginBottom: theme.spacing.sm,
       textAlign: 'center',
+      fontSize: 32,
     },
     subtitle: {
       ...theme.typography.body,
@@ -180,30 +112,39 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       paddingHorizontal: theme.spacing.lg,
       lineHeight: 24,
     },
-    form: {
-      width: '100%',
+    featuresContainer: {
+      gap: theme.spacing.md,
     },
-    input: {
+    featureCard: {
       backgroundColor: theme.colors.backgroundCard,
-      borderWidth: 2,
-      borderColor: theme.colors.border,
-      borderRadius: theme.button.borderRadius,
-      padding: theme.spacing.md,
-      marginBottom: theme.spacing.md,
-      fontSize: 16,
-      color: theme.colors.text,
+      borderRadius: theme.card.borderRadius,
+      padding: theme.spacing.lg,
+      flexDirection: 'row',
+      alignItems: 'center',
       shadowColor: theme.card.shadowColor,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.05,
       shadowRadius: 4,
       elevation: 2,
     },
+    featureEmoji: {
+      fontSize: 32,
+      marginRight: theme.spacing.md,
+    },
+    featureText: {
+      ...theme.typography.body,
+      color: theme.colors.text,
+      fontWeight: '600',
+      fontSize: 16,
+    },
+    ctaContainer: {
+      marginBottom: theme.spacing.lg,
+    },
     button: {
       backgroundColor: theme.colors.primary,
       borderRadius: theme.button.borderRadius,
       padding: theme.button.padding,
       alignItems: 'center',
-      marginTop: theme.spacing.md,
       marginBottom: theme.spacing.lg,
       shadowColor: theme.button.shadowColor,
       shadowOffset: theme.button.shadowOffset,
@@ -211,12 +152,9 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       shadowRadius: theme.button.shadowRadius,
       elevation: theme.button.elevation,
     },
-    buttonDisabled: {
-      opacity: 0.6,
-    },
     buttonText: {
       color: theme.colors.textOnPrimary,
-      fontSize: 16,
+      fontSize: 18,
       fontWeight: '700',
       letterSpacing: 0.5,
     },

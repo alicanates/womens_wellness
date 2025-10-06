@@ -31,6 +31,7 @@ export default function SettingsScreen() {
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [heightCm, setHeightCm] = useState(165);
   const [weightKg, setWeightKg] = useState(60);
@@ -48,6 +49,7 @@ export default function SettingsScreen() {
     if (userData) {
       const data = userData as any;
       setDisplayName(data?.profile?.displayName || '');
+      setUsername(data?.profile?.username || '');
       if (data?.profile?.birthDate) {
         setBirthDate(new Date(data.profile.birthDate));
       }
@@ -186,6 +188,7 @@ export default function SettingsScreen() {
   const handleSaveProfile = () => {
     const profileData: any = {
       displayName: displayName || undefined,
+      username: username || undefined,
       birthDate: birthDate ? birthDate.toISOString() : undefined,
       heightCm: heightCm,
       weightKg: weightKg,
@@ -297,6 +300,19 @@ export default function SettingsScreen() {
               placeholder="Ad Soyad"
               placeholderTextColor={theme.colors.textLight}
               editable={isEditingProfile}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Kullanıcı Adı</Text>
+            <TextInput
+              style={styles.input}
+              value={isEditingProfile ? username : ((userData as any)?.profile?.username || '')}
+              onChangeText={setUsername}
+              placeholder="kullaniciadi"
+              placeholderTextColor={theme.colors.textLight}
+              editable={isEditingProfile}
+              autoCapitalize="none"
             />
           </View>
 

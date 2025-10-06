@@ -12,6 +12,7 @@ const pump = promisify(pipeline);
 
 class UpdateProfileDto {
   displayName?: string;
+  username?: string;
   birthYear?: number;
   heightCm?: number;
   weightKg?: number;
@@ -28,24 +29,38 @@ class UpdateUserDto {
 
 @ApiTags('users')
 @Controller()
-@UseGuards(AuthGuard('jwt'))
-@ApiBearerAuth()
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Get('users/availability')
+  @ApiOperation({ summary: 'Check username availability' })
+  async checkUsernameAvailability(@Query('username') username: string) {
+    if (!username) {
+      throw new BadRequestException('Username is required');
+    }
+    const available = await this.usersService.isUsernameAvailable(username);
+    return { available };
+  }
+
   @Get('me')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
   async getMe(@CurrentUser() user: any) {
     return this.usersService.getUserWithProfile(user.id);
   }
 
   @Patch('me')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update current user profile' })
   async updateMe(@CurrentUser() user: any, @Body() dto: UpdateProfileDto) {
     return this.usersService.updateProfile(user.id, dto);
   }
 
   @Delete('me')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete current user account' })
   async deleteMe(@CurrentUser() user: any) {
     return this.usersService.deleteUser(user.id);
@@ -53,6 +68,8 @@ export class UsersController {
 
   // Admin endpoints
   @Get('users')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all users (Admin)' })
   async getAllUsers(
     @Query('page') page?: string,
@@ -64,24 +81,32 @@ export class UsersController {
   }
 
   @Get('users/:id')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user by ID (Admin)' })
   async getUserById(@Param('id') id: string) {
     return this.usersService.getUserById(id);
   }
 
   @Patch('users/:id')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update user (Admin)' })
   async updateUser(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.usersService.updateUser(id, dto);
   }
 
   @Delete('users/:id')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete user (Admin)' })
   async deleteUser(@Param('id') id: string) {
     return this.usersService.deleteUser(id);
   }
 
   @Post('me/profile-picture')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Upload profile picture' })
   @ApiConsumes('multipart/form-data')
   async uploadProfilePicture(@CurrentUser() user: any, @Req() req: any) {
