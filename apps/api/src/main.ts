@@ -43,6 +43,15 @@ async function bootstrap() {
   await app.register(fastifyStatic as any, {
     root: uploadsPath,
     prefix: '/uploads/',
+    decorateReply: false,
+  });
+
+  // Serve public files (HTML pages, etc.)
+  const publicPath = join(process.cwd(), 'public');
+  await app.register(fastifyStatic as any, {
+    root: publicPath,
+    prefix: '/public/',
+    decorateReply: false,
   });
 
   // Swagger/OpenAPI Documentation

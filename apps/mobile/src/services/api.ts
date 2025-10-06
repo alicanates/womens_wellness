@@ -155,6 +155,15 @@ export const authService = {
 
   googleLogin: (idToken: string) =>
     api.post<AuthResponse>('/auth/google', { idToken }, false),
+
+  forgotPassword: (data: { email: string }) =>
+    api.post<{ message: string }>('/auth/forgot-password', data, false),
+
+  resetPassword: (data: { token: string; newPassword: string }) =>
+    api.post<{ message: string }>('/auth/reset-password', data, false),
+
+  verifyResetToken: (token: string) =>
+    api.get<{ isValid: boolean }>(`/auth/verify-reset-token?token=${token}`, false),
 };
 
 // User endpoints

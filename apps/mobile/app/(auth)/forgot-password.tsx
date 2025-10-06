@@ -13,40 +13,80 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useAuthStore } from '@/store/authStore';
-import { authService } from '@/services/api';
 import { useTheme } from '@/hooks/useTheme';
+import { authService } from '@/services/api';
 
-export default function SignInScreen() {
+export default function ForgotPasswordScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { setAuth } = useAuthStore();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
-  const handleSignIn = async () => {
-    if (!email || !password) {
-      Alert.alert('Hata', 'Lütfen e-posta ve şifrenizi girin');
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert('Hata', 'Lütfen e-posta adresinizi girin');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Hata', 'Lütfen geçerli bir e-posta adresi girin');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await authService.login({ email, password });
-      await setAuth(response.user, {
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-      });
-      router.replace('/(tabs)/home');
+      await authService.forgotPassword({ email });
+      setEmailSent(true);
     } catch (error: any) {
-      Alert.alert('Giriş Hatası', error.message || 'Bir hata oluştu');
+      Alert.alert('Hata', error.message || 'Bir hata oluştu');
     } finally {
       setLoading(false);
     }
   };
 
   const styles = createStyles(theme);
+
+  if (emailSent) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.container}>
+          <View style={styles.successContainer}>
+            <Text style={styles.successEmoji}>✉️</Text>
+            <Text style={styles.successTitle}>E-posta Gönderildi!</Text>
+            <Text style={styles.successMessage}>
+              Eğer {email} adresine kayıtlı bir hesap varsa, şifre sıfırlama bağlantısını içeren bir e-posta gönderilecektir.
+            </Text>
+            <Text style={styles.successHint}>
+              E-postayı göremiyorsanız spam klasörünüzü kontrol edin.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.buttonText}>Giriş Sayfasına Dön</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                setEmailSent(false);
+                setEmail('');
+              }}
+              style={styles.linkContainer}
+            >
+              <Text style={styles.linkText}>
+                E-postayı almadınız mı?{' '}
+                <Text style={styles.linkTextBold}>Tekrar gönder</Text>
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -62,10 +102,10 @@ export default function SignInScreen() {
           <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.emoji}>💕</Text>
-              <Text style={styles.title}>Tekrar Hoş Geldin!</Text>
+              <Text style={styles.emoji}>🔐</Text>
+              <Text style={styles.title}>Şifreni mi Unuttun?</Text>
               <Text style={styles.subtitle}>
-                Sağlık yolculuğuna devam etmek için giriş yap
+                Endişelenme! E-posta adresini gir, sana şifre sıfırlama bağlantısı gönderelim.
               </Text>
             </View>
 
@@ -80,46 +120,29 @@ export default function SignInScreen() {
                 autoCapitalize="none"
                 keyboardType="email-address"
                 editable={!loading}
+                autoFocus
               />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Şifre"
-                placeholderTextColor={theme.colors.textLight}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                editable={!loading}
-              />
-
-              <TouchableOpacity
-                onPress={() => router.push('/(auth)/forgot-password')}
-                disabled={loading}
-                style={styles.forgotPasswordContainer}
-              >
-                <Text style={styles.forgotPasswordText}>Şifremi Unuttum</Text>
-              </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.button, loading && styles.buttonDisabled]}
-                onPress={handleSignIn}
+                onPress={handleForgotPassword}
                 disabled={loading}
               >
                 {loading ? (
                   <ActivityIndicator color={theme.colors.textOnPrimary} />
                 ) : (
-                  <Text style={styles.buttonText}>Giriş Yap</Text>
+                  <Text style={styles.buttonText}>Sıfırlama Bağlantısı Gönder</Text>
                 )}
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => router.push('/(auth)/signup')}
+                onPress={() => router.back()}
                 disabled={loading}
                 style={styles.linkContainer}
               >
                 <Text style={styles.linkText}>
-                  Hesabın yok mu?{' '}
-                  <Text style={styles.linkTextBold}>Hemen kayıt ol</Text>
+                  Şifreni hatırladın mı?{' '}
+                  <Text style={styles.linkTextBold}>Giriş yap</Text>
                 </Text>
               </TouchableOpacity>
             </View>
@@ -178,7 +201,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       borderColor: theme.colors.border,
       borderRadius: theme.button.borderRadius,
       padding: theme.spacing.md,
-      marginBottom: theme.spacing.md,
+      marginBottom: theme.spacing.lg,
       fontSize: 16,
       color: theme.colors.text,
       shadowColor: theme.card.shadowColor,
@@ -186,16 +209,6 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       shadowOpacity: 0.05,
       shadowRadius: 4,
       elevation: 2,
-    },
-    forgotPasswordContainer: {
-      alignSelf: 'flex-end',
-      marginBottom: theme.spacing.lg,
-      marginTop: -theme.spacing.xs,
-    },
-    forgotPasswordText: {
-      color: theme.colors.primary,
-      fontSize: 14,
-      fontWeight: '600',
     },
     button: {
       backgroundColor: theme.colors.primary,
@@ -230,5 +243,34 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     linkTextBold: {
       color: theme.colors.primary,
       fontWeight: '700',
+    },
+    successContainer: {
+      alignItems: 'center',
+    },
+    successEmoji: {
+      fontSize: 80,
+      marginBottom: theme.spacing.lg,
+    },
+    successTitle: {
+      ...theme.typography.title,
+      color: theme.colors.text,
+      marginBottom: theme.spacing.md,
+      textAlign: 'center',
+    },
+    successMessage: {
+      ...theme.typography.body,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      paddingHorizontal: theme.spacing.md,
+      lineHeight: 24,
+      marginBottom: theme.spacing.lg,
+    },
+    successHint: {
+      fontSize: 14,
+      color: theme.colors.textLight,
+      textAlign: 'center',
+      paddingHorizontal: theme.spacing.lg,
+      marginBottom: theme.spacing.xxl,
+      fontStyle: 'italic',
     },
   });
