@@ -15,6 +15,7 @@
     "@refinedev/nextjs-router": "^6.0.0",
     "@refinedev/react-hook-form": "^4.8.14",
     "@refinedev/simple-rest": "^5.0.1",
+    "@tanstack/react-query": "^4.41.0",
     "antd": "^5.12.2",
     "axios": "^1.6.2",
     "dayjs": "^1.11.10",

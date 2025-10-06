@@ -16,6 +16,11 @@ export default function UserList() {
         <Table.Column dataIndex="id" title="ID" width={80} />
         <Table.Column dataIndex="email" title="Email" />
         <Table.Column
+          dataIndex={['profile', 'username']}
+          title="Username"
+          render={(value) => value || '-'}
+        />
+        <Table.Column
           dataIndex="status"
           title="Status"
           render={(value) => (

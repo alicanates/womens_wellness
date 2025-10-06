@@ -32,6 +32,7 @@ export default function UserShow() {
       {record?.profile ? (
         <div>
           <p><strong>Display Name:</strong> {record.profile.displayName || 'N/A'}</p>
+          <p><strong>Username:</strong> {record.profile.username || 'N/A'}</p>
           <p><strong>Birth Date:</strong> {
             record.profile.birthDay && record.profile.birthMonth && record.profile.birthYear
               ? `${record.profile.birthDay}/${record.profile.birthMonth}/${record.profile.birthYear}`
