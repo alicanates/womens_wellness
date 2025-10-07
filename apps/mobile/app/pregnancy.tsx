@@ -259,35 +259,35 @@ export default function PregnancyScreen() {
       title: 'Kasılma Sayacı',
       icon: 'timer-outline',
       route: '/pregnancy/contractions',
-      implemented: false,
+      implemented: true,
     },
     {
       id: 'appointments',
       title: 'Randevular',
       icon: 'calendar-outline',
       route: '/pregnancy/appointments',
-      implemented: false,
+      implemented: true,
     },
     {
       id: 'medications',
       title: 'İlaçlar',
       icon: 'medical-outline',
       route: '/pregnancy/medications',
-      implemented: false,
+      implemented: true,
     },
     {
       id: 'birthplan',
       title: 'Doğum Planı',
       icon: 'document-text-outline',
       route: '/pregnancy/birth-plan',
-      implemented: false,
+      implemented: true,
     },
     {
       id: 'hospitalbag',
       title: 'Hastane Çantası',
       icon: 'bag-outline',
       route: '/pregnancy/hospital-bag',
-      implemented: false,
+      implemented: true,
     },
     {
       id: 'notes',
@@ -442,13 +442,7 @@ export default function PregnancyScreen() {
             <TouchableOpacity
               key={tool.id}
               style={styles.toolCard}
-              onPress={() => {
-                if (tool.implemented) {
-                  router.push(tool.route as any);
-                } else {
-                  alert(`${tool.title} yakında gelecek!`);
-                }
-              }}
+              onPress={() => router.push(tool.route as any)}
             >
               <View style={styles.toolIcon}>
                 <Text style={{ fontSize: 24 }}>
