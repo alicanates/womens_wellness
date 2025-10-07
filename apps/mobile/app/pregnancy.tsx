@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { pregnancyService } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
+import { usePregnancyStore } from '@/store/pregnancyStore';
 import { useTheme } from '@/hooks/useTheme';
 import { router } from 'expo-router';
 // Temporarily comment out icons until font is loaded
@@ -24,6 +25,7 @@ export default function PregnancyScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { clearPregnancy } = usePregnancyStore();
 
   // Fetch pregnancy data
   const { data: pregnancy, isLoading, error } = useQuery({
@@ -345,6 +347,7 @@ export default function PregnancyScreen() {
           onPress: async () => {
             try {
               await pregnancyService.delete();
+              clearPregnancy(); // Clear pregnancy mode state
               queryClient.invalidateQueries({ queryKey: ['pregnancy'] });
               router.back();
               Alert.alert('Başarılı', 'Hamilelik kaydı silindi');
