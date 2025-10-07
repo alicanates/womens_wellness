@@ -7,6 +7,7 @@ export interface PeriodCycle {
 
 export interface PredictionResult {
   nextStart: Date;
+  ovulation: Date;
   fertile: {
     start: Date;
     end: Date;
@@ -96,6 +97,7 @@ export class PredictionService {
 
     return {
       nextStart,
+      ovulation: ovulationDay,
       fertile: {
         start: fertileStart,
         end: fertileEnd,

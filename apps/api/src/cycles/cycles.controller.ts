@@ -103,4 +103,51 @@ export class CyclesController {
   async deleteAllCycles(@CurrentUser() user: any) {
     return this.cyclesService.deleteAllCycles(user.id);
   }
+
+  // Daily Log endpoints
+  @Post('daily-log')
+  async upsertDailyLog(
+    @CurrentUser() user: any,
+    @Body()
+    data: {
+      date: string;
+      flow?: 'light' | 'moderate' | 'heavy';
+      cramps?: number;
+      symptoms?: string[];
+      mood?: string[];
+      hadSex?: boolean;
+      contraception?: string[];
+      sexNotes?: string;
+      medications?: string[];
+      healthNotes?: string;
+      attachments?: string[];
+    },
+  ) {
+    return this.cyclesService.upsertDailyLog(user.id, data);
+  }
+
+  @Get('daily-log/:date')
+  async getDailyLog(
+    @CurrentUser() user: any,
+    @Param('date') date: string,
+  ) {
+    return this.cyclesService.getDailyLog(user.id, date);
+  }
+
+  @Get('daily-logs')
+  async getDailyLogs(
+    @CurrentUser() user: any,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    return this.cyclesService.getDailyLogs(user.id, startDate, endDate);
+  }
+
+  @Delete('daily-log/:date')
+  async deleteDailyLog(
+    @CurrentUser() user: any,
+    @Param('date') date: string,
+  ) {
+    return this.cyclesService.deleteDailyLog(user.id, date);
+  }
 }

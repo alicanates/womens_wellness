@@ -10,6 +10,20 @@ interface PeriodSymptoms {
   notes?: string;
 }
 
+interface DailyLogInput {
+  date: string;
+  flow?: 'light' | 'moderate' | 'heavy';
+  cramps?: number;
+  symptoms?: string[];
+  mood?: string[];
+  hadSex?: boolean;
+  contraception?: string[];
+  sexNotes?: string;
+  medications?: string[];
+  healthNotes?: string;
+  attachments?: string[];
+}
+
 @Injectable()
 export class CyclesService {
   constructor(
@@ -177,6 +191,22 @@ export class CyclesService {
       orderBy: { startDate: 'desc' },
     });
 
+    // Get daily logs for this month
+    const dailyLogs = await this.prisma.dailyLog.findMany({
+      where: {
+        userId,
+        date: {
+          gte: startOfMonth,
+          lte: endOfMonth,
+        },
+      },
+    });
+
+    // Create a map for quick lookup
+    const dailyLogMap = new Map(
+      dailyLogs.map((log) => [log.date.toISOString().split('T')[0], log])
+    );
+
     // Debug: log cycles for this month
     console.log(`📊 Cycles for ${year}-${month}:`, cycles.map(c => ({
       start: c.startDate.toISOString().split('T')[0],
@@ -205,13 +235,18 @@ export class CyclesService {
       isPeriod: boolean;
       isFertile: boolean;
       isPredicted: boolean;
+      isOvulation: boolean;
       cycleDay?: number;
+      markers: string[];
+      dailyLog?: any;
     }> = [];
 
     for (let day = 1; day <= endOfMonth.getDate(); day++) {
       const date = new Date(year, month - 1, day);
+      const dateKey = date.toISOString().split('T')[0];
       let isPeriod = false;
       let cycleDay: number | undefined;
+      const markers: string[] = [];
 
       // Check if this day is within any cycle's period days
       // Assume typical period lasts 3-7 days (default: 5 days if no end date)
@@ -234,6 +269,7 @@ export class CyclesService {
 
         if (dateNormalized >= start && dateNormalized <= end) {
           isPeriod = true;
+          markers.push('period');
           cycleDay = this.predictionService.getCycleDay(dateNormalized, start);
           console.log(`  🩸 Day ${day}: PERIOD (cycle ${cycle.id.slice(0,8)}, days ${start.toISOString().split('T')[0]} to ${end.toISOString().split('T')[0]})`);
           break;
@@ -245,7 +281,18 @@ export class CyclesService {
       if (prediction && !isPeriod) {
         isFertile = this.predictionService.isFertileDay(date, prediction);
         if (isFertile) {
+          markers.push('fertile');
           console.log(`  🌸 Day ${day}: FERTILE`);
+        }
+      }
+
+      // Check if ovulation day
+      let isOvulation = false;
+      if (prediction && !isPeriod) {
+        isOvulation = this.isSameDay(date, prediction.ovulation);
+        if (isOvulation) {
+          markers.push('ovulation');
+          console.log(`  ⭐ Day ${day}: OVULATION`);
         }
       }
 
@@ -258,12 +305,23 @@ export class CyclesService {
         }
       }
 
+      // Get daily log if exists
+      const dailyLog = dailyLogMap.get(dateKey);
+      if (dailyLog) {
+        if (dailyLog.hadSex) markers.push('sex');
+        if (dailyLog.symptoms.length > 0) markers.push('symptom');
+        if (dailyLog.medications.length > 0) markers.push('medication');
+      }
+
       days.push({
         date,
         isPeriod,
         isFertile,
         isPredicted,
+        isOvulation,
         cycleDay,
+        markers,
+        dailyLog: dailyLog || undefined,
       });
     }
 
@@ -298,6 +356,7 @@ export class CyclesService {
         totalCycles: 0,
         averageCycleLength: null,
         averagePeriodLength: null,
+        cycleVariance: null,
       };
     }
 
@@ -319,6 +378,16 @@ export class CyclesService {
           )
         : null;
 
+    // Calculate cycle variance (standard deviation)
+    let cycleVariance: number | null = null;
+    if (cycleLengths.length > 1 && avgCycleLength !== null) {
+      const squaredDiffs = cycleLengths.map((len) =>
+        Math.pow(len - avgCycleLength, 2)
+      );
+      const variance = squaredDiffs.reduce((a, b) => a + b, 0) / cycleLengths.length;
+      cycleVariance = Math.round(Math.sqrt(variance) * 10) / 10; // Round to 1 decimal
+    }
+
     // Calculate average period length
     const periodLengths = cycles
       .filter((c) => c.endDate)
@@ -339,8 +408,116 @@ export class CyclesService {
       totalCycles: cycles.length,
       averageCycleLength: avgCycleLength,
       averagePeriodLength: avgPeriodLength,
+      cycleVariance,
       cycleLengths,
       periodLengths,
+      last3Cycles: cycleLengths.slice(0, 3),
     };
+  }
+
+  /**
+   * Create or update daily log for a specific date
+   */
+  async upsertDailyLog(userId: string, data: DailyLogInput) {
+    const date = new Date(data.date);
+    date.setHours(0, 0, 0, 0); // Normalize to start of day
+
+    // Find if date falls within any cycle
+    const cycle = await this.prisma.periodCycle.findFirst({
+      where: {
+        userId,
+        startDate: { lte: date },
+        OR: [
+          { endDate: { gte: date } },
+          { endDate: null },
+        ],
+      },
+    });
+
+    return this.prisma.dailyLog.upsert({
+      where: {
+        userId_date: {
+          userId,
+          date,
+        },
+      },
+      update: {
+        flow: data.flow,
+        cramps: data.cramps,
+        symptoms: data.symptoms || [],
+        mood: data.mood || [],
+        hadSex: data.hadSex ?? false,
+        contraception: data.contraception || [],
+        sexNotes: data.sexNotes,
+        medications: data.medications || [],
+        healthNotes: data.healthNotes,
+        attachments: data.attachments || [],
+      },
+      create: {
+        userId,
+        cycleId: cycle?.id,
+        date,
+        flow: data.flow,
+        cramps: data.cramps,
+        symptoms: data.symptoms || [],
+        mood: data.mood || [],
+        hadSex: data.hadSex ?? false,
+        contraception: data.contraception || [],
+        sexNotes: data.sexNotes,
+        medications: data.medications || [],
+        healthNotes: data.healthNotes,
+        attachments: data.attachments || [],
+      },
+    });
+  }
+
+  /**
+   * Get daily log for a specific date
+   */
+  async getDailyLog(userId: string, date: string) {
+    const dateObj = new Date(date);
+    dateObj.setHours(0, 0, 0, 0);
+
+    return this.prisma.dailyLog.findUnique({
+      where: {
+        userId_date: {
+          userId,
+          date: dateObj,
+        },
+      },
+    });
+  }
+
+  /**
+   * Get daily logs for a date range
+   */
+  async getDailyLogs(userId: string, startDate: string, endDate: string) {
+    return this.prisma.dailyLog.findMany({
+      where: {
+        userId,
+        date: {
+          gte: new Date(startDate),
+          lte: new Date(endDate),
+        },
+      },
+      orderBy: { date: 'asc' },
+    });
+  }
+
+  /**
+   * Delete daily log
+   */
+  async deleteDailyLog(userId: string, date: string) {
+    const dateObj = new Date(date);
+    dateObj.setHours(0, 0, 0, 0);
+
+    return this.prisma.dailyLog.delete({
+      where: {
+        userId_date: {
+          userId,
+          date: dateObj,
+        },
+      },
+    });
   }
 }

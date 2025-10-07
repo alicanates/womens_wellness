@@ -313,6 +313,28 @@ export const cyclesService = {
     api.get(`/cycles/calendar?year=${year}&month=${month}`),
 
   getStats: () => api.get('/cycles/stats'),
+
+  // Daily Log endpoints
+  upsertDailyLog: (data: {
+    date: string;
+    flow?: 'light' | 'moderate' | 'heavy';
+    cramps?: number;
+    symptoms?: string[];
+    mood?: string[];
+    hadSex?: boolean;
+    contraception?: string[];
+    sexNotes?: string;
+    medications?: string[];
+    healthNotes?: string;
+    attachments?: string[];
+  }) => api.post('/cycles/daily-log', data),
+
+  getDailyLog: (date: string) => api.get(`/cycles/daily-log/${date}`),
+
+  getDailyLogs: (startDate: string, endDate: string) =>
+    api.get(`/cycles/daily-logs?startDate=${startDate}&endDate=${endDate}`),
+
+  deleteDailyLog: (date: string) => api.delete(`/cycles/daily-log/${date}`),
 };
 
 // Pregnancy endpoints
@@ -328,7 +350,12 @@ export const pregnancyService = {
 
   get: () => api.get('/pregnancy'),
 
-  getSummary: () => api.get('/pregnancy/summary'),
+  getSummary: () => api.get<{
+    gestationalAge: { weeks: number; days: number };
+    trimester: number;
+    dueDate: string;
+    weeklyTip?: string;
+  }>('/pregnancy/summary'),
 
   delete: () => api.delete('/pregnancy'),
 
@@ -434,7 +461,11 @@ export const pregnancyService = {
   deleteNote: (id: string) => api.delete(`/pregnancy/notes/${id}`),
 
   // Weekly Content
-  getWeeklyContent: () => api.get('/pregnancy/weekly-content'),
+  getWeeklyContent: () => api.get<{
+    week: number;
+    content: string;
+    developmentSummary?: string;
+  }>('/pregnancy/weekly-content'),
 };
 
 // Reminders endpoints

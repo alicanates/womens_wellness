@@ -18,7 +18,10 @@ import { useAuthStore } from '@/store/authStore';
 import { usePregnancyStore } from '@/store/pregnancyStore';
 import { useTheme } from '@/hooks/useTheme';
 import { router } from 'expo-router';
-// Temporarily using emojis instead of Ionicons
+import { Legend } from '@/components/calendar/Legend';
+import { DayMarkers, MarkerType } from '@/components/calendar/DayMarkers';
+import { InsightCards } from '@/components/calendar/InsightCards';
+import { DayDetailsSheet } from '@/components/calendar/DayDetailsSheet';
 
 export default function CalendarScreen() {
   const theme = useTheme();
@@ -29,6 +32,10 @@ export default function CalendarScreen() {
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  // Day details sheet state
+  const [selectedDay, setSelectedDay] = useState<any | null>(null);
+  const [showDayDetails, setShowDayDetails] = useState(false);
 
   // Initialize pregnancy mode from storage
   useEffect(() => {
@@ -60,7 +67,7 @@ export default function CalendarScreen() {
   const { data: calendarData, isLoading } = useQuery({
     queryKey: ['calendar', selectedYear, selectedMonth],
     queryFn: async () => {
-      const data = await cyclesService.getCalendar(selectedYear, selectedMonth);
+      const data: any = await cyclesService.getCalendar(selectedYear, selectedMonth);
       console.log('Raw calendar data:', JSON.stringify(data, null, 2));
 
       // Parse date strings to Date objects
@@ -84,7 +91,14 @@ export default function CalendarScreen() {
   const { data: predictionData } = useQuery({
     queryKey: ['prediction'],
     queryFn: () => cyclesService.getPrediction(),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !isPregnancyMode,
+  });
+
+  // Fetch stats
+  const { data: statsData } = useQuery({
+    queryKey: ['stats'],
+    queryFn: () => cyclesService.getStats(),
+    enabled: isAuthenticated && !isPregnancyMode,
   });
 
   const monthNames = [
@@ -125,60 +139,9 @@ export default function CalendarScreen() {
     setSelectedMonth(today.getMonth() + 1);
   };
 
-  const getDayStyle = (day: any): StyleProp<ViewStyle>[] => {
-    const calStyles = createCalendarStyles(theme);
-    const styles: StyleProp<ViewStyle>[] = [calStyles.day];
-
-    if (day.isPeriod) {
-      styles.push(calStyles.periodDay);
-    } else if (day.isFertile) {
-      styles.push(calStyles.fertileDay);
-    } else if (day.isPredicted) {
-      styles.push(calStyles.predictedDay);
-    }
-
-    // Ensure date is a Date object
-    const dayDate = day.date instanceof Date ? day.date : new Date(day.date);
-
-    const isToday =
-      dayDate.getDate() === today.getDate() &&
-      dayDate.getMonth() === today.getMonth() &&
-      dayDate.getFullYear() === today.getFullYear();
-
-    if (isToday) {
-      styles.push(calStyles.today);
-    }
-
-    return styles;
-  };
-
   const handleDayPress = (day: any) => {
-    // Ensure date is a Date object
-    const dayDate = day.date instanceof Date ? day.date : new Date(day.date);
-
-    let message = `${dayDate.getDate()} ${monthNames[dayDate.getMonth()]}\n\n`;
-
-    if (day.isPeriod) {
-      message += `🩸 Regl günü${day.cycleDay ? ` (${day.cycleDay}. gün)` : ''}\n`;
-    }
-    if (day.isFertile) {
-      message += '🌸 Verimli gün\n';
-    }
-    if (day.isPredicted) {
-      message += '📅 Tahmini regl başlangıcı\n';
-    }
-
-    const buttons: any[] = [
-      { text: 'Kapat', style: 'cancel' },
-    ];
-
-    // Allow logging period for any day
-    buttons.unshift({
-      text: 'Regl Olarak İşaretle',
-      onPress: () => logPeriodForDate(dayDate),
-    });
-
-    Alert.alert('Gün Detayı', message, buttons);
+    setSelectedDay(day);
+    setShowDayDetails(true);
   };
 
   const logPeriodForDate = async (date: Date) => {
@@ -364,43 +327,21 @@ export default function CalendarScreen() {
         ) : (
           // Period Mode Content
           <>
-            {/* Legend */}
-      <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendColor, { backgroundColor: '#FF1493' }]} />
-          <Text style={styles.legendText}>Regl</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendColor, { backgroundColor: '#9C27B0' }]} />
-          <Text style={styles.legendText}>Verimli</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendColor, { backgroundColor: '#FF69B4' }]} />
-          <Text style={styles.legendText}>Tahmin</Text>
-        </View>
-      </View>
+            {/* Test Text */}
+            <View style={{padding: 16, backgroundColor: '#FFF'}}>
+              <Text style={{fontSize: 16}}>Period Mode Active</Text>
+            </View>
 
-      {/* Prediction summary */}
-      {predictionData && (predictionData as any).prediction && (
-        <View style={styles.predictionCard}>
-          <Text style={styles.predictionTitle}>Sonraki Regl Tahmini</Text>
-          <Text style={styles.predictionDate}>
-            {new Date(
-              (predictionData as any).prediction.nextStart
-            ).toLocaleDateString('tr-TR', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            })}
-          </Text>
-          <Text style={styles.predictionMeta}>
-            Ortalama döngü: {(predictionData as any).prediction.averageCycleLength} gün
-          </Text>
-          <Text style={styles.predictionMeta}>
-            Güven: {(predictionData as any).prediction.confidence === 'high' ? 'Yüksek' : (predictionData as any).prediction.confidence === 'medium' ? 'Orta' : 'Düşük'}
-          </Text>
-        </View>
-      )}
+            {/* Legend */}
+            <Legend />
+
+            {/* Insight Cards */}
+            {predictionData && (predictionData as any).prediction && (
+              <InsightCards
+                prediction={(predictionData as any).prediction}
+                stats={statsData as any}
+              />
+            )}
 
       {/* Calendar grid */}
       <View style={styles.calendar}>
@@ -423,17 +364,24 @@ export default function CalendarScreen() {
 
             {((calendarData as any).days || []).map((day: any, index: number) => {
               const dayDate = typeof day.date === 'string' ? new Date(day.date) : day.date;
+              const isToday =
+                dayDate.getDate() === today.getDate() &&
+                dayDate.getMonth() === today.getMonth() &&
+                dayDate.getFullYear() === today.getFullYear();
+
               return (
                 <TouchableOpacity
                   key={index}
-                  style={getDayStyle({ ...day, date: dayDate })}
+                  style={[
+                    calendarStyles.day,
+                    isToday && calendarStyles.today,
+                  ]}
                   onPress={() => handleDayPress({ ...day, date: dayDate })}
                 >
                   <Text
                     style={[
                       calendarStyles.dayText,
-                      (day.isPeriod || day.isFertile || day.isPredicted) &&
-                        calendarStyles.dayTextHighlight,
+                      isToday && calendarStyles.todayText,
                     ]}
                   >
                     {dayDate.getDate()}
@@ -443,6 +391,10 @@ export default function CalendarScreen() {
                       {day.cycleDay}
                     </Text>
                   )}
+                  <DayMarkers
+                    markers={day.markers || []}
+                    isPredicted={day.isPredicted}
+                  />
                 </TouchableOpacity>
               );
             })}
@@ -465,6 +417,23 @@ export default function CalendarScreen() {
         )}
       </Animated.View>
     </ScrollView>
+
+    {/* Day Details Sheet */}
+    {selectedDay && (
+      <DayDetailsSheet
+        visible={showDayDetails}
+        onClose={() => {
+          setShowDayDetails(false);
+          setSelectedDay(null);
+        }}
+        date={selectedDay.date}
+        dayData={selectedDay}
+        isPeriod={selectedDay.isPeriod}
+        isFertile={selectedDay.isFertile}
+        isPredicted={selectedDay.isPredicted}
+        isOvulation={selectedDay.isOvulation}
+      />
+    )}
     </SafeAreaView>
   );
 }
@@ -509,60 +478,6 @@ const createStyles = (theme: ReturnType<typeof useTheme>) => StyleSheet.create({
     color: theme.colors.primary,
     marginTop: 4,
     fontWeight: '600',
-  },
-  legend: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    padding: 12,
-    backgroundColor: theme.colors.backgroundCard,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: theme.spacing.sm,
-  },
-  legendColor: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    marginRight: 4,
-  },
-  legendText: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
-  },
-  predictionCard: {
-    backgroundColor: theme.colors.backgroundCard,
-    margin: theme.spacing.md,
-    padding: theme.card.padding,
-    borderRadius: theme.card.borderRadius,
-    shadowColor: theme.card.shadowColor,
-    shadowOffset: theme.card.shadowOffset,
-    shadowOpacity: theme.card.shadowOpacity,
-    shadowRadius: theme.card.shadowRadius,
-    elevation: theme.card.elevation,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  predictionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-  },
-  predictionDate: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.sm,
-  },
-  predictionMeta: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    marginTop: 4,
   },
   calendar: {
     backgroundColor: theme.colors.backgroundCard,
@@ -696,36 +611,26 @@ const createCalendarStyles = (theme: ReturnType<typeof useTheme>) => StyleSheet.
     alignItems: 'center',
     padding: 4,
     marginVertical: 2,
-  },
-  periodDay: {
-    backgroundColor: '#FF1493', // Deep pink for period - very distinctive
-    borderRadius: 12,
-  },
-  fertileDay: {
-    backgroundColor: '#9C27B0', // Purple for fertile - clearly different
-    borderRadius: 12,
-  },
-  predictedDay: {
-    backgroundColor: '#FF69B4', // Hot pink for predicted - medium tone
-    borderRadius: 12,
+    borderRadius: 8,
   },
   today: {
     borderWidth: 2,
-    borderColor: theme.colors.primaryDark,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.background,
   },
   dayText: {
     fontSize: 14,
     fontWeight: '600',
     color: theme.colors.text,
   },
-  dayTextHighlight: {
-    color: '#fff',
+  todayText: {
+    color: theme.colors.primary,
     fontWeight: '700',
   },
   cycleDayText: {
-    fontSize: 9,
-    color: '#fff',
-    marginTop: 2,
+    fontSize: 8,
+    color: theme.colors.textSecondary,
+    marginTop: 1,
     fontWeight: '600',
   },
 });
