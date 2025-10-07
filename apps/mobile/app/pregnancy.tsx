@@ -391,7 +391,7 @@ export default function PregnancyScreen() {
         {summary && (
           <View style={styles.summaryHeader}>
             <Text style={styles.subtitle}>
-              {(summary as any).gestationalAge.weeks} hafta {(summary as any).gestationalAge.days} gün
+              {summary.gestationalAge.weeks} hafta {summary.gestationalAge.days} gün
             </Text>
           </View>
         )}
@@ -403,21 +403,21 @@ export default function PregnancyScreen() {
               <View>
                 <Text style={styles.summaryLabel}>Gebelik Yaşı</Text>
                 <Text style={styles.summaryValue}>
-                  {(summary as any).gestationalAge.weeks}+{(summary as any).gestationalAge.days}
+                  {summary.gestationalAge.weeks}+{summary.gestationalAge.days}
                 </Text>
               </View>
               <View style={styles.trimesterBadge}>
                 <Text style={styles.trimesterText}>
-                  {(summary as any).trimester}. Trimester
+                  {summary.trimester}. Trimester
                 </Text>
               </View>
             </View>
 
-            {(summary as any).dueDate && (
+            {summary.dueDate && (
               <View style={[styles.summaryRow, { marginBottom: 0 }]}>
                 <Text style={styles.summaryLabel}>Tahmini Doğum Tarihi</Text>
                 <Text style={[styles.summaryValue, { fontSize: 16 }]}>
-                  {new Date((summary as any).dueDate).toLocaleDateString('tr-TR', {
+                  {new Date(summary.dueDate).toLocaleDateString('tr-TR', {
                     day: 'numeric',
                     month: 'long',
                     year: 'numeric',
@@ -426,10 +426,10 @@ export default function PregnancyScreen() {
               </View>
             )}
 
-            {(summary as any).weeklyTip && (
+            {summary.weeklyTip && (
               <View style={styles.tipCard}>
                 <Text style={styles.tipLabel}>BUGÜNÜN İPUCU</Text>
-                <Text style={styles.tipText}>{(summary as any).weeklyTip}</Text>
+                <Text style={styles.tipText}>{summary.weeklyTip}</Text>
               </View>
             )}
           </View>
@@ -464,15 +464,15 @@ export default function PregnancyScreen() {
         {weeklyContent && (
           <View style={{ marginTop: 24, marginBottom: 32 }}>
             <Text style={styles.sectionTitle}>
-              {(weeklyContent as any).week}. Hafta
+              {weeklyContent.week}. Hafta
             </Text>
             <View style={styles.summaryCard}>
               <Text style={[styles.tipText, { marginBottom: 12 }]}>
-                {(weeklyContent as any).content}
+                {weeklyContent.content}
               </Text>
-              {(weeklyContent as any).developmentSummary && (
+              {weeklyContent.developmentSummary && (
                 <Text style={[styles.summaryLabel, { marginTop: 8 }]}>
-                  {(weeklyContent as any).developmentSummary}
+                  {weeklyContent.developmentSummary}
                 </Text>
               )}
             </View>
