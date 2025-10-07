@@ -506,3 +506,71 @@ export const remindersService = {
 
   testPush: () => api.post('/reminders/push/test', {}),
 };
+
+// Home endpoints
+export const homeService = {
+  getSnapshot: (locale: string = 'tr') =>
+    api.get<{
+      user: {
+        displayName: string;
+        profilePictureUrl?: string;
+      };
+      streak: {
+        current: number;
+        longest: number;
+        startDate?: string;
+      };
+      todaySnapshot: {
+        cycleDay?: number;
+        nextPeriodEstimate?: {
+          date: string;
+          confidence: 'low' | 'medium' | 'high';
+        };
+        fertilityWindow?: {
+          start: number;
+          end: number;
+        };
+        ovulationEstimate?: string;
+        pregnancy?: {
+          weeks: number;
+          days: number;
+          dueDate: string;
+        };
+        waterProgress: {
+          current: number;
+          target: number;
+          logs: number;
+        };
+        remindersToday: number;
+      };
+      priorityCards: Array<{
+        id: string;
+        type: 'hydration' | 'cycle_insight' | 'symptom_log' | 'medication' | 'reminder' | 'nova_prompt';
+        priority: number;
+        data: any;
+        isDismissed: boolean;
+        isPinned: boolean;
+      }>;
+      educationalArticles: Array<{
+        id: string;
+        title: string;
+        content: string;
+        category: string;
+        tags: string[];
+        imageUrl?: string;
+        publishedAt: string;
+      }>;
+    }>(`/home/snapshot?locale=${locale}`),
+
+  dismissCard: (cardId: string, days: number = 7) =>
+    api.post('/home/cards/dismiss', { cardId, days }),
+
+  pinCard: (cardId: string) =>
+    api.post('/home/cards/pin', { cardId }),
+
+  unpinCard: (cardId: string) =>
+    api.post('/home/cards/unpin', { cardId }),
+
+  setVisiblePills: (pillIds: string[]) =>
+    api.post('/home/pills/set-visible', { pillIds }),
+};

@@ -11,6 +11,102 @@
   },
   "home": {
     "welcome": "Hoş Geldiniz",
+    "greeting": {
+      "morning": "Günaydın",
+      "afternoon": "İyi günler",
+      "evening": "İyi akşamlar",
+      "night": "İyi geceler"
+    },
+    "question": "Bugün nasılsın?",
+    "streak": {
+      "title": "Seri",
+      "current": "Güncel Seri",
+      "longest": "En Uzun Seri",
+      "days": "gün"
+    },
+    "pills": {
+      "cycle": "Döngü",
+      "fertility": "Verimlilik",
+      "pregnancy": "Gebelik",
+      "reminders": "Hatırlatıcılar",
+      "hydration": "Hidrasyon",
+      "medication": "İlaç"
+    },
+    "cycleSnapshot": {
+      "day": "Gün",
+      "estimate": "Tahmini",
+      "confidence": {
+        "low": "Düşük",
+        "medium": "Orta",
+        "high": "Yüksek"
+      },
+      "fertilityWindow": "Verimlilik penceresi",
+      "ovulation": "Yumurtlama tahmini"
+    },
+    "pregnancy": {
+      "weeks": "hafta",
+      "days": "gün",
+      "dueDate": "Tahmini doğum tarihi"
+    },
+    "hydration": {
+      "title": "Hidrasyon",
+      "todayTotal": "Bugünkü Toplam",
+      "target": "Hedef",
+      "quickAdd": "Hızlı Ekle",
+      "behindTarget": "Hedefin gerisinde",
+      "onTrack": "Hedefinde"
+    },
+    "symptoms": {
+      "title": "Semptomlar & Ruh Hali",
+      "quickLog": "Hızlı Kayıt",
+      "howToday": "Bugün nasıl?",
+      "more": "Daha Fazla"
+    },
+    "medication": {
+      "title": "İlaç",
+      "taken": "alındı",
+      "confirm": "Aldım",
+      "snooze": "Ertele"
+    },
+    "reminders": {
+      "title": "Hatırlatıcılar",
+      "today": "Bugün",
+      "next": "Sonraki",
+      "seeAll": "Tümü"
+    },
+    "nova": {
+      "title": "NOVA Öneri",
+      "tapToChat": "Sohbet için dokun"
+    },
+    "education": {
+      "title": "Eğitim",
+      "categories": {
+        "menstrual_health": "Regl Sağlığı",
+        "hydration": "Hidrasyon",
+        "sleep": "Uyku",
+        "exercise": "Egzersiz",
+        "mindfulness": "Farkındalık"
+      }
+    },
+    "quickActions": {
+      "log": "Kayıt",
+      "addWater": "Su Ekle",
+      "logSymptom": "Semptom Ekle",
+      "logMood": "Ruh Hali Ekle",
+      "logMedication": "İlaç Ekle",
+      "logPeriod": "Regl Başlat/Bitir",
+      "seeMetrics": "Tüm Metrikleri Gör"
+    },
+    "cards": {
+      "dismiss": "Kapat",
+      "pin": "Sabitle",
+      "unpin": "Sabitlemeyi Kaldır"
+    },
+    "privacy": {
+      "title": "Gizlilik",
+      "anonymousMode": "Anonim Mod",
+      "dataControls": "Veri Kontrolleri"
+    },
     "todayWater": "Bugünkü Su Tüketimi",
     "nextPeriod": "Sonraki Regl",
     "pregnancyWeek": "Hamilelik Haftası"

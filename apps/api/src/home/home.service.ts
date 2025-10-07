@@ -1,0 +1,524 @@
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CyclesService } from '../cycles/cycles.service';
+import { WaterService } from '../water/water.service';
+import { PregnancyService } from '../pregnancy/pregnancy.service';
+
+export interface HomeSnapshot {
+  user: {
+    displayName: string;
+    profilePictureUrl?: string;
+  };
+  streak: {
+    current: number;
+    longest: number;
+    startDate?: Date;
+  };
+  todaySnapshot: {
+    cycleDay?: number;
+    nextPeriodEstimate?: {
+      date: Date;
+      confidence: 'low' | 'medium' | 'high';
+    };
+    fertilityWindow?: {
+      start: number;
+      end: number;
+    };
+    ovulationEstimate?: Date;
+    pregnancy?: {
+      weeks: number;
+      days: number;
+      dueDate: Date;
+    };
+    waterProgress: {
+      current: number; // mL
+      target: number; // mL
+      logs: number;
+    };
+    remindersToday: number;
+  };
+  priorityCards: PriorityCard[];
+  educationalArticles: EducationalArticleDto[];
+}
+
+export interface PriorityCard {
+  id: string;
+  type: 'hydration' | 'cycle_insight' | 'symptom_log' | 'medication' | 'reminder' | 'nova_prompt';
+  priority: number;
+  data: any;
+  isDismissed: boolean;
+  isPinned: boolean;
+}
+
+export interface EducationalArticleDto {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  tags: string[];
+  imageUrl?: string;
+  publishedAt: Date;
+}
+
+@Injectable()
+export class HomeService {
+  constructor(
+    private prisma: PrismaService,
+    private cyclesService: CyclesService,
+    private waterService: WaterService,
+    private pregnancyService: PregnancyService,
+  ) {}
+
+  async getHomeSnapshot(userId: string, locale: string = 'tr'): Promise<HomeSnapshot> {
+    // Get user profile
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { profile: true, homePreferences: true },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Get or create home preferences
+    let preferences = user.homePreferences;
+    if (!preferences) {
+      preferences = await this.prisma.userHomePreferences.create({
+        data: { userId },
+      });
+    }
+
+    // Calculate water streak
+    const streak = await this.calculateWaterStreak(userId, preferences);
+
+    // Get today's snapshot data
+    const todaySnapshot = await this.getTodaySnapshot(userId);
+
+    // Get priority cards
+    const priorityCards = await this.getPriorityCards(userId, preferences);
+
+    // Get educational articles
+    const educationalArticles = await this.getEducationalArticles(locale);
+
+    return {
+      user: {
+        displayName: user.profile?.displayName || user.email.split('@')[0],
+        profilePictureUrl: user.profile?.profilePictureUrl || undefined,
+      },
+      streak,
+      todaySnapshot,
+      priorityCards,
+      educationalArticles,
+    };
+  }
+
+  private async calculateWaterStreak(userId: string, preferences: any): Promise<{
+    current: number;
+    longest: number;
+    startDate?: Date;
+  }> {
+    // Get water logs for the last 30 days to calculate streak
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const logs = await this.prisma.waterLog.findMany({
+      where: {
+        userId,
+        loggedAt: { gte: thirtyDaysAgo },
+      },
+      orderBy: { loggedAt: 'desc' },
+    });
+
+    // Group logs by date
+    const logsByDate = new Map<string, number>();
+    logs.forEach((log) => {
+      const dateKey = log.loggedAt.toISOString().split('T')[0];
+      logsByDate.set(dateKey, (logsByDate.get(dateKey) || 0) + log.amountMl);
+    });
+
+    // Calculate current streak (consecutive days with logs)
+    let currentStreak = 0;
+    let streakStartDate: Date | undefined;
+    const today = new Date();
+
+    for (let i = 0; i < 30; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(checkDate.getDate() - i);
+      const dateKey = checkDate.toISOString().split('T')[0];
+
+      if (logsByDate.has(dateKey)) {
+        currentStreak++;
+        streakStartDate = checkDate;
+      } else {
+        break;
+      }
+    }
+
+    // Update preferences if streak changed
+    if (currentStreak !== preferences.streakCount) {
+      const longestStreak = Math.max(currentStreak, preferences.longestStreak);
+      await this.prisma.userHomePreferences.update({
+        where: { userId },
+        data: {
+          streakCount: currentStreak,
+          longestStreak,
+          streakStartDate: streakStartDate || null,
+        },
+      });
+
+      return {
+        current: currentStreak,
+        longest: longestStreak,
+        startDate: streakStartDate,
+      };
+    }
+
+    return {
+      current: preferences.streakCount,
+      longest: preferences.longestStreak,
+      startDate: preferences.streakStartDate || undefined,
+    };
+  }
+
+  private async getTodaySnapshot(userId: string) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Get cycle data
+    const cycles = await this.cyclesService.getCycles(userId);
+    let cycleDay: number | undefined;
+    let nextPeriodEstimate;
+
+    if (cycles && cycles.length > 0) {
+      const latestCycle = cycles[0];
+      const cycleStart = new Date(latestCycle.startDate);
+      cycleDay = Math.floor((today.getTime() - cycleStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+      // Simple prediction based on average cycle length
+      if (cycles.length >= 3) {
+        const completedCycles = cycles.filter(c => c.endDate);
+        if (completedCycles.length >= 2) {
+          const avgCycleLength = completedCycles.reduce((sum, c) => {
+            const start = new Date(c.startDate);
+            const end = new Date(c.endDate!);
+            return sum + Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+          }, 0) / completedCycles.length;
+
+          const variance = completedCycles.reduce((sum, c) => {
+            const start = new Date(c.startDate);
+            const end = new Date(c.endDate!);
+            const cycleLength = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+            return sum + Math.abs(cycleLength - avgCycleLength);
+          }, 0) / completedCycles.length;
+
+          const estimatedNextPeriod = new Date(cycleStart);
+          estimatedNextPeriod.setDate(estimatedNextPeriod.getDate() + Math.round(avgCycleLength));
+
+          let confidence: 'low' | 'medium' | 'high' = 'low';
+          if (variance < 2) confidence = 'high';
+          else if (variance < 4) confidence = 'medium';
+
+          nextPeriodEstimate = {
+            date: estimatedNextPeriod,
+            confidence,
+          };
+        }
+      }
+    }
+
+    // Get pregnancy data
+    let pregnancy;
+    const pregnancyRecord = await this.pregnancyService.getPregnancy(userId);
+    if (pregnancyRecord && pregnancyRecord.isActive) {
+      const lmpDate = new Date(pregnancyRecord.lmpDate || pregnancyRecord.dueDate!);
+      lmpDate.setDate(lmpDate.getDate() - 280); // Calculate LMP from due date if needed
+
+      const daysSinceLMP = Math.floor((today.getTime() - lmpDate.getTime()) / (1000 * 60 * 60 * 24));
+      const weeks = Math.floor(daysSinceLMP / 7);
+      const days = daysSinceLMP % 7;
+
+      pregnancy = {
+        weeks,
+        days,
+        dueDate: pregnancyRecord.dueDate || new Date(),
+      };
+    }
+
+    // Get water progress
+    const waterToday = await this.waterService.getTodayTotal(userId);
+
+    // Get user profile for water target
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId },
+    });
+
+    const waterTarget = profile?.weightKg ? Math.round(profile.weightKg * 30) : 2000; // 30ml per kg or default 2L
+
+    // Get reminders count for today
+    const remindersToday = await this.prisma.reminder.count({
+      where: {
+        userId,
+        active: true,
+        nextRunAt: {
+          gte: today,
+          lt: tomorrow,
+        },
+      },
+    });
+
+    return {
+      cycleDay,
+      nextPeriodEstimate,
+      pregnancy,
+      waterProgress: {
+        current: waterToday.totalMl,
+        target: waterTarget,
+        logs: waterToday.logs.length,
+      },
+      remindersToday,
+    };
+  }
+
+  private async getPriorityCards(userId: string, preferences: any): Promise<PriorityCard[]> {
+    const cards: PriorityCard[] = [];
+    const dismissedCards = (preferences.dismissedCards as any) || {};
+    const pinnedCards = preferences.pinnedCards || [];
+    const now = new Date();
+
+    // Check which cards are dismissed (and not expired)
+    const isDismissed = (cardId: string) => {
+      const dismissedUntil = dismissedCards[cardId];
+      if (!dismissedUntil) return false;
+      return new Date(dismissedUntil) > now;
+    };
+
+    // Get today snapshot for card data
+    const snapshot = await this.getTodaySnapshot(userId);
+
+    // Hydration card
+    const hydrationProgress = snapshot.waterProgress.current / snapshot.waterProgress.target;
+    if (hydrationProgress < 0.5) {
+      cards.push({
+        id: 'hydration',
+        type: 'hydration',
+        priority: hydrationProgress < 0.25 ? 100 : 80,
+        data: snapshot.waterProgress,
+        isDismissed: isDismissed('hydration'),
+        isPinned: pinnedCards.includes('hydration'),
+      });
+    }
+
+    // Cycle insight card
+    if (snapshot.nextPeriodEstimate) {
+      const daysUntilPeriod = Math.floor(
+        (snapshot.nextPeriodEstimate.date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (Math.abs(daysUntilPeriod) <= 5) {
+        cards.push({
+          id: 'cycle_insight',
+          type: 'cycle_insight',
+          priority: 90,
+          data: {
+            estimate: snapshot.nextPeriodEstimate,
+            daysUntil: daysUntilPeriod,
+            cycleDay: snapshot.cycleDay,
+          },
+          isDismissed: isDismissed('cycle_insight'),
+          isPinned: pinnedCards.includes('cycle_insight'),
+        });
+      }
+    }
+
+    // Symptom log card (always show with lower priority)
+    cards.push({
+      id: 'symptom_log',
+      type: 'symptom_log',
+      priority: 60,
+      data: {},
+      isDismissed: isDismissed('symptom_log'),
+      isPinned: pinnedCards.includes('symptom_log'),
+    });
+
+    // Reminders card
+    if (snapshot.remindersToday > 0) {
+      const nextReminder = await this.prisma.reminder.findFirst({
+        where: {
+          userId,
+          active: true,
+          nextRunAt: { gte: now },
+        },
+        orderBy: { nextRunAt: 'asc' },
+      });
+
+      if (nextReminder) {
+        const hoursUntil = (nextReminder.nextRunAt.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+        cards.push({
+          id: 'reminder',
+          type: 'reminder',
+          priority: hoursUntil < 3 ? 95 : 70,
+          data: {
+            count: snapshot.remindersToday,
+            next: nextReminder,
+          },
+          isDismissed: isDismissed('reminder'),
+          isPinned: pinnedCards.includes('reminder'),
+        });
+      }
+    }
+
+    // NOVA smart prompt (low priority, once per day)
+    const lastNovaPrompt = dismissedCards['nova_prompt'];
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    if (!lastNovaPrompt || new Date(lastNovaPrompt) < oneDayAgo) {
+      cards.push({
+        id: 'nova_prompt',
+        type: 'nova_prompt',
+        priority: 50,
+        data: {
+          prompt: this.getNovaPrompt(snapshot),
+        },
+        isDismissed: false,
+        isPinned: pinnedCards.includes('nova_prompt'),
+      });
+    }
+
+    // Sort cards: pinned first, then by priority, filter dismissed
+    return cards
+      .filter(card => !card.isDismissed)
+      .sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return b.priority - a.priority;
+      });
+  }
+
+  private getNovaPrompt(snapshot: any): string {
+    // Generate contextual prompts based on user data
+    const prompts = [
+      'Bugün nasıl hissediyorsun? Enerji durumunu kaydetmek ister misin?',
+      'Su içmeyi unutma! Hedefine ulaşmak için biraz daha içmelisin.',
+      'Döngünü takip etmek sağlığın için önemli. Son durumunu kaydedelim mi?',
+    ];
+
+    if (snapshot.waterProgress.current < snapshot.waterProgress.target * 0.5) {
+      return 'Su tüketimin hedefinin yarısının altında. Biraz su içmek için zamanı geldi! 💧';
+    }
+
+    if (snapshot.nextPeriodEstimate) {
+      const daysUntil = Math.floor(
+        (snapshot.nextPeriodEstimate.date.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (daysUntil <= 2) {
+        return 'Regl döneminiz yaklaşıyor. Kendine iyi bak! 💕';
+      }
+    }
+
+    return prompts[Math.floor(Math.random() * prompts.length)];
+  }
+
+  private async getEducationalArticles(locale: string): Promise<EducationalArticleDto[]> {
+    const articles = await this.prisma.educationalArticle.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gte: new Date() } },
+        ],
+      },
+      orderBy: [
+        { priority: 'desc' },
+        { publishedAt: 'desc' },
+      ],
+      take: 5,
+    });
+
+    return articles.map(article => ({
+      id: article.id,
+      title: locale === 'en' && article.titleEn ? article.titleEn : article.titleTr,
+      content: locale === 'en' && article.contentEn ? article.contentEn : article.contentTr,
+      category: article.category,
+      tags: article.tags,
+      imageUrl: article.imageUrl || undefined,
+      publishedAt: article.publishedAt,
+    }));
+  }
+
+  async dismissCard(userId: string, cardId: string, days: number = 7): Promise<void> {
+    const preferences = await this.prisma.userHomePreferences.findUnique({
+      where: { userId },
+    });
+
+    if (!preferences) {
+      await this.prisma.userHomePreferences.create({
+        data: { userId },
+      });
+    }
+
+    const dismissedCards = (preferences?.dismissedCards as any) || {};
+    const dismissUntil = new Date();
+    dismissUntil.setDate(dismissUntil.getDate() + days);
+
+    dismissedCards[cardId] = dismissUntil.toISOString();
+
+    await this.prisma.userHomePreferences.update({
+      where: { userId },
+      data: { dismissedCards },
+    });
+  }
+
+  async pinCard(userId: string, cardId: string): Promise<void> {
+    const preferences = await this.prisma.userHomePreferences.findUnique({
+      where: { userId },
+    });
+
+    const pinnedCards = preferences?.pinnedCards || [];
+    if (!pinnedCards.includes(cardId)) {
+      pinnedCards.push(cardId);
+
+      await this.prisma.userHomePreferences.upsert({
+        where: { userId },
+        create: {
+          userId,
+          pinnedCards,
+        },
+        update: {
+          pinnedCards,
+        },
+      });
+    }
+  }
+
+  async unpinCard(userId: string, cardId: string): Promise<void> {
+    const preferences = await this.prisma.userHomePreferences.findUnique({
+      where: { userId },
+    });
+
+    if (preferences) {
+      const pinnedCards = preferences.pinnedCards.filter(id => id !== cardId);
+
+      await this.prisma.userHomePreferences.update({
+        where: { userId },
+        data: { pinnedCards },
+      });
+    }
+  }
+
+  async setVisiblePills(userId: string, pillIds: string[]): Promise<void> {
+    await this.prisma.userHomePreferences.upsert({
+      where: { userId },
+      create: {
+        userId,
+        visiblePills: pillIds,
+      },
+      update: {
+        visiblePills: pillIds,
+      },
+    });
+  }
+}

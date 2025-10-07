@@ -1,0 +1,135 @@
+{
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot Password",
+    "continueWithGoogle": "Continue with Google",
+    "emailRequired": "Email address is required",
+    "passwordMinLength": "Password must be at least 8 characters"
+  },
+  "home": {
+    "welcome": "Welcome",
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening",
+      "night": "Good night"
+    },
+    "question": "How are you today?",
+    "streak": {
+      "title": "Streak",
+      "current": "Current Streak",
+      "longest": "Longest Streak",
+      "days": "days"
+    },
+    "pills": {
+      "cycle": "Cycle",
+      "fertility": "Fertility",
+      "pregnancy": "Pregnancy",
+      "reminders": "Reminders",
+      "hydration": "Hydration",
+      "medication": "Medication"
+    },
+    "cycleSnapshot": {
+      "day": "Day",
+      "estimate": "Estimate",
+      "confidence": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High"
+      },
+      "fertilityWindow": "Fertility window",
+      "ovulation": "Ovulation estimate"
+    },
+    "pregnancy": {
+      "weeks": "weeks",
+      "days": "days",
+      "dueDate": "Due date"
+    },
+    "hydration": {
+      "title": "Hydration",
+      "todayTotal": "Today's Total",
+      "target": "Target",
+      "quickAdd": "Quick Add",
+      "behindTarget": "Behind target",
+      "onTrack": "On track"
+    },
+    "symptoms": {
+      "title": "Symptoms & Mood",
+      "quickLog": "Quick Log",
+      "howToday": "How are you today?",
+      "more": "More"
+    },
+    "medication": {
+      "title": "Medication",
+      "taken": "taken",
+      "confirm": "Taken",
+      "snooze": "Snooze"
+    },
+    "reminders": {
+      "title": "Reminders",
+      "today": "Today",
+      "next": "Next",
+      "seeAll": "See All"
+    },
+    "nova": {
+      "title": "NOVA Suggestion",
+      "tapToChat": "Tap to chat"
+    },
+    "education": {
+      "title": "Education",
+      "categories": {
+        "menstrual_health": "Menstrual Health",
+        "hydration": "Hydration",
+        "sleep": "Sleep",
+        "exercise": "Exercise",
+        "mindfulness": "Mindfulness"
+      }
+    },
+    "quickActions": {
+      "log": "Log",
+      "addWater": "Add Water",
+      "logSymptom": "Log Symptom",
+      "logMood": "Log Mood",
+      "logMedication": "Log Medication",
+      "logPeriod": "Start/End Period",
+      "seeMetrics": "View All Metrics"
+    },
+    "cards": {
+      "dismiss": "Dismiss",
+      "pin": "Pin",
+      "unpin": "Unpin"
+    },
+    "privacy": {
+      "title": "Privacy",
+      "anonymousMode": "Anonymous Mode",
+      "dataControls": "Data Controls"
+    },
+    "todayWater": "Today's Water Intake",
+    "nextPeriod": "Next Period",
+    "pregnancyWeek": "Pregnancy Week"
+  },
+  "chat": {
+    "typeMessage": "Type your message...",
+    "stop": "Stop",
+    "clearChat": "Clear Chat",
+    "forgetEverything": "Forget Everything",
+    "quotaExceeded": "Monthly message limit reached"
+  },
+  "calculators": {
+    "bmi": {
+      "title": "Body Mass Index",
+      "underweight": "Underweight",
+      "normal": "Normal",
+      "overweight": "Overweight",
+      "obese": "Obese"
+    }
+  },
+  "errors": {
+    "networkError": "Network error",
+    "serverError": "Server error",
+    "unauthorized": "Unauthorized access"
+  }
+}

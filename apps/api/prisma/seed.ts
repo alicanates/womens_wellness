@@ -169,6 +169,68 @@ async function main() {
 
   console.log('✅ Created feature flags');
 
+  // Create educational articles
+  const articles = [
+    {
+      titleTr: 'Menstrüel Siklusunuzu Anlamak',
+      titleEn: 'Understanding Your Menstrual Cycle',
+      contentTr: 'Menstrüel siklus, vücudunuzun gebeliğe hazırlanma sürecidir. Ortalama 28 gün sürer, ancak 21-35 gün arası normal kabul edilir. Siklusunuzu takip etmek, vücudunuzu daha iyi anlamanıza yardımcı olur.',
+      contentEn: 'The menstrual cycle is your body\'s process of preparing for pregnancy. It typically lasts 28 days, but 21-35 days is considered normal. Tracking your cycle helps you better understand your body.',
+      category: 'menstrual_health',
+      tags: ['cycle', 'period', 'basics'],
+      priority: 100,
+    },
+    {
+      titleTr: 'Hidrasyon ve Kadın Sağlığı',
+      titleEn: 'Hydration and Women\'s Health',
+      contentTr: 'Yeterli su içmek, hormonal dengeyi destekler ve döngü düzensizliklerini azaltabilir. Günde en az 2 litre su içmeyi hedefleyin. Vücut ağırlığınızın her kilosu için yaklaşık 30 ml su tüketin.',
+      contentEn: 'Adequate water intake supports hormonal balance and can reduce cycle irregularities. Aim for at least 2 liters of water daily. Consume about 30 ml of water for each kilogram of body weight.',
+      category: 'hydration',
+      tags: ['water', 'health', 'hormones'],
+      priority: 90,
+    },
+    {
+      titleTr: 'Uyku ve Hormonal Sağlık',
+      titleEn: 'Sleep and Hormonal Health',
+      contentTr: 'Kaliteli uyku, hormonal dengeniz için çok önemlidir. Günde 7-9 saat uyumayı hedefleyin. Düzenli uyku saatleri, döngü düzenini destekler ve PMS semptomlarını azaltabilir.',
+      contentEn: 'Quality sleep is crucial for your hormonal balance. Aim for 7-9 hours of sleep per day. Regular sleep schedules support cycle regularity and can reduce PMS symptoms.',
+      category: 'sleep',
+      tags: ['sleep', 'hormones', 'pms'],
+      priority: 85,
+    },
+    {
+      titleTr: 'Egzersiz ve Menstrüel Sağlık',
+      titleEn: 'Exercise and Menstrual Health',
+      contentTr: 'Düzenli egzersiz, ağrılı adet sorunlarını azaltabilir ve ruh halinizi iyileştirebilir. Haftada en az 150 dakika orta şiddette aktivite yapın. Yoga ve yürüyüş, dönem sırasında özellikle faydalıdır.',
+      contentEn: 'Regular exercise can reduce period pain and improve mood. Aim for at least 150 minutes of moderate activity per week. Yoga and walking are especially beneficial during your period.',
+      category: 'exercise',
+      tags: ['exercise', 'pain', 'mood'],
+      priority: 80,
+    },
+    {
+      titleTr: 'Farkındalık ve Döngü Takibi',
+      titleEn: 'Mindfulness and Cycle Tracking',
+      contentTr: 'Döngünüzü takip etmek, vücudunuzla daha fazla bağlantı kurmanıza yardımcı olur. Semptomlarınızı, ruh halinizi ve enerji seviyelerinizi not edin. Bu bilgiler, sağlık profesyonellerinizle paylaşılabilir.',
+      contentEn: 'Tracking your cycle helps you connect more with your body. Note your symptoms, mood, and energy levels. This information can be shared with your healthcare providers.',
+      category: 'mindfulness',
+      tags: ['tracking', 'awareness', 'health'],
+      priority: 75,
+    },
+  ];
+
+  for (const article of articles) {
+    await prisma.educationalArticle.upsert({
+      where: { id: `article-${article.category}-1` },
+      update: {},
+      create: {
+        id: `article-${article.category}-1`,
+        ...article,
+      },
+    });
+  }
+
+  console.log('✅ Created educational articles');
+
   console.log('🎉 Seeding completed successfully!');
 }
 

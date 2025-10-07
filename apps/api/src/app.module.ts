@@ -19,6 +19,7 @@ import { RemindersModule } from './reminders/reminders.module';
 import { ModelPolicyModule } from './model-policy/model-policy.module';
 import { FeatureFlagModule } from './feature-flag/feature-flag.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
+import { HomeModule } from './home/home.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { AuditLogModule } from './audit-log/audit-log.module';
     ModelPolicyModule,
     FeatureFlagModule,
     AuditLogModule,
+    HomeModule,
   ],
   controllers: [AppController],
   providers: [

@@ -78,19 +78,20 @@ model User {
   updatedAt DateTime   @updatedAt
 
   // Relations
-  profile       Profile?
-  oauthAccounts OAuthAccount[]
-  healthMetrics HealthMetric[]
-  periodCycles  PeriodCycle[]
-  dailyLogs     DailyLog[]
-  pregnancy     Pregnancy?
-  waterLogs     WaterLog[]
-  reminders     Reminder[]
-  conversations Conversation[]
-  memories      Memory[]
-  subscription  Subscription?
-  usageQuota    UsageQuota?
-  auditLogs     AuditLog[]
+  profile          Profile?
+  oauthAccounts    OAuthAccount[]
+  healthMetrics    HealthMetric[]
+  periodCycles     PeriodCycle[]
+  dailyLogs        DailyLog[]
+  pregnancy        Pregnancy?
+  waterLogs        WaterLog[]
+  reminders        Reminder[]
+  conversations    Conversation[]
+  memories         Memory[]
+  subscription     Subscription?
+  usageQuota       UsageQuota?
+  auditLogs        AuditLog[]
+  homePreferences  UserHomePreferences?
 
   @@index([email])
 }
@@ -494,4 +495,46 @@ model FeatureFlag {
   valueJson Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Home Screen Personalization
+// ────────────────────────────────────────────────────────────────────────────
+
+model UserHomePreferences {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  dismissedCards   Json     @default("{}") // { cardId: dismissedUntil timestamp }
+  pinnedCards      String[] @default([]) // ordered list of pinned card IDs
+  visiblePills     String[] @default([]) // ordered list of visible pill IDs for Zone B
+  streakStartDate  DateTime? // when current water streak started
+  streakCount      Int      @default(0) // current streak days
+  longestStreak    Int      @default(0) // longest streak achieved
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Educational content feed for Zone D
+model EducationalArticle {
+  id          String   @id @default(cuid())
+  titleTr     String
+  titleEn     String?
+  contentTr   String   @db.Text
+  contentEn   String?  @db.Text
+  category    String // menstrual_health, hydration, sleep, exercise, mindfulness
+  tags        String[] @default([])
+  imageUrl    String?
+  priority    Int      @default(0) // higher = shown first
+  publishedAt DateTime @default(now())
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category, publishedAt])
+  @@index([isActive, priority])
 }

@@ -1,36 +1,62 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { waterService, userService } from '@/services/api';
-import { getGreetingMessage } from '@/utils/greeting';
+import { homeService } from '@/services/api';
 import { useTheme } from '@/hooks/useTheme';
+import { StreakChip } from '@/components/home/StreakChip';
+import { StatusPill } from '@/components/home/StatusPill';
+import { PriorityCard } from '@/components/home/PriorityCard';
 
 export default function HomeScreen() {
   const theme = useTheme();
   const { user } = useAuthStore();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
 
-  const { data: userData } = useQuery({
-    queryKey: ['me'],
-    queryFn: () => userService.getMe(),
+  const { data: snapshot, isLoading, refetch } = useQuery({
+    queryKey: ['homeSnapshot'],
+    queryFn: () => homeService.getSnapshot('tr'),
     enabled: isAuthenticated,
-    staleTime: 0, // Always consider data stale
-    refetchOnMount: true, // Refetch on component mount
+    staleTime: 60000, // 1 minute
   });
 
-  const { data: waterToday } = useQuery({
-    queryKey: ['waterToday'],
-    queryFn: () => waterService.getTodayTotal(),
-    enabled: isAuthenticated,
+  const dismissCardMutation = useMutation({
+    mutationFn: (cardId: string) => homeService.dismissCard(cardId, 7),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
+    },
   });
 
-  const displayName = (userData as any)?.profile?.displayName || user?.email?.split('@')[0] || 'Misafir';
-  const greetingMessage = getGreetingMessage(displayName);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Günaydın';
+    if (hour < 18) return 'İyi günler';
+    if (hour < 22) return 'İyi akşamlar';
+    return 'İyi geceler';
+  };
 
   const styles = createStyles(theme);
+
+  if (isLoading && !snapshot) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Yükleniyor...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -38,184 +64,342 @@ export default function HomeScreen() {
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={theme.colors.primary} />
+        }
       >
-      {/* Header with Profile Picture */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.greeting}>{greetingMessage}</Text>
-          <Text style={styles.question}>Bugün nasılsın? 💕</Text>
+        {/* Zone A: Identity & Quick Access */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.greeting}>
+              {getGreeting()}, {snapshot?.user.displayName || 'Misafir'}!
+            </Text>
+            <Text style={styles.question}>Bugün nasılsın? 💕</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => router.push('/settings')}
+          >
+            {snapshot?.user.profilePictureUrl ? (
+              <Image
+                source={{ uri: snapshot.user.profilePictureUrl }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <View style={styles.profilePlaceholder}>
+                <Text style={styles.profilePlaceholderText}>
+                  {snapshot?.user.displayName?.charAt(0).toUpperCase() || 'M'}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => router.push('/settings')}
-        >
-          {(userData as any)?.profile?.profilePictureUrl ? (
-            <Image
-              source={{ uri: (userData as any).profile.profilePictureUrl }}
-              style={styles.profileImage}
+
+        {/* Streak Chip */}
+        {snapshot?.streak && snapshot.streak.current > 0 && (
+          <View style={styles.streakContainer}>
+            <StreakChip
+              current={snapshot.streak.current}
+              longest={snapshot.streak.longest}
+              onPress={() => {
+                // Show streak details modal
+              }}
             />
+          </View>
+        )}
+
+        {/* Zone B: Today at a Glance (Status Pills) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Bugün Bir Bakışta</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.pillsContainer}
+          >
+            {/* Cycle Snapshot Pill */}
+            {snapshot?.todaySnapshot.cycleDay && (
+              <StatusPill
+                icon="🌸"
+                title="Döngü"
+                value={`Gün ${snapshot.todaySnapshot.cycleDay}`}
+                subtitle={
+                  snapshot.todaySnapshot.nextPeriodEstimate
+                    ? `${new Date(snapshot.todaySnapshot.nextPeriodEstimate.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}`
+                    : undefined
+                }
+                onPress={() => router.push('/(tabs)/calendar')}
+              />
+            )}
+
+            {/* Pregnancy Pill */}
+            {snapshot?.todaySnapshot.pregnancy && (
+              <StatusPill
+                icon="🤰"
+                title="Gebelik"
+                value={`${snapshot.todaySnapshot.pregnancy.weeks}h+${snapshot.todaySnapshot.pregnancy.days}g`}
+                subtitle={new Date(snapshot.todaySnapshot.pregnancy.dueDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                onPress={() => router.push('/pregnancy')}
+              />
+            )}
+
+            {/* Water Pill */}
+            {snapshot?.todaySnapshot.waterProgress && (
+              <StatusPill
+                icon="💧"
+                title="Su"
+                value={`${(snapshot.todaySnapshot.waterProgress.current / 1000).toFixed(1)}L`}
+                subtitle={`/ ${(snapshot.todaySnapshot.waterProgress.target / 1000).toFixed(1)}L`}
+                onPress={() => router.push('/water')}
+              />
+            )}
+
+            {/* Reminders Pill */}
+            {snapshot?.todaySnapshot.remindersToday && snapshot.todaySnapshot.remindersToday > 0 && (
+              <StatusPill
+                icon="⏰"
+                title="Hatırlatıcılar"
+                value={`${snapshot.todaySnapshot.remindersToday}`}
+                subtitle="bugün"
+                onPress={() => router.push('/(tabs)/reminders')}
+              />
+            )}
+          </ScrollView>
+        </View>
+
+        {/* Zone C: Priority Cards */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Öncelikler</Text>
+          {snapshot?.priorityCards && snapshot.priorityCards.length > 0 ? (
+            snapshot.priorityCards.slice(0, 4).map((card) => (
+              <PriorityCard
+                key={card.id}
+                card={card}
+                onDismiss={() => dismissCardMutation.mutate(card.id)}
+              />
+            ))
           ) : (
-            <View style={styles.profilePlaceholder}>
-              <Text style={styles.profilePlaceholderText}>
-                {displayName.charAt(0).toUpperCase()}
-              </Text>
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyText}>Harika! Şu an için öncelikli bir şey yok.</Text>
             </View>
           )}
-        </TouchableOpacity>
-      </View>
-
-      {/* Water Card */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardIcon}>💧</Text>
-          <Text style={styles.cardTitle}>Bugünkü Su Tüketimi</Text>
         </View>
-        <Text style={styles.cardValue}>
-          {(waterToday as any)?.totalL || 0} L
-        </Text>
-        <Text style={styles.cardSubtitle}>
-          {(waterToday as any)?.logs?.length || 0} kayıt
-        </Text>
-        <TouchableOpacity
-          style={styles.cardButton}
-          onPress={() => router.push('/water')}
-        >
-          <Text style={styles.cardButtonText}>Su Ekle</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* BMI Card */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardIcon}>⚖️</Text>
-          <Text style={styles.cardTitle}>Vücut Kitle İndeksi</Text>
+        {/* Zone D: Educational Articles (Optional) */}
+        {snapshot?.educationalArticles && snapshot.educationalArticles.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Keşfet</Text>
+            {snapshot.educationalArticles.slice(0, 3).map((article) => (
+              <TouchableOpacity key={article.id} style={styles.articleCard}>
+                <View style={styles.articleHeader}>
+                  <Text style={styles.articleCategory}>
+                    {article.category === 'menstrual_health' ? 'Regl Sağlığı' :
+                     article.category === 'hydration' ? 'Hidrasyon' :
+                     article.category === 'sleep' ? 'Uyku' :
+                     article.category === 'exercise' ? 'Egzersiz' : 'Farkındalık'}
+                  </Text>
+                </View>
+                <Text style={styles.articleTitle}>{article.title}</Text>
+                <Text style={styles.articleExcerpt} numberOfLines={2}>
+                  {article.content}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Zone E: Quick Actions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Hızlı İşlemler</Text>
+          <View style={styles.quickActions}>
+            <TouchableOpacity
+              style={[styles.quickActionButton, styles.quickActionButtonFirst]}
+              onPress={() => router.push('/water')}
+            >
+              <Text style={styles.quickActionIcon}>💧</Text>
+              <Text style={styles.quickActionText}>Su Ekle</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => router.push('/(tabs)/calendar')}
+            >
+              <Text style={styles.quickActionIcon}>📝</Text>
+              <Text style={styles.quickActionText}>Semptom Ekle</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => router.push('/bmi-calculator')}
+            >
+              <Text style={styles.quickActionIcon}>⚖️</Text>
+              <Text style={styles.quickActionText}>Metrikler</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <Text style={styles.cardSubtitle}>Sağlık hedeflerine ulaşmak için BMI'nı hesapla</Text>
-        <TouchableOpacity
-          style={styles.cardButton}
-          onPress={() => router.push('/bmi-calculator')}
-        >
-          <Text style={styles.cardButtonText}>BMI Hesapla</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+
+        <View style={styles.bottomSpacer} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
-const createStyles = (theme: ReturnType<typeof useTheme>) => StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingBottom: 100,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.xl,
-    paddingBottom: theme.spacing.lg,
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  profileButton: {
-    marginLeft: theme.spacing.md,
-  },
-  profileImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-  },
-  profilePlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: theme.colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-  },
-  profilePlaceholderText: {
-    color: theme.colors.textOnPrimary,
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  greeting: {
-    ...theme.typography.title,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
-  },
-  question: {
-    ...theme.typography.subtitle,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
-  },
-  card: {
-    backgroundColor: theme.colors.backgroundCard,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-    borderRadius: theme.card.borderRadius,
-    padding: theme.card.padding,
-    shadowColor: theme.card.shadowColor,
-    shadowOffset: theme.card.shadowOffset,
-    shadowOpacity: theme.card.shadowOpacity,
-    shadowRadius: theme.card.shadowRadius,
-    elevation: theme.card.elevation,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  cardIcon: {
-    fontSize: 24,
-    marginRight: theme.spacing.sm,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: theme.colors.text,
-    flex: 1,
-  },
-  cardValue: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.xs,
-  },
-  cardSubtitle: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.md,
-    lineHeight: 20,
-  },
-  cardButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.button.borderRadius,
-    padding: theme.button.padding,
-    alignItems: 'center',
-    shadowColor: theme.button.shadowColor,
-    shadowOffset: theme.button.shadowOffset,
-    shadowOpacity: theme.button.shadowOpacity,
-    shadowRadius: theme.button.shadowRadius,
-    elevation: theme.button.elevation,
-  },
-  cardButtonText: {
-    color: theme.colors.textOnPrimary,
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-});
+const createStyles = (theme: ReturnType<typeof useTheme>) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    container: {
+      flex: 1,
+    },
+    contentContainer: {
+      paddingBottom: 100,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: theme.spacing.lg,
+      paddingTop: theme.spacing.xl,
+      paddingBottom: theme.spacing.lg,
+    },
+    headerLeft: {
+      flex: 1,
+    },
+    profileButton: {
+      marginLeft: theme.spacing.md,
+    },
+    profileImage: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+    },
+    profilePlaceholder: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: theme.colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    profilePlaceholderText: {
+      color: theme.colors.textOnPrimary,
+      fontSize: 20,
+      fontWeight: '700',
+    },
+    greeting: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: theme.colors.text,
+      marginBottom: 4,
+    },
+    question: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      fontWeight: '500',
+    },
+    streakContainer: {
+      paddingHorizontal: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
+    },
+    section: {
+      marginTop: theme.spacing.lg,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.colors.text,
+      paddingHorizontal: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
+    },
+    pillsContainer: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingRight: theme.spacing.xl,
+    },
+    emptyCard: {
+      backgroundColor: theme.colors.backgroundCard,
+      marginHorizontal: theme.spacing.lg,
+      borderRadius: theme.card.borderRadius,
+      padding: theme.card.padding,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 100,
+    },
+    emptyText: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
+    articleCard: {
+      backgroundColor: theme.colors.backgroundCard,
+      marginHorizontal: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
+      borderRadius: theme.card.borderRadius,
+      padding: theme.card.padding,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    articleHeader: {
+      marginBottom: 8,
+    },
+    articleCategory: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.colors.primary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    articleTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.colors.text,
+      marginBottom: 6,
+    },
+    articleExcerpt: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      lineHeight: 20,
+    },
+    quickActions: {
+      flexDirection: 'row',
+      paddingHorizontal: theme.spacing.lg,
+      justifyContent: 'space-between',
+    },
+    quickActionButton: {
+      flex: 1,
+      backgroundColor: theme.colors.backgroundCard,
+      borderRadius: 12,
+      padding: theme.spacing.md,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginLeft: theme.spacing.md,
+    },
+    quickActionButtonFirst: {
+      marginLeft: 0,
+    },
+    quickActionIcon: {
+      fontSize: 32,
+      marginBottom: 8,
+    },
+    quickActionText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.colors.text,
+      textAlign: 'center',
+    },
+    bottomSpacer: {
+      height: 40,
+    },
+  });
