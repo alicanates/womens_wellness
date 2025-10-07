@@ -7,21 +7,47 @@ import {
   Alert,
   StyleProp,
   ViewStyle,
+  Switch,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { cyclesService } from '@/services/api';
+import { cyclesService, pregnancyService } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
+import { usePregnancyStore } from '@/store/pregnancyStore';
 import { useTheme } from '@/hooks/useTheme';
+import { router } from 'expo-router';
+// Temporarily using emojis instead of Ionicons
 
 export default function CalendarScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { isPregnancyMode, setPregnancyMode, initializePregnancyMode } = usePregnancyStore();
   const today = new Date();
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  // Initialize pregnancy mode from storage
+  useEffect(() => {
+    initializePregnancyMode();
+  }, []);
+
+  // Fetch pregnancy data
+  const { data: pregnancy } = useQuery({
+    queryKey: ['pregnancy'],
+    queryFn: () => pregnancyService.get(),
+    enabled: isAuthenticated && isPregnancyMode,
+  });
+
+  // Fetch pregnancy summary
+  const { data: pregnancySummary } = useQuery({
+    queryKey: ['pregnancy', 'summary'],
+    queryFn: () => pregnancyService.getSummary(),
+    enabled: isAuthenticated && isPregnancyMode && !!pregnancy,
+  });
   const leadingPlaceholders = useMemo(() => {
     const firstDay = new Date(selectedYear, selectedMonth - 1, 1);
     let offset = firstDay.getDay() - 1;
@@ -229,6 +255,30 @@ export default function CalendarScreen() {
     );
   };
 
+  const handlePregnancyToggle = async (value: boolean) => {
+    if (value && !pregnancy) {
+      // Need to set up pregnancy first
+      router.push('/pregnancy/setup');
+      return;
+    }
+
+    // Animate transition
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    await setPregnancyMode(value);
+  };
+
   const styles = createStyles(theme);
   const calendarStyles = createCalendarStyles(theme);
 
@@ -259,7 +309,62 @@ export default function CalendarScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Legend */}
+      {/* Pregnancy Mode Toggle */}
+      <View style={styles.pregnancyToggle}>
+        <Text style={styles.pregnancyToggleLabel}>
+          {isPregnancyMode ? '🤰 Hamileyim' : '📅 Hamile Değilim'}
+        </Text>
+        <Switch
+          value={isPregnancyMode}
+          onValueChange={handlePregnancyToggle}
+          trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+          thumbColor="#fff"
+        />
+      </View>
+
+      {/* Animated Content */}
+      <Animated.View style={{ opacity: fadeAnim }}>
+        {isPregnancyMode ? (
+          // Pregnancy Mode Content
+          pregnancySummary ? (
+            <View style={styles.pregnancyCard}>
+              <Text style={styles.pregnancyTitle}>Hamilelik Özeti</Text>
+              <View style={styles.pregnancyRow}>
+                <Text style={styles.pregnancyLabel}>Gebelik Yaşı</Text>
+                <Text style={styles.pregnancyValue}>
+                  {pregnancySummary.gestationalAge.weeks} hafta{' '}
+                  {pregnancySummary.gestationalAge.days} gün
+                </Text>
+              </View>
+              <View style={styles.pregnancyRow}>
+                <Text style={styles.pregnancyLabel}>Trimester</Text>
+                <Text style={styles.pregnancyValue}>
+                  {pregnancySummary.trimester}. Trimester
+                </Text>
+              </View>
+              {pregnancySummary.dueDate && (
+                <View style={[styles.pregnancyRow, { marginBottom: 0 }]}>
+                  <Text style={styles.pregnancyLabel}>Tahmini Doğum</Text>
+                  <Text style={styles.pregnancyValue}>
+                    {new Date(pregnancySummary.dueDate).toLocaleDateString('tr-TR', {
+                      day: 'numeric',
+                      month: 'short',
+                    })}
+                  </Text>
+                </View>
+              )}
+              <TouchableOpacity
+                style={styles.viewDetailsButton}
+                onPress={() => router.push('/pregnancy')}
+              >
+                <Text style={styles.viewDetailsText}>Detaylı Görünüm →</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null
+        ) : (
+          // Period Mode Content
+          <>
+            {/* Legend */}
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={[styles.legendColor, { backgroundColor: '#FF1493' }]} />
@@ -351,9 +456,14 @@ export default function CalendarScreen() {
       </TouchableOpacity>
 
       {/* Reset button */}
-      <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
-        <Text style={styles.resetButtonText}>🔄 Takvimi Sıfırla</Text>
-      </TouchableOpacity>
+      {!isPregnancyMode && (
+        <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
+          <Text style={styles.resetButtonText}>🔄 Takvimi Sıfırla</Text>
+        </TouchableOpacity>
+      )}
+          </>
+        )}
+      </Animated.View>
     </ScrollView>
     </SafeAreaView>
   );
@@ -517,6 +627,64 @@ const createStyles = (theme: ReturnType<typeof useTheme>) => StyleSheet.create({
     color: theme.colors.textOnPrimary,
     fontSize: 16,
     fontWeight: '700',
+  },
+  pregnancyToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.backgroundCard,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  pregnancyToggleLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.text,
+  },
+  pregnancyCard: {
+    backgroundColor: theme.colors.backgroundCard,
+    margin: theme.spacing.md,
+    padding: theme.card.padding,
+    borderRadius: theme.card.borderRadius,
+    shadowColor: theme.card.shadowColor,
+    shadowOffset: theme.card.shadowOffset,
+    shadowOpacity: theme.card.shadowOpacity,
+    shadowRadius: theme.card.shadowRadius,
+    elevation: theme.card.elevation,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  pregnancyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: theme.spacing.md,
+  },
+  pregnancyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  pregnancyLabel: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+  },
+  pregnancyValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.colors.primary,
+  },
+  viewDetailsButton: {
+    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    alignItems: 'center',
+  },
+  viewDetailsText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.primary,
   },
 });
 

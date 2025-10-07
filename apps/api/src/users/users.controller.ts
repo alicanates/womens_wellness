@@ -66,6 +66,14 @@ export class UsersController {
     return this.usersService.deleteUser(user.id);
   }
 
+  @Get('me/export')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Export all user data' })
+  async exportMyData(@CurrentUser() user: any) {
+    return this.usersService.exportUserData(user.id);
+  }
+
   // Admin endpoints
   @Get('users')
   @UseGuards(AuthGuard('jwt'))

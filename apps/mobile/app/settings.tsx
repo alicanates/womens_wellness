@@ -11,11 +11,18 @@ import {
   Switch,
   Platform,
   Modal,
+  Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+
+// Type assertion to fix TypeScript module resolution issue
+const { cacheDirectory, writeAsStringAsync } = FileSystem as any;
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
@@ -243,6 +250,83 @@ export default function SettingsScreen() {
     );
   };
 
+  const handlePrivacyPolicy = () => {
+    // TODO: Replace with actual privacy policy URL when available
+    const url = 'https://example.com/privacy-policy';
+    Linking.openURL(url).catch(() => {
+      Alert.alert('Hata', 'Gizlilik politikası açılamadı');
+    });
+  };
+
+  const handleTermsOfUse = () => {
+    // TODO: Replace with actual terms of use URL when available
+    const url = 'https://example.com/terms-of-use';
+    Linking.openURL(url).catch(() => {
+      Alert.alert('Hata', 'Kullanım koşulları açılamadı');
+    });
+  };
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncData = async () => {
+    try {
+      setIsSyncing(true);
+
+      // Force refetch all user data from server
+      await queryClient.invalidateQueries({ queryKey: ['me'] });
+      await queryClient.refetchQueries({ queryKey: ['me'] });
+
+      Alert.alert('Başarılı', 'Verileriniz senkronize edildi');
+    } catch (error: any) {
+      Alert.alert('Hata', error.message || 'Senkronizasyon başarısız');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleDownloadData = async () => {
+    try {
+      setIsExporting(true);
+
+      // Call API to get user data export
+      const exportData = await userService.exportMyData();
+
+      // Create a JSON file
+      const filename = `womens-wellness-data-${new Date().toISOString().split('T')[0]}.json`;
+
+      if (!cacheDirectory) {
+        throw new Error('Dosya sistemi kullanılamıyor');
+      }
+
+      const fileUri = cacheDirectory + filename;
+
+      await writeAsStringAsync(
+        fileUri,
+        JSON.stringify(exportData, null, 2)
+      );
+
+      // Check if sharing is available
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/json',
+          dialogTitle: 'Verilerimi İndir',
+        });
+      } else {
+        Alert.alert(
+          'Başarılı',
+          `Verileriniz indirildi: ${filename}`,
+          [{ text: 'Tamam' }]
+        );
+      }
+    } catch (error: any) {
+      Alert.alert('Hata', error.message || 'Veriler indirilemedi');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const currentDisplayName = (userData as any)?.profile?.displayName || user?.email?.split('@')[0] || 'Misafir';
 
   const styles = createStyles(theme);
@@ -441,19 +525,55 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Gizlilik ve Veri</Text>
 
-          <TouchableOpacity style={styles.settingButton}>
+          <TouchableOpacity style={styles.settingButton} onPress={handlePrivacyPolicy}>
             <Text style={styles.settingButtonText}>Gizlilik Politikası</Text>
             <Text style={styles.settingButtonIcon}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingButton}>
+          <TouchableOpacity style={styles.settingButton} onPress={handleTermsOfUse}>
             <Text style={styles.settingButtonText}>Kullanım Koşulları</Text>
             <Text style={styles.settingButtonIcon}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingButton}>
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={handleDownloadData}
+            disabled={isExporting}
+          >
             <Text style={styles.settingButtonText}>Verilerimi İndir</Text>
-            <Text style={styles.settingButtonIcon}>›</Text>
+            {isExporting ? (
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+            ) : (
+              <Text style={styles.settingButtonIcon}>›</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Data Backup & Sync Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Yedekleme ve Senkronizasyon</Text>
+
+          <View style={styles.infoCard}>
+            <Text style={styles.infoCardIcon}>☁️</Text>
+            <View style={styles.infoCardContent}>
+              <Text style={styles.infoCardTitle}>Otomatik Yedekleme Aktif</Text>
+              <Text style={styles.infoCardText}>
+                Tüm verileriniz güvenli bir şekilde bulutta saklanıyor. Yeni bir cihazda oturum açtığınızda verileriniz otomatik olarak yüklenir.
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={handleSyncData}
+            disabled={isSyncing}
+          >
+            <Text style={styles.settingButtonText}>Şimdi Senkronize Et</Text>
+            {isSyncing ? (
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+            ) : (
+              <Text style={styles.settingButtonIcon}>🔄</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -954,5 +1074,32 @@ const createStyles = (theme: any) =>
       fontSize: 12,
       color: theme.colors.textSecondary,
       marginVertical: 2,
+    },
+    infoCard: {
+      flexDirection: 'row',
+      backgroundColor: theme.colors.backgroundCard,
+      borderRadius: 12,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    infoCardIcon: {
+      fontSize: 24,
+      marginRight: theme.spacing.md,
+    },
+    infoCardContent: {
+      flex: 1,
+    },
+    infoCardTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 4,
+    },
+    infoCardText: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      lineHeight: 20,
     },
   });

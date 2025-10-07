@@ -154,4 +154,85 @@ export class UsersService {
 
     return { success: true };
   }
+
+  async exportUserData(userId: string) {
+    // Gather all user data for export (KVKK Article 11 compliance)
+    const [
+      user,
+      healthMetrics,
+      waterLogs,
+      cycles,
+      pregnancy,
+      reminders,
+      conversations,
+      messages,
+      memories,
+      usageQuota,
+    ] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          profile: true,
+          subscription: true,
+        },
+      }),
+      this.prisma.healthMetric.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.waterLog.findMany({
+        where: { userId },
+        orderBy: { loggedAt: 'desc' },
+      }),
+      this.prisma.periodCycle.findMany({
+        where: { userId },
+        orderBy: { startDate: 'desc' },
+      }),
+      this.prisma.pregnancy.findMany({
+        where: { userId },
+        orderBy: { dueDate: 'desc' },
+      }),
+      this.prisma.reminder.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.conversation.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.message.findMany({
+        where: { conversation: { userId } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.memory.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.usageQuota.findUnique({
+        where: { userId },
+      }),
+    ]);
+
+    if (!user) {
+      throw new BadRequestException('Kullanıcı bulunamadı');
+    }
+
+    // Remove sensitive data
+    const { password, ...userWithoutPassword } = user;
+
+    return {
+      exportDate: new Date().toISOString(),
+      exportVersion: '1.0',
+      user: userWithoutPassword,
+      healthMetrics,
+      waterLogs,
+      cycles,
+      pregnancy,
+      reminders,
+      conversations,
+      messages,
+      memories,
+      usageQuota,
+    };
+  }
 }

@@ -78,39 +78,39 @@ model User {
   updatedAt DateTime   @updatedAt
 
   // Relations
-  profile        Profile?
-  oauthAccounts  OAuthAccount[]
-  healthMetrics  HealthMetric[]
-  periodCycles   PeriodCycle[]
-  pregnancy      Pregnancy?
-  waterLogs      WaterLog[]
-  reminders      Reminder[]
-  conversations  Conversation[]
-  memories       Memory[]
-  subscription   Subscription?
-  usageQuota     UsageQuota?
-  auditLogs      AuditLog[]
+  profile       Profile?
+  oauthAccounts OAuthAccount[]
+  healthMetrics HealthMetric[]
+  periodCycles  PeriodCycle[]
+  pregnancy     Pregnancy?
+  waterLogs     WaterLog[]
+  reminders     Reminder[]
+  conversations Conversation[]
+  memories      Memory[]
+  subscription  Subscription?
+  usageQuota    UsageQuota?
+  auditLogs     AuditLog[]
 
   @@index([email])
 }
 
 model Profile {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
-  displayName        String
-  username           String?  @unique
-  birthDate          DateTime? // Keep for backward compatibility
-  birthDay           Int?      // 1-31
-  birthMonth         Int?      // 1-12
-  birthYear          Int?      // e.g., 1990
-  heightCm           Float?
-  weightKg           Float?
-  country            String?
-  timezone           String   @default("Europe/Istanbul")
-  profilePictureUrl  String?
-  preferencesJson    Json?    // Encrypted field
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  displayName       String
+  username          String?   @unique
+  birthDate         DateTime? // Keep for backward compatibility
+  birthDay          Int? // 1-31
+  birthMonth        Int? // 1-12
+  birthYear         Int? // e.g., 1990
+  heightCm          Float?
+  weightKg          Float?
+  country           String?
+  timezone          String    @default("Europe/Istanbul")
+  profilePictureUrl String?
+  preferencesJson   Json? // Encrypted field
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -150,12 +150,12 @@ model PasswordResetToken {
 // ────────────────────────────────────────────────────────────────────────────
 
 model HealthMetric {
-  id         String            @id @default(cuid())
+  id         String           @id @default(cuid())
   userId     String
   kind       HealthMetricKind
   valueJson  Json
-  measuredAt DateTime          @default(now())
-  createdAt  DateTime          @default(now())
+  measuredAt DateTime         @default(now())
+  createdAt  DateTime         @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -163,14 +163,14 @@ model HealthMetric {
 }
 
 model PeriodCycle {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   userId       String
   startDate    DateTime
   endDate      DateTime?
-  symptomsJson Json?    // Encrypted field, matches PeriodSymptoms interface
+  symptomsJson Json? // Encrypted field, matches PeriodSymptoms interface
   notes        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -178,16 +178,131 @@ model PeriodCycle {
 }
 
 model Pregnancy {
-  id          String    @id @default(cuid())
-  userId      String    @unique
-  lmpDate     DateTime? // Last Menstrual Period
-  dueDate     DateTime?
-  doctorNotes String?   // Encrypted field
-  weekCache   Int?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  lmpDate           DateTime? // Last Menstrual Period
+  dueDate           DateTime?
+  doctorNotes       String?   @db.Text // Encrypted field
+  weekCache         Int?
+  isActive          Boolean   @default(true)
+  anonymousMode     Boolean   @default(false)
+  trimester         Int? // 1, 2, or 3
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                 User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kickCounts           KickCount[]
+  contractions         Contraction[]
+  appointments         PregnancyAppointment[]
+  medications          PregnancyMedication[]
+  birthPlan            BirthPlan?
+  hospitalBagItems     HospitalBagItem[]
+  pregnancyNotes       PregnancyNote[]
+
+  @@index([userId])
+}
+
+model KickCount {
+  id          String   @id @default(cuid())
+  pregnancyId String
+  sessionDate DateTime
+  kickCount   Int
+  durationMin Int // Duration in minutes
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  pregnancy Pregnancy @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+
+  @@index([pregnancyId, sessionDate])
+}
+
+model Contraction {
+  id          String   @id @default(cuid())
+  pregnancyId String
+  startTime   DateTime
+  endTime     DateTime
+  durationSec Int // Duration in seconds
+  intensity   Int? // Optional 1-10 scale
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  pregnancy Pregnancy @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+
+  @@index([pregnancyId, startTime])
+}
+
+model PregnancyAppointment {
+  id            String   @id @default(cuid())
+  pregnancyId   String
+  appointmentAt DateTime
+  clinic        String?
+  doctorName    String?
+  notes         String?  @db.Text
+  vitalsJson    Json? // BP, weight, glucose, etc.
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  pregnancy Pregnancy @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+
+  @@index([pregnancyId, appointmentAt])
+}
+
+model PregnancyMedication {
+  id            String   @id @default(cuid())
+  pregnancyId   String
+  name          String
+  dosage        String?
+  frequency     String?
+  safetyRating  String? // A, B, C, D, X or custom
+  notes         String?  @db.Text
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  pregnancy Pregnancy @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+
+  @@index([pregnancyId])
+}
+
+model BirthPlan {
+  id              String   @id @default(cuid())
+  pregnancyId     String   @unique
+  contentJson     Json     @db.JsonB // Structured birth plan data
+  lastExportedAt  DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  pregnancy Pregnancy @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+}
+
+model HospitalBagItem {
+  id          String   @id @default(cuid())
+  pregnancyId String
+  category    String // parent, partner, baby
+  itemName    String
+  isPacked    Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pregnancy Pregnancy @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+
+  @@index([pregnancyId, category])
+}
+
+model PregnancyNote {
+  id          String   @id @default(cuid())
+  pregnancyId String
+  title       String?
+  content     String   @db.Text
+  tags        String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pregnancy Pregnancy @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+
+  @@index([pregnancyId, createdAt])
 }
 
 model WaterLog {
@@ -257,7 +372,7 @@ model Memory {
   userId       String
   scope        MemoryScope
   key          String
-  valueJson    Json        // Encrypted field for sensitive data
+  valueJson    Json // Encrypted field for sensitive data
   tags         String[]    @default([])
   accessCount  Int         @default(0)
   lastAccessed DateTime    @default(now())
@@ -289,7 +404,7 @@ model Subscription {
 model UsageQuota {
   id         String   @id @default(cuid())
   userId     String   @unique
-  monthKey   String   // Format: YYYY-MM
+  monthKey   String // Format: YYYY-MM
   aiRequests Int      @default(0)
   limit      Int      @default(100)
   resetsAt   DateTime

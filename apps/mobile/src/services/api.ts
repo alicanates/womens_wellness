@@ -171,6 +171,7 @@ export const userService = {
   getMe: () => api.get('/me'),
   updateMe: (data: any) => api.patch('/me', data),
   deleteMe: () => api.delete('/me'),
+  exportMyData: () => api.get('/me/export'),
 
   uploadProfilePicture: async (fileUri: string): Promise<{ profilePictureUrl: string }> => {
     const token = await SecureStore.getItemAsync('accessToken');
@@ -312,6 +313,128 @@ export const cyclesService = {
     api.get(`/cycles/calendar?year=${year}&month=${month}`),
 
   getStats: () => api.get('/cycles/stats'),
+};
+
+// Pregnancy endpoints
+export const pregnancyService = {
+  // Pregnancy Profile
+  createOrUpdate: (data: {
+    lmpDate?: string;
+    dueDate?: string;
+    doctorNotes?: string;
+    isActive?: boolean;
+    anonymousMode?: boolean;
+  }) => api.post('/pregnancy', data),
+
+  get: () => api.get('/pregnancy'),
+
+  getSummary: () => api.get('/pregnancy/summary'),
+
+  delete: () => api.delete('/pregnancy'),
+
+  // Kick Counter
+  logKick: (data: {
+    sessionDate: string;
+    kickCount: number;
+    durationMin: number;
+    notes?: string;
+  }) => api.post('/pregnancy/kicks', data),
+
+  getKicks: (limit?: number) =>
+    api.get(`/pregnancy/kicks${limit ? `?limit=${limit}` : ''}`),
+
+  deleteKick: (id: string) => api.delete(`/pregnancy/kicks/${id}`),
+
+  // Contractions
+  logContraction: (data: {
+    startTime: string;
+    endTime: string;
+    durationSec: number;
+    intensity?: number;
+    notes?: string;
+  }) => api.post('/pregnancy/contractions', data),
+
+  getContractions: (hours?: number) =>
+    api.get(`/pregnancy/contractions${hours ? `?hours=${hours}` : ''}`),
+
+  getContractionsSummary: () => api.get('/pregnancy/contractions/summary'),
+
+  deleteContraction: (id: string) => api.delete(`/pregnancy/contractions/${id}`),
+
+  deleteAllContractions: () => api.delete('/pregnancy/contractions'),
+
+  // Appointments
+  createAppointment: (data: {
+    appointmentAt: string;
+    clinic?: string;
+    doctorName?: string;
+    notes?: string;
+    vitals?: any;
+  }) => api.post('/pregnancy/appointments', data),
+
+  getAppointments: () => api.get('/pregnancy/appointments'),
+
+  getAppointment: (id: string) => api.get(`/pregnancy/appointments/${id}`),
+
+  updateAppointment: (id: string, data: any) =>
+    api.patch(`/pregnancy/appointments/${id}`, data),
+
+  deleteAppointment: (id: string) => api.delete(`/pregnancy/appointments/${id}`),
+
+  // Medications
+  addMedication: (data: {
+    name: string;
+    dosage?: string;
+    frequency?: string;
+    safetyRating?: string;
+    notes?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => api.post('/pregnancy/medications', data),
+
+  getMedications: () => api.get('/pregnancy/medications'),
+
+  updateMedication: (id: string, data: any) =>
+    api.patch(`/pregnancy/medications/${id}`, data),
+
+  deleteMedication: (id: string) => api.delete(`/pregnancy/medications/${id}`),
+
+  // Birth Plan
+  createOrUpdateBirthPlan: (content: any) =>
+    api.post('/pregnancy/birth-plan', { content }),
+
+  getBirthPlan: () => api.get('/pregnancy/birth-plan'),
+
+  deleteBirthPlan: () => api.delete('/pregnancy/birth-plan'),
+
+  // Hospital Bag
+  addHospitalBagItem: (data: {
+    category: string;
+    itemName: string;
+    sortOrder?: number;
+  }) => api.post('/pregnancy/hospital-bag', data),
+
+  getHospitalBagItems: () => api.get('/pregnancy/hospital-bag'),
+
+  updateHospitalBagItem: (id: string, data: any) =>
+    api.patch(`/pregnancy/hospital-bag/${id}`, data),
+
+  deleteHospitalBagItem: (id: string) => api.delete(`/pregnancy/hospital-bag/${id}`),
+
+  // Notes
+  createNote: (data: { title?: string; content: string; tags?: string[] }) =>
+    api.post('/pregnancy/notes', data),
+
+  getNotes: () => api.get('/pregnancy/notes'),
+
+  getNote: (id: string) => api.get(`/pregnancy/notes/${id}`),
+
+  updateNote: (id: string, data: any) => api.patch(`/pregnancy/notes/${id}`, data),
+
+  deleteNote: (id: string) => api.delete(`/pregnancy/notes/${id}`),
+
+  // Weekly Content
+  getWeeklyContent: () => api.get('/pregnancy/weekly-content'),
 };
 
 // Reminders endpoints

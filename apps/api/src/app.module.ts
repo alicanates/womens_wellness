@@ -14,6 +14,7 @@ import { ChatModule } from './chat/chat.module';
 import { MemoryModule } from './memory/memory.module';
 import { QuotaModule } from './quota/quota.module';
 import { CyclesModule } from './cycles/cycles.module';
+import { PregnancyModule } from './pregnancy/pregnancy.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { ModelPolicyModule } from './model-policy/model-policy.module';
 import { FeatureFlagModule } from './feature-flag/feature-flag.module';
@@ -49,6 +50,7 @@ import { AuditLogModule } from './audit-log/audit-log.module';
     MemoryModule,
     QuotaModule,
     CyclesModule,
+    PregnancyModule,
     RemindersModule,
     ModelPolicyModule,
     FeatureFlagModule,
