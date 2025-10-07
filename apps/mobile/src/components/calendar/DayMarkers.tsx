@@ -8,16 +8,58 @@ export type MarkerType =
   | 'sex'
   | 'symptom'
   | 'medication'
-  | 'appointment';
+  | 'appointment'
+  | 'mood';
 
 interface DayMarkersProps {
   markers: MarkerType[];
   isPredicted?: boolean;
   maxVisible?: number;
+  mood?: string[]; // Array of moods for the day
 }
 
-export function DayMarkers({ markers, isPredicted, maxVisible = 4 }: DayMarkersProps) {
+export function DayMarkers({ markers, isPredicted, maxVisible = 4, mood }: DayMarkersProps) {
   const theme = useTheme();
+
+  // Calculate mood emoji based on selections
+  const getMoodEmoji = (moods: string[]): string | null => {
+    if (!moods || moods.length === 0) return null;
+
+    console.log('DayMarkers - Processing moods:', moods);
+
+    const positiveMoods = ['Mutlu', 'Enerjik', 'Sakin'];
+    const negativeMoods = ['Üzgün', 'Sinirli', 'Anksiyetli', 'Huzursuz'];
+
+    const positiveCount = moods.filter(m => positiveMoods.includes(m)).length;
+    const negativeCount = moods.filter(m => negativeMoods.includes(m)).length;
+
+    console.log('DayMarkers - Positive count:', positiveCount, 'Negative count:', negativeCount);
+
+    // If only positive moods selected
+    if (positiveCount > 0 && negativeCount === 0) {
+      console.log('DayMarkers - Returning positive emoji');
+      return '😊';
+    }
+
+    // If only negative moods selected
+    if (negativeCount > 0 && positiveCount === 0) {
+      console.log('DayMarkers - Returning negative emoji');
+      return '😔';
+    }
+
+    // If mixed selection
+    if (positiveCount > 0 && negativeCount > 0) {
+      console.log('DayMarkers - Returning neutral emoji');
+      return '😐';
+    }
+
+    console.log('DayMarkers - No mood emoji returned');
+    return null;
+  };
+
+  const moodEmoji = getMoodEmoji(mood || []);
+  console.log('DayMarkers - Final mood emoji:', moodEmoji, 'for moods:', mood);
+
   const visibleMarkers = markers.slice(0, maxVisible);
   const overflowCount = markers.length - maxVisible;
 
@@ -37,6 +79,8 @@ export function DayMarkers({ markers, isPredicted, maxVisible = 4 }: DayMarkersP
         return '💊';
       case 'appointment':
         return '📅';
+      case 'mood':
+        return moodEmoji || '😐';
       default:
         return '•';
     }
@@ -65,7 +109,13 @@ export function DayMarkers({ markers, isPredicted, maxVisible = 4 }: DayMarkersP
 
   return (
     <View style={styles.markersContainer}>
-      {visibleMarkers.map((marker, index) => (
+      {/* Show mood emoji first if available */}
+      {moodEmoji && (
+        <Text style={styles.moodMarker}>
+          {moodEmoji}
+        </Text>
+      )}
+      {visibleMarkers.filter(m => m !== 'mood').map((marker, index) => (
         <Text
           key={`${marker}-${index}`}
           style={[
@@ -95,7 +145,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 2,
-    minHeight: 12,
+    minHeight: 14,
+  },
+  moodMarker: {
+    fontSize: 12,
+    marginHorizontal: 1,
   },
   marker: {
     fontSize: 8,

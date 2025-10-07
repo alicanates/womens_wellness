@@ -188,8 +188,9 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       borderColor: theme.colors.border,
     },
     recommendationCard: {
-      backgroundColor: '#FFF9E6',
-      borderColor: '#FFE082',
+      backgroundColor: theme.colors.backgroundCard,
+      borderColor: theme.colors.primary,
+      borderWidth: 1,
     },
     cardTitle: {
       fontSize: 16,
@@ -297,7 +298,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     },
     recommendationText: {
       fontSize: 13,
-      color: '#5D4037',
+      color: theme.colors.text,
       lineHeight: 20,
       marginBottom: 4,
     },

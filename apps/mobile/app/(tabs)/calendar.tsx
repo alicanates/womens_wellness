@@ -140,63 +140,45 @@ export default function CalendarScreen() {
   };
 
   const handleDayPress = (day: any) => {
-    setSelectedDay(day);
-    setShowDayDetails(true);
+    const dayDate = typeof day.date === 'string' ? new Date(day.date) : day.date;
+
+    Alert.alert(
+      `${dayDate.getDate()} ${monthNames[dayDate.getMonth()]}`,
+      'Ne yapmak istersiniz?',
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Detayları Görüntüle',
+          onPress: () => {
+            setSelectedDay(day);
+            setShowDayDetails(true);
+          },
+        },
+        {
+          text: 'Regl Başlangıcı Olarak Kaydet',
+          onPress: () => logPeriodForDate(dayDate),
+        },
+      ]
+    );
   };
 
   const logPeriodForDate = async (date: Date) => {
-    Alert.alert(
-      'Regl Kaydet',
-      `${date.getDate()} ${monthNames[date.getMonth()]} tarihini regl başlangıcı olarak kaydetmek istiyor musunuz?`,
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Kaydet',
-          onPress: async () => {
-            try {
-              await cyclesService.createCycle({
-                startDate: date.toISOString(),
-              });
-              queryClient.invalidateQueries({ queryKey: ['calendar'] });
-              queryClient.invalidateQueries({ queryKey: ['prediction'] });
-              Alert.alert('Başarılı', 'Regl kaydedildi');
-            } catch (error: any) {
-              Alert.alert('Hata', error.message || 'Kaydedilemedi');
-            }
-          },
-        },
-      ]
-    );
+    try {
+      await cyclesService.createCycle({
+        startDate: date.toISOString(),
+      });
+      queryClient.invalidateQueries({ queryKey: ['calendar'] });
+      queryClient.invalidateQueries({ queryKey: ['prediction'] });
+      Alert.alert('Başarılı', 'Regl kaydedildi');
+    } catch (error: any) {
+      Alert.alert('Hata', error.message || 'Kaydedilemedi');
+    }
   };
 
-  const handleLogPeriod = () => {
-    Alert.alert(
-      'Regl Kaydet',
-      'Bugün regl başlangıcı olarak kaydedilsin mi?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Kaydet',
-          onPress: async () => {
-            try {
-              await cyclesService.createCycle({
-                startDate: new Date().toISOString(),
-              });
-              queryClient.invalidateQueries({ queryKey: ['calendar'] });
-              queryClient.invalidateQueries({ queryKey: ['prediction'] });
-              Alert.alert('Başarılı', 'Regl kaydedildi');
-            } catch (error: any) {
-              Alert.alert('Hata', error.message || 'Kaydedilemedi');
-            }
-          },
-        },
-      ]
-    );
-  };
 
   const handleReset = () => {
     Alert.alert(
-      'Takvimi Sıfırla',
+      'Döngüyü Sıfırla',
       'Tüm regl kayıtları silinecek. Bu işlem geri alınamaz. Emin misiniz?',
       [
         { text: 'İptal', style: 'cancel' },
@@ -208,7 +190,7 @@ export default function CalendarScreen() {
               await cyclesService.deleteAllCycles();
               queryClient.invalidateQueries({ queryKey: ['calendar'] });
               queryClient.invalidateQueries({ queryKey: ['prediction'] });
-              Alert.alert('Başarılı', 'Takvim sıfırlandı');
+              Alert.alert('Başarılı', 'Döngü sıfırlandı');
             } catch (error: any) {
               Alert.alert('Hata', error.message || 'Sıfırlanamadı');
             }
@@ -252,8 +234,29 @@ export default function CalendarScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-      {/* Header with navigation */}
-      <View style={styles.header}>
+      {/* Page Header */}
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle}>Regl Takibi</Text>
+      </View>
+
+      {/* Pregnancy Mode Toggle */}
+      <View style={styles.pregnancyToggle}>
+        <Text style={styles.pregnancyToggleLabel}>
+          {isPregnancyMode ? '🤰 Hamileyim' : '📅 Hamile Değilim'}
+        </Text>
+        <Switch
+          value={isPregnancyMode}
+          onValueChange={handlePregnancyToggle}
+          trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+          thumbColor="#fff"
+        />
+      </View>
+
+      {/* Legend - Symbol explanations */}
+      {!isPregnancyMode && <Legend />}
+
+      {/* Month Navigation */}
+      <View style={styles.monthNavigation}>
         <TouchableOpacity onPress={goToPreviousMonth} style={styles.navButton}>
           <Text style={styles.navButtonText}>←</Text>
         </TouchableOpacity>
@@ -271,77 +274,6 @@ export default function CalendarScreen() {
           <Text style={styles.navButtonText}>→</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Pregnancy Mode Toggle */}
-      <View style={styles.pregnancyToggle}>
-        <Text style={styles.pregnancyToggleLabel}>
-          {isPregnancyMode ? '🤰 Hamileyim' : '📅 Hamile Değilim'}
-        </Text>
-        <Switch
-          value={isPregnancyMode}
-          onValueChange={handlePregnancyToggle}
-          trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-          thumbColor="#fff"
-        />
-      </View>
-
-      {/* Animated Content */}
-      <Animated.View style={{ opacity: fadeAnim }}>
-        {isPregnancyMode ? (
-          // Pregnancy Mode Content
-          pregnancySummary ? (
-            <View style={styles.pregnancyCard}>
-              <Text style={styles.pregnancyTitle}>Hamilelik Özeti</Text>
-              <View style={styles.pregnancyRow}>
-                <Text style={styles.pregnancyLabel}>Gebelik Yaşı</Text>
-                <Text style={styles.pregnancyValue}>
-                  {pregnancySummary.gestationalAge.weeks} hafta{' '}
-                  {pregnancySummary.gestationalAge.days} gün
-                </Text>
-              </View>
-              <View style={styles.pregnancyRow}>
-                <Text style={styles.pregnancyLabel}>Trimester</Text>
-                <Text style={styles.pregnancyValue}>
-                  {pregnancySummary.trimester}. Trimester
-                </Text>
-              </View>
-              {pregnancySummary.dueDate && (
-                <View style={[styles.pregnancyRow, { marginBottom: 0 }]}>
-                  <Text style={styles.pregnancyLabel}>Tahmini Doğum</Text>
-                  <Text style={styles.pregnancyValue}>
-                    {new Date(pregnancySummary.dueDate).toLocaleDateString('tr-TR', {
-                      day: 'numeric',
-                      month: 'short',
-                    })}
-                  </Text>
-                </View>
-              )}
-              <TouchableOpacity
-                style={styles.viewDetailsButton}
-                onPress={() => router.push('/pregnancy')}
-              >
-                <Text style={styles.viewDetailsText}>Detaylı Görünüm →</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null
-        ) : (
-          // Period Mode Content
-          <>
-            {/* Test Text */}
-            <View style={{padding: 16, backgroundColor: '#FFF'}}>
-              <Text style={{fontSize: 16}}>Period Mode Active</Text>
-            </View>
-
-            {/* Legend */}
-            <Legend />
-
-            {/* Insight Cards */}
-            {predictionData && (predictionData as any).prediction && (
-              <InsightCards
-                prediction={(predictionData as any).prediction}
-                stats={statsData as any}
-              />
-            )}
 
       {/* Calendar grid */}
       <View style={styles.calendar}>
@@ -394,6 +326,7 @@ export default function CalendarScreen() {
                   <DayMarkers
                     markers={day.markers || []}
                     isPredicted={day.isPredicted}
+                    mood={day.dailyLog?.mood || []}
                   />
                 </TouchableOpacity>
               );
@@ -402,15 +335,60 @@ export default function CalendarScreen() {
         ) : null}
       </View>
 
-      {/* Log period button */}
-      <TouchableOpacity style={styles.logButton} onPress={handleLogPeriod}>
-        <Text style={styles.logButtonText}>📝 Regl Kaydet</Text>
-      </TouchableOpacity>
+      {/* Animated Content */}
+      <Animated.View style={{ opacity: fadeAnim }}>
+        {isPregnancyMode ? (
+          // Pregnancy Mode Content
+          pregnancySummary ? (
+            <View style={styles.pregnancyCard}>
+              <Text style={styles.pregnancyTitle}>Hamilelik Özeti</Text>
+              <View style={styles.pregnancyRow}>
+                <Text style={styles.pregnancyLabel}>Gebelik Yaşı</Text>
+                <Text style={styles.pregnancyValue}>
+                  {pregnancySummary.gestationalAge.weeks} hafta{' '}
+                  {pregnancySummary.gestationalAge.days} gün
+                </Text>
+              </View>
+              <View style={styles.pregnancyRow}>
+                <Text style={styles.pregnancyLabel}>Trimester</Text>
+                <Text style={styles.pregnancyValue}>
+                  {pregnancySummary.trimester}. Trimester
+                </Text>
+              </View>
+              {pregnancySummary.dueDate && (
+                <View style={[styles.pregnancyRow, { marginBottom: 0 }]}>
+                  <Text style={styles.pregnancyLabel}>Tahmini Doğum</Text>
+                  <Text style={styles.pregnancyValue}>
+                    {new Date(pregnancySummary.dueDate).toLocaleDateString('tr-TR', {
+                      day: 'numeric',
+                      month: 'short',
+                    })}
+                  </Text>
+                </View>
+              )}
+              <TouchableOpacity
+                style={styles.viewDetailsButton}
+                onPress={() => router.push('/pregnancy')}
+              >
+                <Text style={styles.viewDetailsText}>Detaylı Görünüm →</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null
+        ) : (
+          // Period Mode Content
+          <>
+            {/* Insight Cards */}
+            {predictionData && (predictionData as any).prediction && (
+              <InsightCards
+                prediction={(predictionData as any).prediction}
+                stats={statsData as any}
+              />
+            )}
 
       {/* Reset button */}
       {!isPregnancyMode && (
         <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
-          <Text style={styles.resetButtonText}>🔄 Takvimi Sıfırla</Text>
+          <Text style={styles.resetButtonText}>🔄 Döngüyü Sıfırla</Text>
         </TouchableOpacity>
       )}
           </>
@@ -449,14 +427,30 @@ const createStyles = (theme: ReturnType<typeof useTheme>) => StyleSheet.create({
   contentContainer: {
     paddingBottom: 100,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  pageHeader: {
     padding: theme.spacing.md,
     backgroundColor: theme.colors.backgroundCard,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+  },
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: theme.colors.text,
+    textAlign: 'center',
+  },
+  monthNavigation: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    backgroundColor: theme.colors.backgroundCard,
+    borderRadius: theme.card.borderRadius,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   navButton: {
     padding: theme.spacing.sm,
