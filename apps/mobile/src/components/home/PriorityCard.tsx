@@ -1,6 +1,8 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { useRouter } from 'expo-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { cyclesService, waterService } from '@/services/api';
 
 interface PriorityCardProps {
   card: {
@@ -15,7 +17,40 @@ interface PriorityCardProps {
 export function PriorityCard({ card, onDismiss, onPin }: PriorityCardProps) {
   const theme = useTheme();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const styles = createStyles(theme);
+
+  // Mutation for logging water
+  const logWaterMutation = useMutation({
+    mutationFn: (amountMl: number) => {
+      return waterService.logWater({ amountMl });
+    },
+    onSuccess: () => {
+      // Refresh home snapshot to update water progress
+      queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
+    },
+    onError: (error: any) => {
+      Alert.alert('Hata', error.message || 'Su eklenemedi.');
+    },
+  });
+
+  // Mutation for logging mood
+  const logMoodMutation = useMutation({
+    mutationFn: (mood: string[]) => {
+      const today = new Date().toISOString().split('T')[0];
+      return cyclesService.upsertDailyLog({ date: today, mood });
+    },
+    onSuccess: () => {
+      Alert.alert('Başarılı', 'Ruh halin kaydedildi! 💕');
+      queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
+      if (onDismiss) {
+        onDismiss();
+      }
+    },
+    onError: (error: any) => {
+      Alert.alert('Hata', error.message || 'Ruh halin kaydedilemedi.');
+    },
+  });
 
   const renderCardContent = () => {
     switch (card.type) {
@@ -38,18 +73,15 @@ export function PriorityCard({ card, onDismiss, onPin }: PriorityCardProps) {
             <View style={styles.quickActions}>
               <TouchableOpacity
                 style={[styles.quickButton, styles.quickButtonFirst]}
-                onPress={() => {
-                  // Quick add water logic will be added
-                  router.push('/water');
-                }}
+                onPress={() => logWaterMutation.mutate(250)}
+                disabled={logWaterMutation.isPending}
               >
                 <Text style={styles.quickButtonText}>+250 ml</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.quickButton}
-                onPress={() => {
-                  router.push('/water');
-                }}
+                onPress={() => logWaterMutation.mutate(500)}
+                disabled={logWaterMutation.isPending}
               >
                 <Text style={styles.quickButtonText}>+500 ml</Text>
               </TouchableOpacity>
@@ -68,10 +100,10 @@ export function PriorityCard({ card, onDismiss, onPin }: PriorityCardProps) {
               Döngü Günü: {card.data.cycleDay}
             </Text>
             <Text style={styles.cardText}>
-              Sonraki regl: {card.data.daysUntil > 0 ? `${card.data.daysUntil} gün sonra` : 'Yakında'}
+              Sonraki regl: {card.data.daysUntil > 0 ? `${card.data.daysUntil} gün sonra` : `Yakında`}
             </Text>
             <Text style={styles.confidenceText}>
-              Güven: {card.data.estimate.confidence === 'high' ? 'Yüksek' : card.data.estimate.confidence === 'medium' ? 'Orta' : 'Düşük'}
+              Güven: {card.data.estimate.confidence === 'high' ? `Yüksek` : card.data.estimate.confidence === 'medium' ? `Orta` : `Düşük`}
             </Text>
           </View>
         );
@@ -85,13 +117,25 @@ export function PriorityCard({ card, onDismiss, onPin }: PriorityCardProps) {
             </View>
             <Text style={styles.cardSubtitle}>Bugün nasıl hissediyorsun?</Text>
             <View style={styles.moodButtons}>
-              <TouchableOpacity style={styles.moodButton}>
+              <TouchableOpacity
+                style={styles.moodButton}
+                onPress={() => logMoodMutation.mutate(['Mutlu'])}
+                disabled={logMoodMutation.isPending}
+              >
                 <Text style={styles.moodIcon}>😊</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.moodButton}>
+              <TouchableOpacity
+                style={styles.moodButton}
+                onPress={() => logMoodMutation.mutate(['Sakin'])}
+                disabled={logMoodMutation.isPending}
+              >
                 <Text style={styles.moodIcon}>😐</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.moodButton}>
+              <TouchableOpacity
+                style={styles.moodButton}
+                onPress={() => logMoodMutation.mutate(['Üzgün'])}
+                disabled={logMoodMutation.isPending}
+              >
                 <Text style={styles.moodIcon}>😔</Text>
               </TouchableOpacity>
             </View>
@@ -144,10 +188,16 @@ export function PriorityCard({ card, onDismiss, onPin }: PriorityCardProps) {
     }
   };
 
+  const content = renderCardContent();
+
+  if (!content) {
+    return null;
+  }
+
   return (
     <View style={styles.container}>
-      {renderCardContent()}
-      {onDismiss && (
+      {content}
+      {onDismiss && card.type !== 'hydration' && (
         <TouchableOpacity style={styles.dismissButton} onPress={onDismiss}>
           <Text style={styles.dismissText}>✕</Text>
         </TouchableOpacity>

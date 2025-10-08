@@ -1,8 +1,8 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useState, useCallback } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { homeService } from '@/services/api';
 import { useTheme } from '@/hooks/useTheme';
@@ -17,6 +17,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
+  // Track in-session dismissed cards (resets on app restart)
+  const [sessionDismissedCards, setSessionDismissedCards] = useState<Set<string>>(new Set());
 
   const { data: snapshot, isLoading, refetch } = useQuery({
     queryKey: ['homeSnapshot'],
@@ -25,9 +27,25 @@ export default function HomeScreen() {
     staleTime: 60000, // 1 minute
   });
 
+  // Refetch data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated) {
+        refetch();
+      }
+    }, [isAuthenticated, refetch])
+  );
+
   const dismissCardMutation = useMutation({
-    mutationFn: (cardId: string) => homeService.dismissCard(cardId, 7),
-    onSuccess: () => {
+    mutationFn: (cardId: string) => {
+      // Hydration card should never be dismissed (no X button shown)
+      // Other cards dismiss via API (persists until end of day)
+      return homeService.dismissCard(cardId, 7);
+    },
+    onSuccess: (_, cardId) => {
+      // Add to session dismissed cards (for immediate UI update)
+      setSessionDismissedCards(prev => new Set(prev).add(cardId));
+      // Refresh home snapshot
       queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
     },
   });
@@ -96,7 +114,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Streak Chip */}
-        {snapshot?.streak && snapshot.streak.current > 0 && (
+        {snapshot?.streak != null && (
           <View style={styles.streakContainer}>
             <StreakChip
               current={snapshot.streak.current}
@@ -117,14 +135,14 @@ export default function HomeScreen() {
             contentContainerStyle={styles.pillsContainer}
           >
             {/* Cycle Snapshot Pill */}
-            {snapshot?.todaySnapshot.cycleDay && (
+            {snapshot?.todaySnapshot.cycleDay != null && snapshot.todaySnapshot.cycleDay > 0 && (
               <StatusPill
                 icon="🌸"
                 title="Döngü"
                 value={`Gün ${snapshot.todaySnapshot.cycleDay}`}
                 subtitle={
                   snapshot.todaySnapshot.nextPeriodEstimate
-                    ? `${new Date(snapshot.todaySnapshot.nextPeriodEstimate.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}`
+                    ? new Date(snapshot.todaySnapshot.nextPeriodEstimate.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })
                     : undefined
                 }
                 onPress={() => router.push('/(tabs)/calendar')}
@@ -148,13 +166,13 @@ export default function HomeScreen() {
                 icon="💧"
                 title="Su"
                 value={`${(snapshot.todaySnapshot.waterProgress.current / 1000).toFixed(1)}L`}
-                subtitle={`/ ${(snapshot.todaySnapshot.waterProgress.target / 1000).toFixed(1)}L`}
+                subtitle={`${(snapshot.todaySnapshot.waterProgress.target / 1000).toFixed(1)}L hedef`}
                 onPress={() => router.push('/water')}
               />
             )}
 
             {/* Reminders Pill */}
-            {snapshot?.todaySnapshot.remindersToday && snapshot.todaySnapshot.remindersToday > 0 && (
+            {snapshot?.todaySnapshot.remindersToday != null && snapshot.todaySnapshot.remindersToday > 0 && (
               <StatusPill
                 icon="⏰"
                 title="Hatırlatıcılar"
@@ -169,19 +187,30 @@ export default function HomeScreen() {
         {/* Zone C: Priority Cards */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Öncelikler</Text>
-          {snapshot?.priorityCards && snapshot.priorityCards.length > 0 ? (
-            snapshot.priorityCards.slice(0, 4).map((card) => (
-              <PriorityCard
-                key={card.id}
-                card={card}
-                onDismiss={() => dismissCardMutation.mutate(card.id)}
-              />
-            ))
-          ) : (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyText}>Harika! Şu an için öncelikli bir şey yok.</Text>
-            </View>
-          )}
+          {(() => {
+            const visibleCards = snapshot?.priorityCards
+              ?.filter((card) => {
+                // Hydration card should NEVER be filtered out
+                if (card.id === 'hydration') return true;
+                // Other cards check session dismissal
+                return !sessionDismissedCards.has(card.id);
+              })
+              .slice(0, 4) || [];
+
+            return visibleCards.length > 0 ? (
+              visibleCards.map((card) => (
+                <PriorityCard
+                  key={card.id}
+                  card={card}
+                  onDismiss={() => dismissCardMutation.mutate(card.id)}
+                />
+              ))
+            ) : (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyText}>Harika! Şu an için öncelikli bir şey yok.</Text>
+              </View>
+            );
+          })()}
         </View>
 
         {/* Zone D: Educational Articles (Optional) */}
@@ -198,9 +227,9 @@ export default function HomeScreen() {
                      article.category === 'exercise' ? 'Egzersiz' : 'Farkındalık'}
                   </Text>
                 </View>
-                <Text style={styles.articleTitle}>{article.title}</Text>
+                <Text style={styles.articleTitle}>{article.title || ''}</Text>
                 <Text style={styles.articleExcerpt} numberOfLines={2}>
-                  {article.content}
+                  {article.content || ''}
                 </Text>
               </TouchableOpacity>
             ))}

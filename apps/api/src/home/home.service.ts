@@ -117,66 +117,61 @@ export class HomeService {
     longest: number;
     startDate?: Date;
   }> {
-    // Get water logs for the last 30 days to calculate streak
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const logs = await this.prisma.waterLog.findMany({
-      where: {
-        userId,
-        loggedAt: { gte: thirtyDaysAgo },
-      },
-      orderBy: { loggedAt: 'desc' },
-    });
-
-    // Group logs by date
-    const logsByDate = new Map<string, number>();
-    logs.forEach((log) => {
-      const dateKey = log.loggedAt.toISOString().split('T')[0];
-      logsByDate.set(dateKey, (logsByDate.get(dateKey) || 0) + log.amountMl);
-    });
-
-    // Calculate current streak (consecutive days with logs)
-    let currentStreak = 0;
-    let streakStartDate: Date | undefined;
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    for (let i = 0; i < 30; i++) {
-      const checkDate = new Date(today);
-      checkDate.setDate(checkDate.getDate() - i);
-      const dateKey = checkDate.toISOString().split('T')[0];
+    // Check if user has logged in today
+    const lastLoginDate = preferences.updatedAt ? new Date(preferences.updatedAt) : null;
+    const lastLoginDateOnly = lastLoginDate ? new Date(lastLoginDate.toISOString().split('T')[0]) : null;
+    const todayDateOnly = new Date(today.toISOString().split('T')[0]);
 
-      if (logsByDate.has(dateKey)) {
+    let currentStreak = preferences.streakCount || 0;
+    let longestStreak = preferences.longestStreak || 0;
+    let streakStartDate = preferences.streakStartDate || null;
+
+    // If this is a new day (first visit of the day)
+    if (!lastLoginDateOnly || lastLoginDateOnly < todayDateOnly) {
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayDateOnly = new Date(yesterday.toISOString().split('T')[0]);
+
+      // Check if the user logged in yesterday (streak continues)
+      if (lastLoginDateOnly && lastLoginDateOnly.getTime() === yesterdayDateOnly.getTime()) {
+        // Continue streak
         currentStreak++;
-        streakStartDate = checkDate;
-      } else {
-        break;
+      } else if (!lastLoginDateOnly || lastLoginDateOnly < yesterdayDateOnly) {
+        // Streak broken - start new streak
+        currentStreak = 1;
+        streakStartDate = today;
+      } else if (lastLoginDateOnly.getTime() === todayDateOnly.getTime()) {
+        // Already counted today (shouldn't happen with the outer if condition)
+        // Do nothing
       }
-    }
 
-    // Update preferences if streak changed
-    if (currentStreak !== preferences.streakCount) {
-      const longestStreak = Math.max(currentStreak, preferences.longestStreak);
+      // Update longest streak if needed
+      longestStreak = Math.max(currentStreak, longestStreak);
+
+      // If this is the first day, set start date
+      if (currentStreak === 1 && !streakStartDate) {
+        streakStartDate = today;
+      }
+
+      // Update preferences with new streak info
       await this.prisma.userHomePreferences.update({
         where: { userId },
         data: {
           streakCount: currentStreak,
           longestStreak,
-          streakStartDate: streakStartDate || null,
+          streakStartDate,
+          updatedAt: new Date(), // This marks the login
         },
       });
-
-      return {
-        current: currentStreak,
-        longest: longestStreak,
-        startDate: streakStartDate,
-      };
     }
 
     return {
-      current: preferences.streakCount,
-      longest: preferences.longestStreak,
-      startDate: preferences.streakStartDate || undefined,
+      current: currentStreak,
+      longest: longestStreak,
+      startDate: streakStartDate || undefined,
     };
   }
 
@@ -288,28 +283,39 @@ export class HomeService {
     const pinnedCards = preferences.pinnedCards || [];
     const now = new Date();
 
+    // Get start of today for daily reset logic
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
     // Check which cards are dismissed (and not expired)
     const isDismissed = (cardId: string) => {
       const dismissedUntil = dismissedCards[cardId];
       if (!dismissedUntil) return false;
-      return new Date(dismissedUntil) > now;
+      const dismissedDate = new Date(dismissedUntil);
+
+      // Hydration card is never persistently dismissed
+      // It only dismisses in the client session (not stored in DB)
+      if (cardId === 'hydration') {
+        return false; // Always show hydration card from server
+      }
+
+      // Other cards: check if dismissal has expired
+      return dismissedDate > now;
     };
 
     // Get today snapshot for card data
     const snapshot = await this.getTodaySnapshot(userId);
 
-    // Hydration card
+    // Hydration card - ALWAYS show regardless of progress
     const hydrationProgress = snapshot.waterProgress.current / snapshot.waterProgress.target;
-    if (hydrationProgress < 0.5) {
-      cards.push({
-        id: 'hydration',
-        type: 'hydration',
-        priority: hydrationProgress < 0.25 ? 100 : 80,
-        data: snapshot.waterProgress,
-        isDismissed: isDismissed('hydration'),
-        isPinned: pinnedCards.includes('hydration'),
-      });
-    }
+    cards.push({
+      id: 'hydration',
+      type: 'hydration',
+      priority: hydrationProgress < 0.25 ? 100 : hydrationProgress < 0.5 ? 80 : 70,
+      data: snapshot.waterProgress,
+      isDismissed: isDismissed('hydration'),
+      isPinned: pinnedCards.includes('hydration'),
+    });
 
     // Cycle insight card
     if (snapshot.nextPeriodEstimate) {
@@ -333,15 +339,30 @@ export class HomeService {
       }
     }
 
-    // Symptom log card (always show with lower priority)
-    cards.push({
-      id: 'symptom_log',
-      type: 'symptom_log',
-      priority: 60,
-      data: {},
-      isDismissed: isDismissed('symptom_log'),
-      isPinned: pinnedCards.includes('symptom_log'),
+    // Symptom log card - show only if user hasn't logged mood today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayLog = await this.prisma.dailyLog.findFirst({
+      where: {
+        userId,
+        date: today,
+      },
     });
+
+    // Only show symptom log if:
+    // 1. User hasn't logged mood today (no dailyLog or empty mood array)
+    // 2. OR user hasn't dismissed it manually via X button
+    const hasMoodToday = todayLog && todayLog.mood && todayLog.mood.length > 0;
+    if (!hasMoodToday) {
+      cards.push({
+        id: 'symptom_log',
+        type: 'symptom_log',
+        priority: 60,
+        data: {},
+        isDismissed: isDismissed('symptom_log'),
+        isPinned: pinnedCards.includes('symptom_log'),
+      });
+    }
 
     // Reminders card
     if (snapshot.remindersToday > 0) {
@@ -450,6 +471,13 @@ export class HomeService {
   }
 
   async dismissCard(userId: string, cardId: string, days: number = 7): Promise<void> {
+    // Hydration card should never be dismissed persistently
+    // It should always reappear on app restart
+    if (cardId === 'hydration') {
+      // Don't save dismissal for hydration card - it's only dismissed in-memory during current session
+      return;
+    }
+
     const preferences = await this.prisma.userHomePreferences.findUnique({
       where: { userId },
     });
@@ -462,7 +490,10 @@ export class HomeService {
 
     const dismissedCards = (preferences?.dismissedCards as any) || {};
     const dismissUntil = new Date();
-    dismissUntil.setDate(dismissUntil.getDate() + days);
+
+    // For other cards (symptom_log, nova_prompt, etc.), dismiss only until end of today
+    // They will reappear tomorrow
+    dismissUntil.setHours(23, 59, 59, 999);
 
     dismissedCards[cardId] = dismissUntil.toISOString();
 
