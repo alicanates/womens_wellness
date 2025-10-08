@@ -193,3 +193,4 @@ packages/
 - Troubleshooting appendices.
 
 > **Rule**: If an omitted detail becomes necessary, implement the safest default and add a `TODO:` with a link to the corresponding module or create a short doc under `docs/`.
+
