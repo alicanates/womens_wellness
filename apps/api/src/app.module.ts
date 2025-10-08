@@ -20,6 +20,7 @@ import { ModelPolicyModule } from './model-policy/model-policy.module';
 import { FeatureFlagModule } from './feature-flag/feature-flag.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { HomeModule } from './home/home.module';
+import { WellnessModule } from './wellness/wellness.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { HomeModule } from './home/home.module';
     FeatureFlagModule,
     AuditLogModule,
     HomeModule,
+    WellnessModule,
   ],
   controllers: [AppController],
   providers: [

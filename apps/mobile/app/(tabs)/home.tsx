@@ -9,6 +9,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { StreakChip } from '@/components/home/StreakChip';
 import { StatusPill } from '@/components/home/StatusPill';
 import { PriorityCard } from '@/components/home/PriorityCard';
+import { WaterTile, StepsTile, MeditationTile, SleepTile } from '@/components/wellness';
 
 export default function HomeScreen() {
   const theme = useTheme();
@@ -38,8 +39,6 @@ export default function HomeScreen() {
 
   const dismissCardMutation = useMutation({
     mutationFn: (cardId: string) => {
-      // Hydration card should never be dismissed (no X button shown)
-      // Other cards dismiss via API (persists until end of day)
       return homeService.dismissCard(cardId, 7);
     },
     onSuccess: (_, cardId) => {
@@ -127,74 +126,100 @@ export default function HomeScreen() {
         )}
 
         {/* Zone B: Today at a Glance (Status Pills) */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Bugün Bir Bakışta</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.pillsContainer}
-          >
-            {/* Cycle Snapshot Pill */}
-            {snapshot?.todaySnapshot.cycleDay != null && snapshot.todaySnapshot.cycleDay > 0 && (
-              <StatusPill
-                icon="🌸"
-                title="Döngü"
-                value={`Gün ${snapshot.todaySnapshot.cycleDay}`}
-                subtitle={
-                  snapshot.todaySnapshot.nextPeriodEstimate
-                    ? new Date(snapshot.todaySnapshot.nextPeriodEstimate.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })
-                    : undefined
-                }
-                onPress={() => router.push('/(tabs)/calendar')}
-              />
-            )}
+        {(() => {
+          // Check if there's any data other than water
+          const hasCycleData = snapshot?.todaySnapshot.cycleDay != null && snapshot.todaySnapshot.cycleDay > 0;
+          const hasPregnancyData = snapshot?.todaySnapshot.pregnancy != null;
+          const hasRemindersData = snapshot?.todaySnapshot.remindersToday != null && snapshot.todaySnapshot.remindersToday > 0;
 
-            {/* Pregnancy Pill */}
-            {snapshot?.todaySnapshot.pregnancy && (
-              <StatusPill
-                icon="🤰"
-                title="Gebelik"
-                value={`${snapshot.todaySnapshot.pregnancy.weeks}h+${snapshot.todaySnapshot.pregnancy.days}g`}
-                subtitle={new Date(snapshot.todaySnapshot.pregnancy.dueDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
-                onPress={() => router.push('/pregnancy')}
-              />
-            )}
+          // Only show section if there's data other than water
+          const showSection = hasCycleData || hasPregnancyData || hasRemindersData;
 
-            {/* Water Pill */}
-            {snapshot?.todaySnapshot.waterProgress && (
-              <StatusPill
-                icon="💧"
-                title="Su"
-                value={`${(snapshot.todaySnapshot.waterProgress.current / 1000).toFixed(1)}L`}
-                subtitle={`${(snapshot.todaySnapshot.waterProgress.target / 1000).toFixed(1)}L hedef`}
-                onPress={() => router.push('/water')}
-              />
-            )}
+          if (!showSection) return null;
 
-            {/* Reminders Pill */}
-            {snapshot?.todaySnapshot.remindersToday != null && snapshot.todaySnapshot.remindersToday > 0 && (
-              <StatusPill
-                icon="⏰"
-                title="Hatırlatıcılar"
-                value={`${snapshot.todaySnapshot.remindersToday}`}
-                subtitle="bugün"
-                onPress={() => router.push('/(tabs)/reminders')}
-              />
-            )}
-          </ScrollView>
-        </View>
+          return (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Bugün Bir Bakışta</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.pillsContainer}
+              >
+                {/* Cycle Snapshot Pill */}
+                {hasCycleData && (
+                  <StatusPill
+                    icon="🌸"
+                    title="Döngü"
+                    value={`Gün ${snapshot.todaySnapshot.cycleDay}`}
+                    subtitle={
+                      snapshot.todaySnapshot.nextPeriodEstimate
+                        ? new Date(snapshot.todaySnapshot.nextPeriodEstimate.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })
+                        : undefined
+                    }
+                    onPress={() => router.push('/(tabs)/calendar')}
+                  />
+                )}
+
+                {/* Pregnancy Pill */}
+                {hasPregnancyData && (
+                  <StatusPill
+                    icon="🤰"
+                    title="Gebelik"
+                    value={`${snapshot.todaySnapshot.pregnancy.weeks}h+${snapshot.todaySnapshot.pregnancy.days}g`}
+                    subtitle={new Date(snapshot.todaySnapshot.pregnancy.dueDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                    onPress={() => router.push('/pregnancy')}
+                  />
+                )}
+
+                {/* Reminders Pill */}
+                {hasRemindersData && (
+                  <StatusPill
+                    icon="⏰"
+                    title="Hatırlatıcılar"
+                    value={`${snapshot.todaySnapshot.remindersToday}`}
+                    subtitle="bugün"
+                    onPress={() => router.push('/(tabs)/reminders')}
+                  />
+                )}
+              </ScrollView>
+            </View>
+          );
+        })()}
+
+        {/* Wellness Tiles - 2x2 Grid */}
+        {snapshot?.wellnessTiles && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>İyilik Hali</Text>
+            <View style={styles.tilesGrid}>
+              {/* Top Row: Water + Steps */}
+              <View style={styles.tilesRow}>
+                <View style={styles.tileWrapper}>
+                  <WaterTile data={snapshot.todaySnapshot.waterProgress} />
+                </View>
+                <View style={styles.tileWrapper}>
+                  <StepsTile data={snapshot.wellnessTiles.steps} />
+                </View>
+              </View>
+
+              {/* Bottom Row: Meditation + Sleep */}
+              <View style={styles.tilesRow}>
+                <View style={styles.tileWrapper}>
+                  <MeditationTile data={snapshot.wellnessTiles.meditation} />
+                </View>
+                <View style={styles.tileWrapper}>
+                  <SleepTile data={snapshot.wellnessTiles.sleep} />
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Zone C: Priority Cards */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Öncelikler</Text>
           {(() => {
             const visibleCards = snapshot?.priorityCards
-              ?.filter((card) => {
-                // Hydration card should NEVER be filtered out
-                if (card.id === 'hydration') return true;
-                // Other cards check session dismissal
-                return !sessionDismissedCards.has(card.id);
-              })
+              ?.filter((card) => !sessionDismissedCards.has(card.id))
               .slice(0, 4) || [];
 
             return visibleCards.length > 0 ? (
@@ -427,6 +452,17 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       fontWeight: '600',
       color: theme.colors.text,
       textAlign: 'center',
+    },
+    tilesGrid: {
+      paddingHorizontal: theme.spacing.lg,
+    },
+    tilesRow: {
+      flexDirection: 'row',
+      marginBottom: theme.spacing.md,
+      gap: theme.spacing.md,
+    },
+    tileWrapper: {
+      flex: 1,
     },
     bottomSpacer: {
       height: 40,

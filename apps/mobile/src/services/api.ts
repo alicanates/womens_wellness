@@ -543,6 +543,26 @@ export const homeService = {
         };
         remindersToday: number;
       };
+      wellnessTiles?: {
+        steps: {
+          today: number;
+          goal: number;
+          percentage: number;
+          source: string;
+        } | null;
+        meditation: {
+          todayMin: number;
+          goalMin: number;
+          percentage: number;
+          sessions: number;
+        } | null;
+        sleep: {
+          lastNightMin: number;
+          goalHours: number;
+          percentage: number;
+          quality?: string;
+        } | null;
+      };
       priorityCards: Array<{
         id: string;
         type: 'hydration' | 'cycle_insight' | 'symptom_log' | 'medication' | 'reminder' | 'nova_prompt';
@@ -573,4 +593,109 @@ export const homeService = {
 
   setVisiblePills: (pillIds: string[]) =>
     api.post('/home/pills/set-visible', { pillIds }),
+};
+
+// Wellness endpoints
+export const wellnessService = {
+  // Steps
+  getSteps: (from?: string, to?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    return api.get(`/wellness/v1/steps${params.toString() ? `?${params.toString()}` : ''}`);
+  },
+
+  getTodaySteps: () => api.get('/wellness/v1/steps/today'),
+
+  logSteps: (data: { date: string; count: number; source?: string; isManual?: boolean }) =>
+    api.post('/wellness/v1/steps', data),
+
+  deleteSteps: (date: string) => api.delete(`/wellness/v1/steps/${date}`),
+
+  // Meditation
+  getMeditation: (from?: string, to?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    return api.get(`/wellness/v1/meditation${params.toString() ? `?${params.toString()}` : ''}`);
+  },
+
+  getTodayMeditation: () => api.get('/wellness/v1/meditation/today'),
+
+  logMeditation: (data: {
+    date: string;
+    durationMin: number;
+    type?: 'breath' | 'guided' | 'custom';
+    source?: string;
+    isManual?: boolean;
+  }) => api.post('/wellness/v1/meditation', data),
+
+  deleteMeditation: (sessionId: string) => api.delete(`/wellness/v1/meditation/${sessionId}`),
+
+  // Sleep
+  getSleep: (from?: string, to?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.append('from', from);
+    if (to) params.append('to', to);
+    return api.get(`/wellness/v1/sleep${params.toString() ? `?${params.toString()}` : ''}`);
+  },
+
+  getLastNightSleep: () => api.get('/wellness/v1/sleep/last-night'),
+
+  logSleep: (data: {
+    sleepDate: string;
+    durationMin: number;
+    quality?: 'good' | 'medium' | 'poor';
+    source?: string;
+    isManual?: boolean;
+    notes?: string;
+  }) => api.post('/wellness/v1/sleep', data),
+
+  deleteSleep: (date: string) => api.delete(`/wellness/v1/sleep/${date}`),
+
+  // Preferences
+  getPreferences: () => api.get<{
+    id: string;
+    userId: string;
+    stepsGoal: number;
+    meditationGoalMin: number;
+    sleepGoalHours: number;
+    tilesEnabled: {
+      steps: boolean;
+      meditation: boolean;
+      sleep: boolean;
+      water: boolean;
+    };
+    notificationsJson: any;
+  }>('/wellness/v1/preferences'),
+
+  updatePreferences: (data: {
+    stepsGoal?: number;
+    meditationGoalMin?: number;
+    sleepGoalHours?: number;
+    tilesEnabled?: any;
+    notificationsJson?: any;
+  }) => api.post('/wellness/v1/preferences', data),
+
+  // Summary (for Home screen)
+  getSummary: () => api.get<{
+    steps: {
+      today: number;
+      goal: number;
+      percentage: number;
+      source: string;
+    } | null;
+    meditation: {
+      todayMin: number;
+      goalMin: number;
+      percentage: number;
+      sessions: number;
+    } | null;
+    sleep: {
+      lastNightMin: number;
+      goalHours: number;
+      percentage: number;
+      quality?: string;
+    } | null;
+  }>('/wellness/v1/summary'),
 };

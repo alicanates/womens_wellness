@@ -18,6 +18,7 @@
       "night": "İyi geceler"
     },
     "question": "Bugün nasılsın?",
+    "todayAtGlance": "Bugün Bir Bakışta",
     "streak": {
       "title": "Seri",
       "current": "Güncel Seri",
@@ -31,6 +32,55 @@
       "reminders": "Hatırlatıcılar",
       "hydration": "Hidrasyon",
       "medication": "İlaç"
+    },
+    "tiles": {
+      "water": {
+        "title": "Su",
+        "target": "Hedef",
+        "noData": "Bugün henüz kayıt yok – +250 ml ile başla",
+        "quickAdd250": "+250 ml",
+        "quickAdd500": "+500 ml"
+      },
+      "steps": {
+        "title": "Adım",
+        "target": "Hedef",
+        "noData": "Bugün veri yok – Manuel Ekle",
+        "goalReached": "Hedefe ulaştın!",
+        "editGoal": "Hedefi Düzenle",
+        "remind10min": "10 dk yürüyüş hatırlat",
+        "connectHealth": "Sağlık verisini bağla",
+        "manualAdd": "Manuel Ekle",
+        "permissionDenied": "Sağlık izni verilmedi"
+      },
+      "meditation": {
+        "title": "Meditasyon",
+        "subtitle": "Nefes",
+        "target": "Hedef",
+        "todayMin": "Bugün {minutes} dk",
+        "noData": "1 dk nefes ile başla",
+        "completed": "Tebrikler, bugün hedefe yaklaştın",
+        "quickBreath1": "1 dk nefes",
+        "quickMeditation5": "5 dk meditasyon"
+      },
+      "sleep": {
+        "title": "Uyku",
+        "target": "Hedef",
+        "hours": "s",
+        "minutes": "dk",
+        "quality": "Kalite",
+        "qualityGood": "iyi",
+        "qualityMedium": "orta",
+        "qualityPoor": "zayıf",
+        "noData": "Dün gece kaydı yok",
+        "confirmLastNight": "Dün geceyi onayla",
+        "addNote": "Uyku notu ekle",
+        "importedPending": "Yeni uyku verisi – onayla",
+        "fragmentedSleep": "Parçalı uyku tespit edildi – değerleri gözden geçir",
+        "preset5h": "5 s",
+        "preset6h": "6 s",
+        "preset7h": "7 s",
+        "preset8h": "8 s"
+      }
     },
     "cycleSnapshot": {
       "day": "Gün",
@@ -125,6 +175,54 @@
       "normal": "Normal",
       "overweight": "Fazla Kilolu",
       "obese": "Obez"
+    }
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "wellness": {
+      "title": "İyilik Hali Kartları",
+      "tilesShowHide": "Kartları Göster/Gizle",
+      "showSteps": "Adım Kartını Göster",
+      "showMeditation": "Meditasyon Kartını Göster",
+      "showSleep": "Uyku Kartını Göster",
+      "showWater": "Su Kartını Göster",
+      "goals": "Hedefler",
+      "stepsGoal": "Adım Hedefi",
+      "meditationGoal": "Meditasyon Hedefi (dakika)",
+      "sleepGoal": "Uyku Hedefi (saat)",
+      "healthPermissions": "Sağlık İzinleri",
+      "healthConnect": "Bağla",
+      "healthDisconnect": "Kaldır",
+      "healthConnected": "Bağlı",
+      "healthNotConnected": "Bağlı değil",
+      "notifications": "Bildirimler",
+      "stepsNotifications": "Adım Bildirimleri",
+      "meditationNotifications": "Meditasyon Bildirimleri",
+      "sleepNotifications": "Uyku Hatırlatıcıları",
+      "quietHours": "Sessiz Saatler",
+      "quietHoursStart": "Başlangıç",
+      "quietHoursEnd": "Bitiş"
+    }
+  },
+  "wellness": {
+    "permissions": {
+      "title": "Sağlık Verisi İzni",
+      "rationale": "Adım sayısı, uyku ve meditasyon verilerinizi otomatik olarak senkronize etmek için sağlık verilerine erişim izni gerekiyor.",
+      "grant": "İzin Ver",
+      "cancel": "İptal",
+      "denied": "İzin reddedildi. Ayarlar > Gizlilik > Sağlık üzerinden izin verebilirsiniz."
+    },
+    "manual": {
+      "addSteps": "Adım Ekle",
+      "addMeditation": "Meditasyon Ekle",
+      "addSleep": "Uyku Ekle",
+      "stepsCount": "Adım Sayısı",
+      "duration": "Süre (dakika)",
+      "sleepDuration": "Uyku Süresi (saat)",
+      "quality": "Kalite",
+      "notes": "Notlar",
+      "save": "Kaydet",
+      "cancel": "İptal"
     }
   },
   "errors": {

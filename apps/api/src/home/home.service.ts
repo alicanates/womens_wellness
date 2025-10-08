@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CyclesService } from '../cycles/cycles.service';
 import { WaterService } from '../water/water.service';
 import { PregnancyService } from '../pregnancy/pregnancy.service';
+import { WellnessService, WellnessSummary } from '../wellness/wellness.service';
 
 export interface HomeSnapshot {
   user: {
@@ -37,6 +38,7 @@ export interface HomeSnapshot {
     };
     remindersToday: number;
   };
+  wellnessTiles?: WellnessSummary;
   priorityCards: PriorityCard[];
   educationalArticles: EducationalArticleDto[];
 }
@@ -67,6 +69,7 @@ export class HomeService {
     private cyclesService: CyclesService,
     private waterService: WaterService,
     private pregnancyService: PregnancyService,
+    private wellnessService: WellnessService,
   ) {}
 
   async getHomeSnapshot(userId: string, locale: string = 'tr'): Promise<HomeSnapshot> {
@@ -100,6 +103,9 @@ export class HomeService {
     // Get educational articles
     const educationalArticles = await this.getEducationalArticles(locale);
 
+    // Get wellness tiles summary
+    const wellnessTiles = await this.wellnessService.getWellnessSummary(userId);
+
     return {
       user: {
         displayName: user.profile?.displayName || user.email.split('@')[0],
@@ -107,6 +113,7 @@ export class HomeService {
       },
       streak,
       todaySnapshot,
+      wellnessTiles,
       priorityCards,
       educationalArticles,
     };
@@ -293,29 +300,12 @@ export class HomeService {
       if (!dismissedUntil) return false;
       const dismissedDate = new Date(dismissedUntil);
 
-      // Hydration card is never persistently dismissed
-      // It only dismisses in the client session (not stored in DB)
-      if (cardId === 'hydration') {
-        return false; // Always show hydration card from server
-      }
-
-      // Other cards: check if dismissal has expired
+      // Check if dismissal has expired
       return dismissedDate > now;
     };
 
     // Get today snapshot for card data
     const snapshot = await this.getTodaySnapshot(userId);
-
-    // Hydration card - ALWAYS show regardless of progress
-    const hydrationProgress = snapshot.waterProgress.current / snapshot.waterProgress.target;
-    cards.push({
-      id: 'hydration',
-      type: 'hydration',
-      priority: hydrationProgress < 0.25 ? 100 : hydrationProgress < 0.5 ? 80 : 70,
-      data: snapshot.waterProgress,
-      isDismissed: isDismissed('hydration'),
-      isPinned: pinnedCards.includes('hydration'),
-    });
 
     // Cycle insight card
     if (snapshot.nextPeriodEstimate) {
@@ -471,13 +461,6 @@ export class HomeService {
   }
 
   async dismissCard(userId: string, cardId: string, days: number = 7): Promise<void> {
-    // Hydration card should never be dismissed persistently
-    // It should always reappear on app restart
-    if (cardId === 'hydration') {
-      // Don't save dismissal for hydration card - it's only dismissed in-memory during current session
-      return;
-    }
-
     const preferences = await this.prisma.userHomePreferences.findUnique({
       where: { userId },
     });
@@ -491,8 +474,7 @@ export class HomeService {
     const dismissedCards = (preferences?.dismissedCards as any) || {};
     const dismissUntil = new Date();
 
-    // For other cards (symptom_log, nova_prompt, etc.), dismiss only until end of today
-    // They will reappear tomorrow
+    // Dismiss cards until end of today - they will reappear tomorrow
     dismissUntil.setHours(23, 59, 59, 999);
 
     dismissedCards[cardId] = dismissUntil.toISOString();

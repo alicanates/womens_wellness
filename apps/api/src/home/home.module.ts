@@ -6,9 +6,10 @@ import { MetricsModule } from '../metrics/metrics.module';
 import { CyclesModule } from '../cycles/cycles.module';
 import { WaterModule } from '../water/water.module';
 import { PregnancyModule } from '../pregnancy/pregnancy.module';
+import { WellnessModule } from '../wellness/wellness.module';
 
 @Module({
-  imports: [PrismaModule, MetricsModule, CyclesModule, WaterModule, PregnancyModule],
+  imports: [PrismaModule, MetricsModule, CyclesModule, WaterModule, PregnancyModule, WellnessModule],
   controllers: [HomeController],
   providers: [HomeService],
   exports: [HomeService],

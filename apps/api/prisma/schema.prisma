@@ -78,20 +78,24 @@ model User {
   updatedAt DateTime   @updatedAt
 
   // Relations
-  profile          Profile?
-  oauthAccounts    OAuthAccount[]
-  healthMetrics    HealthMetric[]
-  periodCycles     PeriodCycle[]
-  dailyLogs        DailyLog[]
-  pregnancy        Pregnancy?
-  waterLogs        WaterLog[]
-  reminders        Reminder[]
-  conversations    Conversation[]
-  memories         Memory[]
-  subscription     Subscription?
-  usageQuota       UsageQuota?
-  auditLogs        AuditLog[]
-  homePreferences  UserHomePreferences?
+  profile             Profile?
+  oauthAccounts       OAuthAccount[]
+  healthMetrics       HealthMetric[]
+  periodCycles        PeriodCycle[]
+  dailyLogs           DailyLog[]
+  pregnancy           Pregnancy?
+  waterLogs           WaterLog[]
+  reminders           Reminder[]
+  conversations       Conversation[]
+  memories            Memory[]
+  subscription        Subscription?
+  usageQuota          UsageQuota?
+  auditLogs           AuditLog[]
+  homePreferences     UserHomePreferences?
+  dailySteps          DailySteps[]
+  meditationSessions  MeditationSession[]
+  sleepLogs           SleepLog[]
+  wellnessPreferences WellnessPreferences?
 
   @@index([email])
 }
@@ -537,4 +541,76 @@ model EducationalArticle {
 
   @@index([category, publishedAt])
   @@index([isActive, priority])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Wellness Tracking (Steps, Meditation, Sleep)
+// ────────────────────────────────────────────────────────────────────────────
+
+model DailySteps {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime // Date only (normalized to start of day UTC)
+  count     Int      // Total steps for the day
+  source    String   @default("manual") // manual, apple_health, google_fit
+  syncedAt  DateTime @default(now())
+  isManual  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model MeditationSession {
+  id          String   @id @default(cuid())
+  userId      String
+  date        DateTime // Date only (normalized to start of day UTC)
+  durationMin Int      // Duration in minutes
+  type        String   @default("breath") // breath, guided, custom
+  source      String   @default("manual") // manual, apple_health, google_fit
+  isManual    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model SleepLog {
+  id          String   @id @default(cuid())
+  userId      String
+  sleepDate   DateTime // Date of the night (normalized to start of day UTC)
+  durationMin Int      // Total sleep duration in minutes
+  quality     String?  // good, medium, poor (optional)
+  source      String   @default("manual") // manual, apple_health, google_fit
+  isManual    Boolean  @default(false)
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sleepDate])
+  @@index([userId, sleepDate])
+}
+
+// Wellness tile preferences and targets
+model WellnessPreferences {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  stepsGoal          Int      @default(7000)
+  meditationGoalMin  Int      @default(10)
+  sleepGoalHours     Float    @default(7.0)
+  tilesEnabled       Json     @default("{\"steps\":true,\"meditation\":true,\"sleep\":true,\"water\":true}") // Feature flags per tile
+  notificationsJson  Json     @default("{}") // Per-tile notification settings
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
