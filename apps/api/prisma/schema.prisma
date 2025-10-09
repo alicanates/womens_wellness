@@ -72,6 +72,7 @@ enum AIProvider {
 model User {
   id        String     @id @default(cuid())
   email     String     @unique
+  username  String?    @unique // Lowercase, alphanumeric + . _ (temporary nullable for migration)
   password  String?
   status    UserStatus @default(ACTIVE)
   createdAt DateTime   @default(now())
@@ -98,17 +99,16 @@ model User {
   wellnessPreferences WellnessPreferences?
 
   @@index([email])
+  @@index([username])
 }
 
 model Profile {
   id                String    @id @default(cuid())
   userId            String    @unique
+  firstName         String?   // Temporary nullable for migration
+  lastName          String?   // Temporary nullable for migration
   displayName       String
-  username          String?   @unique
-  birthDate         DateTime? // Keep for backward compatibility
-  birthDay          Int? // 1-31
-  birthMonth        Int? // 1-12
-  birthYear         Int? // e.g., 1990
+  dateOfBirth       DateTime? // Full birth date for age calculations
   heightCm          Float?
   weightKg          Float?
   country           String?
@@ -120,7 +120,7 @@ model Profile {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([username])
+  @@index([userId])
 }
 
 model OAuthAccount {

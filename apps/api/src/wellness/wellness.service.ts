@@ -50,6 +50,22 @@ export interface WellnessSummary {
 export class WellnessService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Normalize a date to midnight in UTC
+   * This ensures consistent date handling across save/retrieve operations
+   */
+  private normalizeToMidnight(date: Date | string): Date {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
+  }
+
+  /**
+   * Get today's date at midnight in UTC
+   */
+  private getToday(): Date {
+    return this.normalizeToMidnight(new Date());
+  }
+
   // ────────────────────────────────────────────────────────────────────────
   // Steps Management
   // ────────────────────────────────────────────────────────────────────────
@@ -70,8 +86,7 @@ export class WellnessService {
   }
 
   async getTodaySteps(userId: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = this.getToday();
 
     const record = await this.prisma.dailySteps.findUnique({
       where: {
@@ -86,8 +101,7 @@ export class WellnessService {
   }
 
   async logSteps(userId: string, data: StepsData) {
-    const date = new Date(data.date);
-    date.setHours(0, 0, 0, 0);
+    const date = this.normalizeToMidnight(data.date);
 
     // Upsert to handle duplicates
     return this.prisma.dailySteps.upsert({
@@ -114,8 +128,7 @@ export class WellnessService {
   }
 
   async deleteSteps(userId: string, date: string) {
-    const dateObj = new Date(date);
-    dateObj.setHours(0, 0, 0, 0);
+    const dateObj = this.normalizeToMidnight(date);
 
     const record = await this.prisma.dailySteps.findUnique({
       where: {
@@ -155,8 +168,7 @@ export class WellnessService {
   }
 
   async getTodayMeditation(userId: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = this.getToday();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -180,8 +192,7 @@ export class WellnessService {
   }
 
   async logMeditation(userId: string, data: MeditationData) {
-    const date = new Date(data.date);
-    date.setHours(0, 0, 0, 0);
+    const date = this.normalizeToMidnight(data.date);
 
     return this.prisma.meditationSession.create({
       data: {
@@ -229,8 +240,7 @@ export class WellnessService {
   }
 
   async getLastNightSleep(userId: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = this.getToday();
 
     // Get last night's sleep (yesterday's date)
     const yesterday = new Date(today);
@@ -249,8 +259,7 @@ export class WellnessService {
   }
 
   async logSleep(userId: string, data: SleepData) {
-    const sleepDate = new Date(data.sleepDate);
-    sleepDate.setHours(0, 0, 0, 0);
+    const sleepDate = this.normalizeToMidnight(data.sleepDate);
 
     // Validate quality if provided
     if (data.quality && !['good', 'medium', 'poor'].includes(data.quality)) {
@@ -284,8 +293,7 @@ export class WellnessService {
   }
 
   async deleteSleep(userId: string, date: string) {
-    const sleepDate = new Date(date);
-    sleepDate.setHours(0, 0, 0, 0);
+    const sleepDate = this.normalizeToMidnight(date);
 
     const record = await this.prisma.sleepLog.findUnique({
       where: {

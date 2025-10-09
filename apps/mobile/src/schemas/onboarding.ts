@@ -9,7 +9,8 @@ export const UsernameSchema = z
 
 // Step 1: Identity & Access
 export const IdentitySchema = z.object({
-  fullName: z.string().min(2, 'Ad soyad en az 2 karakter olmalıdır'),
+  firstName: z.string().min(2, 'Ad en az 2 karakter olmalıdır'),
+  lastName: z.string().min(2, 'Soyad en az 2 karakter olmalıdır'),
   username: UsernameSchema,
   email: z.string().email('Geçerli bir e-posta adresi girin'),
   birthDate: z.date({

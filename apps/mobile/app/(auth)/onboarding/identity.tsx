@@ -44,7 +44,8 @@ export default function IdentityStep() {
     resolver: zodResolver(IdentitySchema),
     mode: 'onChange',
     defaultValues: {
-      fullName: data.fullName || '',
+      firstName: data.firstName || '',
+      lastName: data.lastName || '',
       username: data.username || '',
       email: data.email || '',
       birthDate: data.birthDate,
@@ -76,7 +77,7 @@ export default function IdentityStep() {
       setCheckingUsername(true);
       try {
         const response = await api.get<{ available: boolean }>(
-          `/users/availability?username=${encodeURIComponent(username)}`,
+          `/auth/check-username?username=${encodeURIComponent(username)}`,
           false
         );
         setUsernameAvailable(response.available);
@@ -133,7 +134,8 @@ export default function IdentityStep() {
     }
 
     await updateData({
-      fullName: formData.fullName,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
       username: formData.username,
       email: formData.email,
       birthDate: formData.birthDate,
@@ -154,16 +156,16 @@ export default function IdentityStep() {
       subtitle="Sağlıklı yaşam yolculuğuna başlamak için bilgilerini gir"
     >
       <View style={styles.form}>
-        {/* Full Name */}
+        {/* First Name */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Ad Soyad</Text>
+          <Text style={styles.label}>Ad</Text>
           <Controller
             control={control}
-            name="fullName"
+            name="firstName"
             render={({ field: { onChange, onBlur, value } }) => (
               <TextInput
-                style={[styles.input, errors.fullName && styles.inputError]}
-                placeholder="Adın ve soyadın"
+                style={[styles.input, errors.firstName && styles.inputError]}
+                placeholder="Adın"
                 placeholderTextColor={theme.colors.textLight}
                 value={value}
                 onChangeText={onChange}
@@ -171,8 +173,30 @@ export default function IdentityStep() {
               />
             )}
           />
-          {errors.fullName && (
-            <Text style={styles.errorText}>{errors.fullName.message}</Text>
+          {errors.firstName && (
+            <Text style={styles.errorText}>{errors.firstName.message}</Text>
+          )}
+        </View>
+
+        {/* Last Name */}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Soyad</Text>
+          <Controller
+            control={control}
+            name="lastName"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <TextInput
+                style={[styles.input, errors.lastName && styles.inputError]}
+                placeholder="Soyadın"
+                placeholderTextColor={theme.colors.textLight}
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+              />
+            )}
+          />
+          {errors.lastName && (
+            <Text style={styles.errorText}>{errors.lastName.message}</Text>
           )}
         </View>
 

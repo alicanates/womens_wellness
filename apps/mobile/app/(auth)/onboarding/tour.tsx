@@ -65,7 +65,8 @@ export default function TourStep() {
   };
 
   const handleComplete = async () => {
-    if (!data.email || !data.password || !data.username || !data.fullName || !data.birthDate) {
+    // Validate required fields
+    if (!data.email || !data.password || !data.username || !data.firstName || !data.lastName || !data.birthDate) {
       Alert.alert('Hata', 'Lütfen tüm gerekli alanları doldurun');
       router.push('/(auth)/onboarding/identity');
       return;
@@ -73,16 +74,14 @@ export default function TourStep() {
 
     setLoading(true);
     try {
-      // Register user
+      // Register user with all required fields
       const response = await authService.register({
         email: data.email,
         password: data.password,
-        displayName: data.fullName,
-        // Additional fields - these would need to be added to the API
-        // username: data.username,
-        // birthDate: data.birthDate.toISOString(),
-        // aiMemoryOptIn: data.aiMemoryOptIn,
-        // notificationIntensity: data.notificationIntensity,
+        username: data.username,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        dateOfBirth: data.birthDate.toISOString(),
       });
 
       // Save auth tokens
@@ -90,24 +89,6 @@ export default function TourStep() {
         accessToken: response.accessToken,
         refreshToken: response.refreshToken,
       });
-
-      // Update profile with birth date, username and other onboarding data
-      try {
-        const profileUpdate: any = {};
-        if (data.birthDate) {
-          profileUpdate.birthDate = data.birthDate.toISOString();
-        }
-        if (data.username) {
-          profileUpdate.username = data.username;
-        }
-
-        if (Object.keys(profileUpdate).length > 0) {
-          await userService.updateMe(profileUpdate);
-        }
-      } catch (error) {
-        console.error('Failed to update profile:', error);
-        // Don't block registration if profile update fails
-      }
 
       // If user provided last period date, create cycle
       if (data.lastPeriodDate) {

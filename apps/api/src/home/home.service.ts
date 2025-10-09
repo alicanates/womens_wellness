@@ -124,13 +124,15 @@ export class HomeService {
     longest: number;
     startDate?: Date;
   }> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
     // Check if user has logged in today
     const lastLoginDate = preferences.updatedAt ? new Date(preferences.updatedAt) : null;
-    const lastLoginDateOnly = lastLoginDate ? new Date(lastLoginDate.toISOString().split('T')[0]) : null;
-    const todayDateOnly = new Date(today.toISOString().split('T')[0]);
+    const lastLoginDateOnly = lastLoginDate
+      ? new Date(lastLoginDate.getFullYear(), lastLoginDate.getMonth(), lastLoginDate.getDate(), 0, 0, 0, 0)
+      : null;
+    const todayDateOnly = today;
 
     let currentStreak = preferences.streakCount || 0;
     let longestStreak = preferences.longestStreak || 0;
@@ -140,28 +142,26 @@ export class HomeService {
     if (!lastLoginDateOnly || lastLoginDateOnly < todayDateOnly) {
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayDateOnly = new Date(yesterday.toISOString().split('T')[0]);
+      const yesterdayDateOnly = yesterday;
 
-      // Check if the user logged in yesterday (streak continues)
-      if (lastLoginDateOnly && lastLoginDateOnly.getTime() === yesterdayDateOnly.getTime()) {
-        // Continue streak
-        currentStreak++;
-      } else if (!lastLoginDateOnly || lastLoginDateOnly < yesterdayDateOnly) {
-        // Streak broken - start new streak
+      // For brand new users (no streak history), start streak at 1
+      if (!lastLoginDateOnly || (currentStreak === 0 && !streakStartDate)) {
         currentStreak = 1;
         streakStartDate = today;
-      } else if (lastLoginDateOnly.getTime() === todayDateOnly.getTime()) {
-        // Already counted today (shouldn't happen with the outer if condition)
-        // Do nothing
+      }
+      // Check if the user logged in yesterday (streak continues)
+      else if (lastLoginDateOnly.getTime() === yesterdayDateOnly.getTime()) {
+        // Continue streak
+        currentStreak++;
+      }
+      // Streak broken - start new streak
+      else if (lastLoginDateOnly < yesterdayDateOnly) {
+        currentStreak = 1;
+        streakStartDate = today;
       }
 
       // Update longest streak if needed
       longestStreak = Math.max(currentStreak, longestStreak);
-
-      // If this is the first day, set start date
-      if (currentStreak === 1 && !streakStartDate) {
-        streakStartDate = today;
-      }
 
       // Update preferences with new streak info
       await this.prisma.userHomePreferences.update({
@@ -183,8 +183,8 @@ export class HomeService {
   }
 
   private async getTodaySnapshot(userId: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -330,12 +330,10 @@ export class HomeService {
     }
 
     // Symptom log card - show only if user hasn't logged mood today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const todayLog = await this.prisma.dailyLog.findFirst({
       where: {
         userId,
-        date: today,
+        date: startOfToday,
       },
     });
 

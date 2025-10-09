@@ -21,19 +21,19 @@ export default function SignInScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { setAuth } = useAuthStore();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState(''); // Can be email or username
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSignIn = async () => {
-    if (!email || !password) {
-      Alert.alert('Hata', 'Lütfen e-posta ve şifrenizi girin');
+    if (!identifier || !password) {
+      Alert.alert('Hata', 'Lütfen e-posta/kullanıcı adı ve şifrenizi girin');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await authService.login({ email, password });
+      const response = await authService.login({ identifier, password });
       await setAuth(response.user, {
         accessToken: response.accessToken,
         refreshToken: response.refreshToken,
@@ -73,12 +73,11 @@ export default function SignInScreen() {
             <View style={styles.form}>
               <TextInput
                 style={styles.input}
-                placeholder="E-posta"
+                placeholder="E-posta veya kullanıcı adı"
                 placeholderTextColor={theme.colors.textLight}
-                value={email}
-                onChangeText={setEmail}
+                value={identifier}
+                onChangeText={setIdentifier}
                 autoCapitalize="none"
-                keyboardType="email-address"
                 editable={!loading}
               />
 

@@ -6,11 +6,11 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async isUsernameAvailable(username: string): Promise<boolean> {
-    const profile = await this.prisma.profile.findUnique({
-      where: { username: username.toLowerCase() },
+    const normalizedUsername = username.toLowerCase();
+    const user = await this.prisma.user.findUnique({
+      where: { username: normalizedUsername },
     });
-
-    return !profile;
+    return !user;
   }
 
   async getUserWithProfile(userId: string) {
@@ -36,48 +36,74 @@ export class UsersService {
   async updateProfile(userId: string, data: any) {
     const updateData: any = {};
 
-    if (data.displayName) updateData.displayName = data.displayName;
-    if (data.username !== undefined) {
-      // Check if username is available (if changing)
-      if (data.username) {
-        const existing = await this.prisma.profile.findUnique({
-          where: { username: data.username.toLowerCase() },
-        });
-        if (existing && existing.userId !== userId) {
-          throw new ConflictException('Bu kullanıcı adı zaten kullanılıyor');
-        }
-        updateData.username = data.username.toLowerCase();
-      } else {
-        updateData.username = null;
+    // Update name fields and regenerate displayName
+    if (data.firstName || data.lastName) {
+      const currentProfile = await this.prisma.profile.findUnique({
+        where: { userId },
+      });
+
+      if (!currentProfile) {
+        throw new BadRequestException('Profile not found');
       }
+
+      const firstName = data.firstName || currentProfile.firstName;
+      const lastName = data.lastName || currentProfile.lastName;
+
+      updateData.firstName = firstName;
+      updateData.lastName = lastName;
+      updateData.displayName = `${firstName} ${lastName}`;
     }
+
+    // Physical attributes
     if (data.heightCm) updateData.heightCm = data.heightCm;
     if (data.weightKg) updateData.weightKg = data.weightKg;
+
+    // Location and preferences
     if (data.timezone) updateData.timezone = data.timezone;
+    if (data.country) updateData.country = data.country;
     if (data.profilePictureUrl !== undefined) updateData.profilePictureUrl = data.profilePictureUrl;
     if (data.preferencesJson) updateData.preferencesJson = data.preferencesJson;
 
-    // Handle birth date - support both old format (birthDate) and new format (birthDay/birthMonth/birthYear)
-    if (data.birthDate) {
-      const date = new Date(data.birthDate);
-      updateData.birthDate = date;
-      updateData.birthDay = date.getDate();
-      updateData.birthMonth = date.getMonth() + 1;
-      updateData.birthYear = date.getFullYear();
-    } else if (data.birthDay !== undefined || data.birthMonth !== undefined || data.birthYear !== undefined) {
-      if (data.birthDay !== undefined) updateData.birthDay = data.birthDay;
-      if (data.birthMonth !== undefined) updateData.birthMonth = data.birthMonth;
-      if (data.birthYear !== undefined) updateData.birthYear = data.birthYear;
-
-      // Also update birthDate for backward compatibility if all fields are provided
-      if (data.birthDay && data.birthMonth && data.birthYear) {
-        updateData.birthDate = new Date(data.birthYear, data.birthMonth - 1, data.birthDay);
-      }
+    // Handle date of birth
+    if (data.dateOfBirth) {
+      updateData.dateOfBirth = new Date(data.dateOfBirth);
     }
 
-    const profile = await this.prisma.profile.update({
+    // Update profile
+    await this.prisma.profile.update({
       where: { userId },
       data: updateData,
+    });
+
+    return this.getUserWithProfile(userId);
+  }
+
+  async updateUsername(userId: string, newUsername: string) {
+    const normalizedUsername = newUsername.toLowerCase();
+
+    // Validate format
+    if (!/^[a-z0-9._]+$/.test(normalizedUsername)) {
+      throw new BadRequestException(
+        'Username can only contain lowercase letters, numbers, dots, and underscores',
+      );
+    }
+
+    if (normalizedUsername.length < 3 || normalizedUsername.length > 24) {
+      throw new BadRequestException('Username must be between 3 and 24 characters');
+    }
+
+    // Check availability
+    const existing = await this.prisma.user.findUnique({
+      where: { username: normalizedUsername },
+    });
+
+    if (existing && existing.id !== userId) {
+      throw new ConflictException('Username already taken');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { username: normalizedUsername },
     });
 
     return this.getUserWithProfile(userId);

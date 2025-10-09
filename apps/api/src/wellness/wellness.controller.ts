@@ -30,22 +30,22 @@ export class WellnessController {
     const fromDate = from ? new Date(from) : undefined;
     const toDate = to ? new Date(to) : undefined;
 
-    return this.wellnessService.getSteps(req.user.userId, fromDate, toDate);
+    return this.wellnessService.getSteps(req.user.id, fromDate, toDate);
   }
 
   @Get('steps/today')
   async getTodaySteps(@Request() req) {
-    return this.wellnessService.getTodaySteps(req.user.userId);
+    return this.wellnessService.getTodaySteps(req.user.id);
   }
 
   @Post('steps')
   async logSteps(@Request() req, @Body() data: StepsData) {
-    return this.wellnessService.logSteps(req.user.userId, data);
+    return this.wellnessService.logSteps(req.user.id, data);
   }
 
   @Delete('steps/:date')
   async deleteSteps(@Request() req, @Param('date') date: string) {
-    return this.wellnessService.deleteSteps(req.user.userId, date);
+    return this.wellnessService.deleteSteps(req.user.id, date);
   }
 
   // ────────────────────────────────────────────────────────────────────────
@@ -61,22 +61,22 @@ export class WellnessController {
     const fromDate = from ? new Date(from) : undefined;
     const toDate = to ? new Date(to) : undefined;
 
-    return this.wellnessService.getMeditation(req.user.userId, fromDate, toDate);
+    return this.wellnessService.getMeditation(req.user.id, fromDate, toDate);
   }
 
   @Get('meditation/today')
   async getTodayMeditation(@Request() req) {
-    return this.wellnessService.getTodayMeditation(req.user.userId);
+    return this.wellnessService.getTodayMeditation(req.user.id);
   }
 
   @Post('meditation')
   async logMeditation(@Request() req, @Body() data: MeditationData) {
-    return this.wellnessService.logMeditation(req.user.userId, data);
+    return this.wellnessService.logMeditation(req.user.id, data);
   }
 
   @Delete('meditation/:sessionId')
   async deleteMeditation(@Request() req, @Param('sessionId') sessionId: string) {
-    return this.wellnessService.deleteMeditation(req.user.userId, sessionId);
+    return this.wellnessService.deleteMeditation(req.user.id, sessionId);
   }
 
   // ────────────────────────────────────────────────────────────────────────
@@ -92,22 +92,22 @@ export class WellnessController {
     const fromDate = from ? new Date(from) : undefined;
     const toDate = to ? new Date(to) : undefined;
 
-    return this.wellnessService.getSleep(req.user.userId, fromDate, toDate);
+    return this.wellnessService.getSleep(req.user.id, fromDate, toDate);
   }
 
   @Get('sleep/last-night')
   async getLastNightSleep(@Request() req) {
-    return this.wellnessService.getLastNightSleep(req.user.userId);
+    return this.wellnessService.getLastNightSleep(req.user.id);
   }
 
   @Post('sleep')
   async logSleep(@Request() req, @Body() data: SleepData) {
-    return this.wellnessService.logSleep(req.user.userId, data);
+    return this.wellnessService.logSleep(req.user.id, data);
   }
 
   @Delete('sleep/:date')
   async deleteSleep(@Request() req, @Param('date') date: string) {
-    return this.wellnessService.deleteSleep(req.user.userId, date);
+    return this.wellnessService.deleteSleep(req.user.id, date);
   }
 
   // ────────────────────────────────────────────────────────────────────────
@@ -116,12 +116,12 @@ export class WellnessController {
 
   @Get('preferences')
   async getPreferences(@Request() req) {
-    return this.wellnessService.getPreferences(req.user.userId);
+    return this.wellnessService.getPreferences(req.user.id);
   }
 
   @Post('preferences')
   async updatePreferences(@Request() req, @Body() data: any) {
-    return this.wellnessService.updatePreferences(req.user.userId, data);
+    return this.wellnessService.updatePreferences(req.user.id, data);
   }
 
   // ────────────────────────────────────────────────────────────────────────
@@ -130,6 +130,6 @@ export class WellnessController {
 
   @Get('summary')
   async getWellnessSummary(@Request() req) {
-    return this.wellnessService.getWellnessSummary(req.user.userId);
+    return this.wellnessService.getWellnessSummary(req.user.id);
   }
 }

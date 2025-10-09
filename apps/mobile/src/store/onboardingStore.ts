@@ -3,7 +3,8 @@ import * as SecureStore from 'expo-secure-store';
 
 export interface OnboardingData {
   // Step 1: Identity & Access
-  fullName?: string;
+  firstName?: string;
+  lastName?: string;
   username?: string;
   email?: string;
   birthDate?: Date;

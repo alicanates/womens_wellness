@@ -20,11 +20,35 @@ export class AuthService {
     return !user;
   }
 
-  async validateUser(email: string, password: string) {
+  async isUsernameAvailable(username: string): Promise<boolean> {
+    const normalizedUsername = username.toLowerCase();
     const user = await this.prisma.user.findUnique({
-      where: { email },
-      include: { profile: true },
+      where: { username: normalizedUsername },
     });
+    return !user;
+  }
+
+  /**
+   * Validates user credentials
+   * @param identifier - Can be either email or username
+   * @param password - User's password
+   */
+  async validateUser(identifier: string, password: string) {
+    // Determine if identifier is email or username
+    const isEmail = identifier.includes('@');
+
+    let user;
+    if (isEmail) {
+      user = await this.prisma.user.findUnique({
+        where: { email: identifier.toLowerCase() },
+        include: { profile: true },
+      });
+    } else {
+      user = await this.prisma.user.findUnique({
+        where: { username: identifier.toLowerCase() },
+        include: { profile: true },
+      });
+    }
 
     if (!user || !user.password) {
       return null;
@@ -38,13 +62,45 @@ export class AuthService {
     return user;
   }
 
-  async register(email: string, password: string, displayName?: string) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email },
+  async register(
+    email: string,
+    password: string,
+    username: string,
+    firstName: string,
+    lastName: string,
+    dateOfBirth?: Date,
+  ) {
+    // Normalize inputs
+    const normalizedEmail = email.toLowerCase();
+    const normalizedUsername = username.toLowerCase();
+
+    // Validate username format (alphanumeric, dots, underscores only)
+    if (!/^[a-z0-9._]+$/.test(normalizedUsername)) {
+      throw new BadRequestException(
+        'Username can only contain lowercase letters, numbers, dots, and underscores',
+      );
+    }
+
+    if (normalizedUsername.length < 3 || normalizedUsername.length > 24) {
+      throw new BadRequestException('Username must be between 3 and 24 characters');
+    }
+
+    // Check if email already exists
+    const existingEmail = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
     });
 
-    if (existingUser) {
+    if (existingEmail) {
       throw new UnauthorizedException('Email already exists');
+    }
+
+    // Check if username already exists
+    const existingUsername = await this.prisma.user.findUnique({
+      where: { username: normalizedUsername },
+    });
+
+    if (existingUsername) {
+      throw new UnauthorizedException('Username already taken');
     }
 
     const hashedPassword = await hash(
@@ -52,13 +108,19 @@ export class AuthService {
       parseInt(process.env.BCRYPT_SALT_ROUNDS || '10'),
     );
 
+    const displayName = `${firstName} ${lastName}`;
+
     const user = await this.prisma.user.create({
       data: {
-        email,
+        email: normalizedEmail,
+        username: normalizedUsername,
         password: hashedPassword,
         profile: {
           create: {
-            displayName: displayName || email.split('@')[0],
+            firstName,
+            lastName,
+            displayName,
+            dateOfBirth,
             timezone: 'Europe/Istanbul',
           },
         },

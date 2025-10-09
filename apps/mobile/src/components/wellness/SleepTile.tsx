@@ -4,6 +4,7 @@ import { WellnessTile } from './WellnessTile';
 import { useTheme } from '@/hooks/useTheme';
 import { wellnessService } from '@/services/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 
 interface SleepTileProps {
   data: {
@@ -16,6 +17,7 @@ interface SleepTileProps {
 
 export const SleepTile: React.FC<SleepTileProps> = ({ data }) => {
   const theme = useTheme();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [modalVisible, setModalVisible] = useState(false);
   const [hoursInput, setHoursInput] = useState('');
@@ -23,9 +25,11 @@ export const SleepTile: React.FC<SleepTileProps> = ({ data }) => {
 
   const logSleepMutation = useMutation({
     mutationFn: (params: { durationMin: number; quality?: 'good' | 'medium' | 'poor' }) => {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setHours(0, 0, 0, 0);
+      // Get yesterday's date at midnight in UTC (matching backend logic)
+      const now = new Date();
+      const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+      const yesterday = new Date(today);
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
 
       return wellnessService.logSleep({
         sleepDate: yesterday.toISOString(),
@@ -36,6 +40,7 @@ export const SleepTile: React.FC<SleepTileProps> = ({ data }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
+      queryClient.invalidateQueries({ queryKey: ['sleep'] });
       setModalVisible(false);
       setHoursInput('');
       setSelectedQuality(undefined);
@@ -85,18 +90,24 @@ export const SleepTile: React.FC<SleepTileProps> = ({ data }) => {
         value="-"
         isEmpty
         emptyState="Dün gece kaydı yok"
-        onPress={() => setModalVisible(true)}
+        onPress={() => router.push('/wellness/sleep')}
         actions={
           <View style={styles(theme).actionsRow}>
             <TouchableOpacity
               style={styles(theme).quickButton}
-              onPress={() => handleQuickLog(7)}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleQuickLog(7);
+              }}
             >
               <Text style={styles(theme).quickButtonText}>7 s</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles(theme).quickButton}
-              onPress={() => handleQuickLog(8)}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleQuickLog(8);
+              }}
             >
               <Text style={styles(theme).quickButtonText}>8 s</Text>
             </TouchableOpacity>
@@ -115,12 +126,15 @@ export const SleepTile: React.FC<SleepTileProps> = ({ data }) => {
         value={formatHours(data.lastNightMin)}
         target={`Hedef ${data.goalHours} s`}
         percentage={data.percentage}
-        onPress={() => setModalVisible(true)}
+        onPress={() => router.push('/wellness/sleep')}
         actions={
           <View style={styles(theme).actionsRow}>
             <TouchableOpacity
               style={styles(theme).smallButton}
-              onPress={() => setModalVisible(true)}
+              onPress={(e) => {
+                e.stopPropagation();
+                setModalVisible(true);
+              }}
             >
               <Text style={styles(theme).smallButtonText}>Düzenle</Text>
             </TouchableOpacity>
@@ -144,25 +158,37 @@ export const SleepTile: React.FC<SleepTileProps> = ({ data }) => {
             <View style={styles(theme).presetsContainer}>
               <TouchableOpacity
                 style={styles(theme).presetButton}
-                onPress={() => handleQuickLog(5)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleQuickLog(5);
+                }}
               >
                 <Text style={styles(theme).presetButtonText}>5 s</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles(theme).presetButton}
-                onPress={() => handleQuickLog(6)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleQuickLog(6);
+                }}
               >
                 <Text style={styles(theme).presetButtonText}>6 s</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles(theme).presetButton}
-                onPress={() => handleQuickLog(7)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleQuickLog(7);
+                }}
               >
                 <Text style={styles(theme).presetButtonText}>7 s</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles(theme).presetButton}
-                onPress={() => handleQuickLog(8)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleQuickLog(8);
+                }}
               >
                 <Text style={styles(theme).presetButtonText}>8 s</Text>
               </TouchableOpacity>

@@ -147,10 +147,13 @@ export const authService = {
   register: (data: {
     email: string;
     password: string;
-    displayName?: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth?: string; // ISO date string
   }) => api.post<AuthResponse>('/auth/register', data, false),
 
-  login: (data: { email: string; password: string }) =>
+  login: (data: { identifier: string; password: string }) =>
     api.post<AuthResponse>('/auth/login', data, false),
 
   googleLogin: (idToken: string) =>

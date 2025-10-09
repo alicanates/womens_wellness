@@ -9,11 +9,14 @@ import { join } from 'path';
 class RegisterDto {
   email!: string;
   password!: string;
-  displayName?: string;
+  username!: string;
+  firstName!: string;
+  lastName!: string;
+  dateOfBirth?: string; // ISO date string
 }
 
 class LoginDto {
-  email!: string;
+  identifier!: string; // Can be email or username
   password!: string;
 }
 
@@ -53,16 +56,34 @@ export class AuthController {
     return { available };
   }
 
+  @Get('check-username')
+  @ApiOperation({ summary: 'Check if username is available' })
+  async checkUsername(@Query('username') username: string) {
+    if (!username) {
+      return { available: false };
+    }
+    const available = await this.authService.isUsernameAvailable(username);
+    return { available };
+  }
+
   @Post('register')
-  @ApiOperation({ summary: 'Register with email and password' })
+  @ApiOperation({ summary: 'Register with email, username, and password' })
   async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto.email, dto.password, dto.displayName);
+    const dateOfBirth = dto.dateOfBirth ? new Date(dto.dateOfBirth) : undefined;
+    return this.authService.register(
+      dto.email,
+      dto.password,
+      dto.username,
+      dto.firstName,
+      dto.lastName,
+      dateOfBirth,
+    );
   }
 
   @Post('login')
-  @ApiOperation({ summary: 'Login with email and password' })
+  @ApiOperation({ summary: 'Login with email/username and password' })
   async login(@Body() dto: LoginDto) {
-    const user = await this.authService.validateUser(dto.email, dto.password);
+    const user = await this.authService.validateUser(dto.identifier, dto.password);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }

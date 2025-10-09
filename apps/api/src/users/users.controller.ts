@@ -11,14 +11,19 @@ import { pipeline } from 'stream';
 const pump = promisify(pipeline);
 
 class UpdateProfileDto {
-  displayName?: string;
-  username?: string;
-  birthYear?: number;
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: string; // ISO date string
   heightCm?: number;
   weightKg?: number;
+  country?: string;
   timezone?: string;
   profilePictureUrl?: string;
   preferencesJson?: any;
+}
+
+class UpdateUsernameDto {
+  username!: string;
 }
 
 class UpdateUserDto {
@@ -32,7 +37,7 @@ class UpdateUserDto {
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get('users/availability')
+  @Get('users/check-username')
   @ApiOperation({ summary: 'Check username availability' })
   async checkUsernameAvailability(@Query('username') username: string) {
     if (!username) {
@@ -40,6 +45,14 @@ export class UsersController {
     }
     const available = await this.usersService.isUsernameAvailable(username);
     return { available };
+  }
+
+  @Patch('me/username')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update current user username' })
+  async updateMyUsername(@CurrentUser() user: any, @Body() dto: UpdateUsernameDto) {
+    return this.usersService.updateUsername(user.id, dto.username);
   }
 
   @Get('me')

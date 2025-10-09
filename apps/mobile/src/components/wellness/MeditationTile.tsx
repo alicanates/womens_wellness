@@ -4,6 +4,7 @@ import { WellnessTile } from './WellnessTile';
 import { useTheme } from '@/hooks/useTheme';
 import { wellnessService } from '@/services/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 
 interface MeditationTileProps {
   data: {
@@ -16,6 +17,7 @@ interface MeditationTileProps {
 
 export const MeditationTile: React.FC<MeditationTileProps> = ({ data }) => {
   const theme = useTheme();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -29,6 +31,7 @@ export const MeditationTile: React.FC<MeditationTileProps> = ({ data }) => {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
+      queryClient.invalidateQueries({ queryKey: ['meditation'] });
       setModalVisible(false);
     },
     onError: (error: any) => {
@@ -49,18 +52,24 @@ export const MeditationTile: React.FC<MeditationTileProps> = ({ data }) => {
         value="-"
         isEmpty
         emptyState="1 dk nefes ile başla"
-        onPress={() => setModalVisible(true)}
+        onPress={() => router.push('/wellness/meditation')}
         actions={
           <View style={styles(theme).actionsRow}>
             <TouchableOpacity
               style={styles(theme).quickButton}
-              onPress={() => handleQuickLog(1)}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleQuickLog(1);
+              }}
             >
               <Text style={styles(theme).quickButtonText}>1 dk</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles(theme).quickButton}
-              onPress={() => handleQuickLog(5)}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleQuickLog(5);
+              }}
             >
               <Text style={styles(theme).quickButtonText}>5 dk</Text>
             </TouchableOpacity>
@@ -81,19 +90,25 @@ export const MeditationTile: React.FC<MeditationTileProps> = ({ data }) => {
         value={`${data.todayMin} dk`}
         target={`Hedef ${data.goalMin} dk`}
         percentage={data.percentage}
-        onPress={() => setModalVisible(true)}
+        onPress={() => router.push('/wellness/meditation')}
         actions={
           <View style={styles(theme).actionsRow}>
             <TouchableOpacity
               style={styles(theme).quickButton}
-              onPress={() => handleQuickLog(1)}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleQuickLog(1);
+              }}
               disabled={logMeditationMutation.isPending}
             >
               <Text style={styles(theme).quickButtonText}>+1 dk</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles(theme).quickButton}
-              onPress={() => handleQuickLog(5)}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleQuickLog(5);
+              }}
               disabled={logMeditationMutation.isPending}
             >
               <Text style={styles(theme).quickButtonText}>+5 dk</Text>

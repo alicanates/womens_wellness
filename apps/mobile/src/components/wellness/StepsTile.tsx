@@ -4,6 +4,7 @@ import { WellnessTile } from './WellnessTile';
 import { useTheme } from '@/hooks/useTheme';
 import { wellnessService } from '@/services/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 
 interface StepsTileProps {
   data: {
@@ -16,6 +17,7 @@ interface StepsTileProps {
 
 export const StepsTile: React.FC<StepsTileProps> = ({ data }) => {
   const theme = useTheme();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [modalVisible, setModalVisible] = useState(false);
   const [stepsInput, setStepsInput] = useState('');
@@ -29,6 +31,7 @@ export const StepsTile: React.FC<StepsTileProps> = ({ data }) => {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
+      queryClient.invalidateQueries({ queryKey: ['steps'] });
       setModalVisible(false);
       setStepsInput('');
     },
@@ -58,11 +61,14 @@ export const StepsTile: React.FC<StepsTileProps> = ({ data }) => {
         value="-"
         isEmpty
         emptyState="Bugün veri yok – Manuel Ekle"
-        onPress={() => setModalVisible(true)}
+        onPress={() => router.push('/wellness/steps')}
         actions={
           <TouchableOpacity
             style={styles(theme).actionButton}
-            onPress={() => setModalVisible(true)}
+            onPress={(e) => {
+              e.stopPropagation();
+              setModalVisible(true);
+            }}
           >
             <Text style={styles(theme).actionButtonText}>Manuel Ekle</Text>
           </TouchableOpacity>
@@ -82,12 +88,15 @@ export const StepsTile: React.FC<StepsTileProps> = ({ data }) => {
         value={`${formatNumber(data.today)} adım`}
         target={`Hedef ${formatNumber(data.goal)}`}
         percentage={data.percentage}
-        onPress={() => setModalVisible(true)}
+        onPress={() => router.push('/wellness/steps')}
         actions={
           <View style={styles(theme).actionsRow}>
             <TouchableOpacity
               style={styles(theme).smallActionButton}
-              onPress={() => setModalVisible(true)}
+              onPress={(e) => {
+                e.stopPropagation();
+                setModalVisible(true);
+              }}
             >
               <Text style={styles(theme).smallActionText}>Manuel Ekle</Text>
             </TouchableOpacity>

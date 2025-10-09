@@ -37,7 +37,8 @@ export default function SettingsScreen() {
   const theme = useTheme();
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [displayName, setDisplayName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [heightCm, setHeightCm] = useState(165);
@@ -55,10 +56,11 @@ export default function SettingsScreen() {
   useEffect(() => {
     if (userData) {
       const data = userData as any;
-      setDisplayName(data?.profile?.displayName || '');
-      setUsername(data?.profile?.username || '');
-      if (data?.profile?.birthDate) {
-        setBirthDate(new Date(data.profile.birthDate));
+      setFirstName(data?.profile?.firstName || '');
+      setLastName(data?.profile?.lastName || '');
+      setUsername(data?.username || '');
+      if (data?.profile?.dateOfBirth) {
+        setBirthDate(new Date(data.profile.dateOfBirth));
       }
       setHeightCm(data?.profile?.heightCm || 165);
       setWeightKg(data?.profile?.weightKg || 60);
@@ -194,12 +196,21 @@ export default function SettingsScreen() {
 
   const handleSaveProfile = () => {
     const profileData: any = {
-      displayName: displayName || undefined,
-      username: username || undefined,
-      birthDate: birthDate ? birthDate.toISOString() : undefined,
+      firstName: firstName || undefined,
+      lastName: lastName || undefined,
+      dateOfBirth: birthDate ? birthDate.toISOString() : undefined,
       heightCm: heightCm,
       weightKg: weightKg,
     };
+
+    // Send username update separately if changed
+    const currentUsername = (userData as any)?.username;
+    if (username && username !== currentUsername) {
+      // Username update needs separate endpoint
+      userService.updateMe({ username }).catch((error: any) => {
+        Alert.alert('Hata', 'Kullanıcı adı güncellenemedi: ' + (error.message || ''));
+      });
+    }
 
     updateProfileMutation.mutate(profileData);
   };
@@ -376,12 +387,24 @@ export default function SettingsScreen() {
 
           {/* Profile Form */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Ad Soyad</Text>
+            <Text style={styles.label}>Ad</Text>
             <TextInput
               style={styles.input}
-              value={isEditingProfile ? displayName : currentDisplayName}
-              onChangeText={setDisplayName}
-              placeholder="Ad Soyad"
+              value={isEditingProfile ? firstName : ((userData as any)?.profile?.firstName || '')}
+              onChangeText={setFirstName}
+              placeholder="Adınız"
+              placeholderTextColor={theme.colors.textLight}
+              editable={isEditingProfile}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Soyad</Text>
+            <TextInput
+              style={styles.input}
+              value={isEditingProfile ? lastName : ((userData as any)?.profile?.lastName || '')}
+              onChangeText={setLastName}
+              placeholder="Soyadınız"
               placeholderTextColor={theme.colors.textLight}
               editable={isEditingProfile}
             />
@@ -391,7 +414,7 @@ export default function SettingsScreen() {
             <Text style={styles.label}>Kullanıcı Adı</Text>
             <TextInput
               style={styles.input}
-              value={isEditingProfile ? username : ((userData as any)?.profile?.username || '')}
+              value={isEditingProfile ? username : ((userData as any)?.username || '')}
               onChangeText={setUsername}
               placeholder="kullaniciadi"
               placeholderTextColor={theme.colors.textLight}
@@ -417,7 +440,7 @@ export default function SettingsScreen() {
             ) : (
               <TextInput
                 style={styles.input}
-                value={birthDate ? birthDate.toLocaleDateString('tr-TR') : ''}
+                value={birthDate ? birthDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Belirtilmemiş'}
                 placeholderTextColor={theme.colors.textLight}
                 editable={false}
               />
@@ -473,9 +496,11 @@ export default function SettingsScreen() {
                 onPress={() => {
                   setIsEditingProfile(false);
                   // Reset values
-                  setDisplayName((userData as any)?.profile?.displayName || '');
-                  if ((userData as any)?.profile?.birthDate) {
-                    setBirthDate(new Date((userData as any).profile.birthDate));
+                  setFirstName((userData as any)?.profile?.firstName || '');
+                  setLastName((userData as any)?.profile?.lastName || '');
+                  setUsername((userData as any)?.username || '');
+                  if ((userData as any)?.profile?.dateOfBirth) {
+                    setBirthDate(new Date((userData as any).profile.dateOfBirth));
                   }
                   setHeightCm((userData as any)?.profile?.heightCm || 165);
                   setWeightKg((userData as any)?.profile?.weightKg || 60);
