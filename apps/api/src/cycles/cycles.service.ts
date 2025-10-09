@@ -419,8 +419,10 @@ export class CyclesService {
    * Create or update daily log for a specific date
    */
   async upsertDailyLog(userId: string, data: DailyLogInput) {
-    const date = new Date(data.date);
-    date.setHours(0, 0, 0, 0); // Normalize to start of day
+    // Parse date string correctly to avoid timezone issues
+    // If data.date is "2025-10-09", we want exactly that date in local timezone
+    const dateParts = data.date.split('-').map(Number);
+    const date = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], 0, 0, 0, 0);
 
     // Find if date falls within any cycle
     const cycle = await this.prisma.periodCycle.findFirst({

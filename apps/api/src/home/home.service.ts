@@ -138,19 +138,30 @@ export class HomeService {
     let longestStreak = preferences.longestStreak || 0;
     let streakStartDate = preferences.streakStartDate || null;
 
+    // For users with no streak (brand new or existing with streak=0), initialize streak
+    if (currentStreak === 0) {
+      currentStreak = 1;
+      longestStreak = 1;
+      streakStartDate = today;
+
+      await this.prisma.userHomePreferences.update({
+        where: { userId },
+        data: {
+          streakCount: currentStreak,
+          longestStreak,
+          streakStartDate,
+          updatedAt: new Date(),
+        },
+      });
+    }
     // If this is a new day (first visit of the day)
-    if (!lastLoginDateOnly || lastLoginDateOnly < todayDateOnly) {
+    else if (lastLoginDateOnly && lastLoginDateOnly < todayDateOnly) {
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayDateOnly = yesterday;
 
-      // For brand new users (no streak history), start streak at 1
-      if (!lastLoginDateOnly || (currentStreak === 0 && !streakStartDate)) {
-        currentStreak = 1;
-        streakStartDate = today;
-      }
       // Check if the user logged in yesterday (streak continues)
-      else if (lastLoginDateOnly.getTime() === yesterdayDateOnly.getTime()) {
+      if (lastLoginDateOnly.getTime() === yesterdayDateOnly.getTime()) {
         // Continue streak
         currentStreak++;
       }
