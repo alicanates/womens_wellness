@@ -18,7 +18,13 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@wellness/types": ["../../packages/types/src"]
+      "@wellness/types": [
+        "../../packages/types/src"
+      ]
     }
-  }
+  },
+  "exclude": [
+    "**/*test*.ts",
+    "**/*manual*.ts"
+  ]
 }

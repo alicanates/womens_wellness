@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import type { AuthTokens, AuthUser } from '@/types/auth';
+import { queryClient } from '@/lib/queryClient';
 
 interface AuthState {
   user: AuthUser | null;
@@ -34,9 +35,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   clearAuth: async () => {
+    // Clear React Query cache to prevent data leakage between users
+    queryClient.clear();
+    // Clear secure storage
     await SecureStore.deleteItemAsync('accessToken');
     await SecureStore.deleteItemAsync('refreshToken');
     await SecureStore.deleteItemAsync('user');
+    await SecureStore.deleteItemAsync('pinVerified'); // Clear PIN verification
+    // Clear state
     set({
       user: null,
       accessToken: null,
@@ -46,9 +52,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    // Clear React Query cache to prevent data leakage between users
+    queryClient.clear();
+    // Clear secure storage
     await SecureStore.deleteItemAsync('accessToken');
     await SecureStore.deleteItemAsync('refreshToken');
     await SecureStore.deleteItemAsync('user');
+    await SecureStore.deleteItemAsync('pinVerified'); // Clear PIN verification
+    // Clear state
     set({
       user: null,
       accessToken: null,
@@ -88,18 +99,22 @@ export const useAuthStore = create<AuthState>((set) => ({
               isLoading: false,
             });
           } else {
-            // Token is invalid, clear auth
+            // Token is invalid, clear auth and cache
+            queryClient.clear();
             await SecureStore.deleteItemAsync('accessToken');
             await SecureStore.deleteItemAsync('refreshToken');
             await SecureStore.deleteItemAsync('user');
+            await SecureStore.deleteItemAsync('pinVerified');
             set({ isLoading: false, isAuthenticated: false });
           }
         } catch (error) {
           // Network error or API not available, clear auth to be safe
           console.warn('Could not validate token, clearing auth:', error);
+          queryClient.clear();
           await SecureStore.deleteItemAsync('accessToken');
           await SecureStore.deleteItemAsync('refreshToken');
           await SecureStore.deleteItemAsync('user');
+          await SecureStore.deleteItemAsync('pinVerified');
           set({ isLoading: false, isAuthenticated: false });
         }
       } else {

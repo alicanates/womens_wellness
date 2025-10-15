@@ -309,8 +309,10 @@ export class CyclesService {
       const dailyLog = dailyLogMap.get(dateKey);
       if (dailyLog) {
         if (dailyLog.hadSex) markers.push('sex');
-        if (dailyLog.symptoms.length > 0) markers.push('symptom');
-        if (dailyLog.medications.length > 0) markers.push('medication');
+        if (dailyLog.symptoms && dailyLog.symptoms.length > 0) markers.push('symptom');
+        if (dailyLog.mood && dailyLog.mood.length > 0) markers.push('mood');
+        if (dailyLog.medications && dailyLog.medications.length > 0) markers.push('medication');
+        console.log(`  🎭 Day ${day}: Has daily log with mood=${dailyLog.mood?.join(', ')}`);
       }
 
       days.push({

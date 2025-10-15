@@ -156,6 +156,31 @@ GOOGLE_OAUTH_CLIENT_ID_WEB=...
 EXPO_ACCESS_TOKEN=...
 ```
 
+#### 🔑 Gemini API Key Kurulumu (Önerilen)
+
+NOVA AI asistanı şu anda **Google Gemini 1.5 Flash** modelini kullanıyor. API key almak için:
+
+1. **Google AI Studio'ya git**: https://aistudio.google.com/app/apikey
+2. **"Create API Key"** butonuna tıkla
+3. Bir Google Cloud projesi seç veya yeni oluştur
+4. API key'i kopyala (örnek: `AIzaSyC...`)
+5. `apps/api/.env.local` dosyasına ekle:
+   ```ini
+   GOOGLE_GENERATIVE_AI_API_KEY=AIzaSyC...
+   ```
+
+**Önemli Notlar**:
+- Gemini API ücretsiz kotası: 15 istek/dakika, 1 milyon token/dakika
+- Üretim ortamında API key'i güvenli bir şekilde sakla (secret manager)
+- API key'i asla git'e commit etme
+- Alternatif olarak OpenAI veya Anthropic kullanabilirsin
+
+**Test etmek için**:
+```bash
+cd apps/api
+pnpm test:gemini  # Gemini API bağlantısını test eder
+```
+
 ### 3. Start Services
 
 ```bash
@@ -393,6 +418,7 @@ bash scripts/dev-setup.sh # Automated setup
 
 - **[CLAUDE.md](./CLAUDE.md)** - Full technical specification (71KB)
 - **[PHASE_*_PROGRESS.md](./PHASE_6_PROGRESS.md)** - Implementation logs
+- **[docs/gemini-api-setup.md](./docs/gemini-api-setup.md)** - Gemini API kurulum rehberi (Türkçe)
 - **[docs/troubleshooting.md](./docs/troubleshooting.md)** - Common issues
 - **[docs/google-oauth-flow.md](./docs/google-oauth-flow.md)** - OAuth setup
 - **[API Docs](http://localhost:4000/api/docs)** - Interactive Swagger
@@ -410,23 +436,78 @@ bash scripts/dev-setup.sh # Automated setup
 
 ### Environment Variables
 
+#### Backend API (`apps/api/.env.local`)
+
 ```bash
-# Required (API)
-DATABASE_URL                 # PostgreSQL connection
-JWT_SECRET                   # Access token secret
-JWT_REFRESH_SECRET           # Refresh token secret
-REDIS_URL                    # Redis connection
+# ===== REQUIRED =====
 
-# Required (At least one AI provider)
-OPENAI_API_KEY              # OR
-ANTHROPIC_API_KEY           # OR
-GOOGLE_GENERATIVE_AI_API_KEY
+# Database
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/wellness
 
-# Optional (Features)
-GOOGLE_OAUTH_CLIENT_ID_*    # Google Sign-In
-EXPO_ACCESS_TOKEN           # Push notifications
-SENTRY_DSN                  # Error tracking
+# JWT Authentication
+JWT_SECRET=<generate-with-openssl-rand-hex-32>
+JWT_REFRESH_SECRET=<generate-with-openssl-rand-hex-32>
+
+# Redis (for caching & queues)
+REDIS_URL=redis://localhost:6379
+
+# AI Provider (EN AZ BİRİ GEREKLİ)
+# Gemini (Önerilen - ücretsiz kota yüksek)
+GOOGLE_GENERATIVE_AI_API_KEY=AIzaSyC...
+# VEYA OpenAI
+OPENAI_API_KEY=sk-...
+# VEYA Anthropic
+ANTHROPIC_API_KEY=sk-ant-...
+
+# ===== OPTIONAL =====
+
+# Google OAuth (Google ile giriş için)
+GOOGLE_OAUTH_CLIENT_ID_IOS=<ios-client-id>.apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_ID_ANDROID=<android-client-id>.apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_ID_WEB=<web-client-id>.apps.googleusercontent.com
+
+# Push Notifications (Expo Push için)
+EXPO_ACCESS_TOKEN=<expo-access-token>
+
+# Email (Development - Mailpit otomatik kullanılır)
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=noreply@wellness.local
+
+# Error Tracking (Production)
+SENTRY_DSN=https://...@sentry.io/...
+
+# Environment
+NODE_ENV=development
+PORT=4000
 ```
+
+#### Mobile App (`apps/mobile/.env.local`)
+
+```bash
+# API Base URL
+EXPO_PUBLIC_API_URL=http://localhost:4000
+
+# Google OAuth (Google ile giriş için)
+EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=<ios-client-id>.apps.googleusercontent.com
+EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=<android-client-id>.apps.googleusercontent.com
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=<web-client-id>.apps.googleusercontent.com
+```
+
+#### Admin Panel (`apps/admin/.env.local`)
+
+```bash
+# API Base URL
+NEXT_PUBLIC_API_URL=http://localhost:4000
+```
+
+**Güvenlik Uyarıları**:
+- ⚠️ `.env.local` dosyalarını asla git'e commit etme
+- ⚠️ Production'da secret manager kullan (AWS Secrets Manager, Doppler, 1Password)
+- ⚠️ API key'leri düzenli olarak rotate et (3-6 ayda bir)
+- ⚠️ Development ve production için farklı key'ler kullan
 
 ---
 

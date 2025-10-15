@@ -70,13 +70,15 @@ enum AIProvider {
 // ────────────────────────────────────────────────────────────────────────────
 
 model User {
-  id        String     @id @default(cuid())
-  email     String     @unique
-  username  String?    @unique // Lowercase, alphanumeric + . _ (temporary nullable for migration)
-  password  String?
-  status    UserStatus @default(ACTIVE)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id         String     @id @default(cuid())
+  email      String     @unique
+  username   String?    @unique // Lowercase, alphanumeric + . _ (temporary nullable for migration)
+  password   String?
+  pinHash    String? // Hashed PIN for app lock
+  pinEnabled Boolean    @default(false) // Whether PIN lock is active
+  status     UserStatus @default(ACTIVE)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
   // Relations
   profile             Profile?

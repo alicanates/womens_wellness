@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async isUsernameAvailable(username: string): Promise<boolean> {
     const normalizedUsername = username.toLowerCase();
@@ -27,53 +27,70 @@ export class UsersService {
       return null;
     }
 
-    // Remove password from response
-    const { password, ...userWithoutPassword } = user;
+    // Remove password and pinHash from response
+    const { password, pinHash, ...userWithoutSensitive } = user;
 
-    return userWithoutPassword;
+    return userWithoutSensitive;
   }
 
   async updateProfile(userId: string, data: any) {
     const updateData: any = {};
+    const userUpdateData: any = {};
+
+    // Get current profile to merge with updates
+    const currentProfile = await this.prisma.profile.findUnique({
+      where: { userId },
+    });
+
+    if (!currentProfile) {
+      throw new BadRequestException('Profile not found');
+    }
 
     // Update name fields and regenerate displayName
-    if (data.firstName || data.lastName) {
-      const currentProfile = await this.prisma.profile.findUnique({
-        where: { userId },
-      });
-
-      if (!currentProfile) {
-        throw new BadRequestException('Profile not found');
-      }
-
-      const firstName = data.firstName || currentProfile.firstName;
-      const lastName = data.lastName || currentProfile.lastName;
+    if (data.firstName !== undefined || data.lastName !== undefined) {
+      const firstName = data.firstName !== undefined ? data.firstName : currentProfile.firstName;
+      const lastName = data.lastName !== undefined ? data.lastName : currentProfile.lastName;
 
       updateData.firstName = firstName;
       updateData.lastName = lastName;
-      updateData.displayName = `${firstName} ${lastName}`;
+      updateData.displayName = `${firstName} ${lastName}`.trim();
     }
 
     // Physical attributes
-    if (data.heightCm) updateData.heightCm = data.heightCm;
-    if (data.weightKg) updateData.weightKg = data.weightKg;
+    if (data.heightCm !== undefined) updateData.heightCm = data.heightCm;
+    if (data.weightKg !== undefined) updateData.weightKg = data.weightKg;
 
     // Location and preferences
-    if (data.timezone) updateData.timezone = data.timezone;
-    if (data.country) updateData.country = data.country;
+    if (data.timezone !== undefined) updateData.timezone = data.timezone;
+    if (data.country !== undefined) updateData.country = data.country;
     if (data.profilePictureUrl !== undefined) updateData.profilePictureUrl = data.profilePictureUrl;
-    if (data.preferencesJson) updateData.preferencesJson = data.preferencesJson;
+    if (data.preferencesJson !== undefined) updateData.preferencesJson = data.preferencesJson;
 
     // Handle date of birth
-    if (data.dateOfBirth) {
-      updateData.dateOfBirth = new Date(data.dateOfBirth);
+    if (data.dateOfBirth !== undefined) {
+      updateData.dateOfBirth = data.dateOfBirth ? new Date(data.dateOfBirth) : null;
+    }
+
+    // Update email in user table if provided
+    if (data.email !== undefined) {
+      userUpdateData.email = data.email;
     }
 
     // Update profile
-    await this.prisma.profile.update({
-      where: { userId },
-      data: updateData,
-    });
+    if (Object.keys(updateData).length > 0) {
+      await this.prisma.profile.update({
+        where: { userId },
+        data: updateData,
+      });
+    }
+
+    // Update user email if provided
+    if (Object.keys(userUpdateData).length > 0) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: userUpdateData,
+      });
+    }
 
     return this.getUserWithProfile(userId);
   }
@@ -128,11 +145,11 @@ export class UsersService {
       this.prisma.user.count(),
     ]);
 
-    // Remove passwords from response
-    const usersWithoutPasswords = users.map(({ password, ...user }) => user);
+    // Remove passwords and pinHash from response
+    const usersWithoutSensitive = users.map(({ password, pinHash, ...user }) => user);
 
     return {
-      data: usersWithoutPasswords,
+      data: usersWithoutSensitive,
       total,
       page,
       limit,
@@ -244,12 +261,12 @@ export class UsersService {
     }
 
     // Remove sensitive data
-    const { password, ...userWithoutPassword } = user;
+    const { password, pinHash, ...userWithoutSensitive } = user;
 
     return {
       exportDate: new Date().toISOString(),
       exportVersion: '1.0',
-      user: userWithoutPassword,
+      user: userWithoutSensitive,
       healthMetrics,
       waterLogs,
       cycles,
@@ -260,5 +277,90 @@ export class UsersService {
       memories,
       usageQuota,
     };
+  }
+
+  // PIN Management
+  async setupPin(userId: string, pin: string) {
+    // Validate PIN (4-6 digits)
+    if (!/^\d{4,6}$/.test(pin)) {
+      throw new BadRequestException('PIN must be 4-6 digits');
+    }
+
+    const bcrypt = require('bcrypt');
+    const pinHash = await bcrypt.hash(pin, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        pinHash,
+        pinEnabled: true,
+      },
+    });
+
+    return { success: true, message: 'PIN başarıyla oluşturuldu' };
+  }
+
+  async verifyPin(userId: string, pin: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { pinHash: true, pinEnabled: true },
+    });
+
+    if (!user || !user.pinEnabled || !user.pinHash) {
+      throw new BadRequestException('PIN ayarlanmamış');
+    }
+
+    const bcrypt = require('bcrypt');
+    const isValid = await bcrypt.compare(pin, user.pinHash);
+
+    if (!isValid) {
+      throw new BadRequestException('Yanlış PIN');
+    }
+
+    return { success: true, message: 'PIN doğrulandı' };
+  }
+
+  async disablePin(userId: string, pin: string) {
+    // Verify PIN before disabling
+    await this.verifyPin(userId, pin);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        pinHash: null,
+        pinEnabled: false,
+      },
+    });
+
+    return { success: true, message: 'PIN devre dışı bırakıldı' };
+  }
+
+  async changePin(userId: string, oldPin: string, newPin: string) {
+    // Verify old PIN
+    await this.verifyPin(userId, oldPin);
+
+    // Validate new PIN
+    if (!/^\d{4,6}$/.test(newPin)) {
+      throw new BadRequestException('Yeni PIN 4-6 rakam olmalıdır');
+    }
+
+    const bcrypt = require('bcrypt');
+    const pinHash = await bcrypt.hash(newPin, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pinHash },
+    });
+
+    return { success: true, message: 'PIN başarıyla değiştirildi' };
+  }
+
+  async getPinStatus(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { pinEnabled: true },
+    });
+
+    return { pinEnabled: user?.pinEnabled || false };
   }
 }

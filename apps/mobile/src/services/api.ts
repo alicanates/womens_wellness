@@ -68,10 +68,17 @@ class ApiClient {
         }
         return retryResponse.json();
       } else {
-        // Refresh failed, clear auth
+        // Refresh failed, clear auth and cache to prevent data leakage
         await SecureStore.deleteItemAsync('accessToken');
         await SecureStore.deleteItemAsync('refreshToken');
         await SecureStore.deleteItemAsync('user');
+        // Clear auth state in store
+        useAuthStore.setState({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false,
+        });
         throw new Error('Oturum süresi doldu. Lütfen tekrar giriş yapın.');
       }
     }
@@ -173,6 +180,8 @@ export const authService = {
 export const userService = {
   getMe: () => api.get('/me'),
   updateMe: (data: any) => api.patch('/me', data),
+  updateUsername: (username: string) => api.patch('/me/username', { username }),
+  checkUsernameAvailability: (username: string) => api.get(`/users/check-username?username=${encodeURIComponent(username)}`, false),
   deleteMe: () => api.delete('/me'),
   exportMyData: () => api.get('/me/export'),
 
@@ -213,6 +222,21 @@ export const userService = {
 
     return response.json();
   },
+
+  // PIN Management
+  getPinStatus: () => api.get<{ pinEnabled: boolean }>('/me/pin-status'),
+
+  setupPin: (pin: string) =>
+    api.post<{ success: boolean; message: string }>('/me/pin/setup', { pin }),
+
+  verifyPin: (pin: string) =>
+    api.post<{ success: boolean; message: string }>('/me/pin/verify', { pin }),
+
+  disablePin: (pin: string) =>
+    api.post<{ success: boolean; message: string }>('/me/pin/disable', { pin }),
+
+  changePin: (oldPin: string, newPin: string) =>
+    api.patch<{ success: boolean; message: string }>('/me/pin/change', { oldPin, newPin }),
 };
 
 // Metrics endpoints

@@ -90,6 +90,20 @@ export default function TourStep() {
         refreshToken: response.refreshToken,
       });
 
+      // Update profile with height and weight if provided
+      if (data.heightCm || data.weightKg) {
+        try {
+          await userService.updateMe({
+            heightCm: data.heightCm,
+            weightKg: data.weightKg,
+          });
+          console.log('Profile updated with height/weight');
+        } catch (error) {
+          console.error('Failed to update height/weight:', error);
+          // Don't block registration if profile update fails
+        }
+      }
+
       // If user provided last period date, create cycle
       if (data.lastPeriodDate) {
         try {

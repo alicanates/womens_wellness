@@ -9,6 +9,8 @@ export interface OnboardingData {
   email?: string;
   birthDate?: Date;
   password?: string;
+  heightCm?: number;
+  weightKg?: number;
 
   // Step 2: Period Info
   lastPeriodDate?: Date;

@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -62,7 +63,10 @@ export default function SignInScreen() {
           <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.emoji}>💕</Text>
+              <Image
+                source={require('../../assets/images/mascot/6.png')}
+                style={styles.mascot}
+              />
               <Text style={styles.title}>Tekrar Hoş Geldin!</Text>
               <Text style={styles.subtitle}>
                 Sağlık yolculuğuna devam etmek için giriş yap
@@ -151,9 +155,11 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       alignItems: 'center',
       marginBottom: theme.spacing.xxl,
     },
-    emoji: {
-      fontSize: 64,
+    mascot: {
+      width: 120,
+      height: 120,
       marginBottom: theme.spacing.md,
+      resizeMode: 'contain',
     },
     title: {
       ...theme.typography.title,

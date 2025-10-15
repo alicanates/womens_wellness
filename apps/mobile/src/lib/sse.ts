@@ -1,6 +1,13 @@
 /**
  * SSE (Server-Sent Events) streaming utility for AI chat
  * Based on CLAUDE.md §24.2 specifications
+ * 
+ * Buffer Management:
+ * - Buffer Size: 512 characters (optimal for smooth streaming)
+ * - Flush Interval: 50ms (matches ~20 FPS for smooth visual updates)
+ * - Max Buffer Wait: 200ms (ensures low perceived latency)
+ * 
+ * See SSE_BUFFER_OPTIMIZATION.md for detailed documentation
  */
 
 export interface SSECallbacks {
@@ -9,42 +16,24 @@ export interface SSECallbacks {
   onError?: (error: Error) => void;
 }
 
-const STREAM_BUFFER_SIZE = 512; // characters
-const STREAM_FLUSH_INTERVAL = 50; // ms
-const MAX_BUFFER_WAIT = 200; // ms before forced flush
+// Buffer configuration - optimized for chat streaming performance
+const STREAM_BUFFER_SIZE = 512; // characters - balances latency vs efficiency
+const STREAM_FLUSH_INTERVAL = 50; // ms - matches human perception threshold
+const MAX_BUFFER_WAIT = 200; // ms - prevents noticeable delay
 
 export class SSEClient {
-  private abortController: AbortController | null = null;
+  private xhr: XMLHttpRequest | null = null;
   private buffer = '';
   private lastFlush = Date.now();
   private flushTimer: NodeJS.Timeout | null = null;
 
   async stream(url: string, token: string, callbacks: SSECallbacks) {
-    this.abortController = new AbortController();
-    this.buffer = '';
-    this.lastFlush = Date.now();
-
-    try {
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'text/event-stream',
-        },
-        signal: this.abortController.signal,
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Stream failed');
-      }
-
-      if (!response.body) {
-        throw new Error('No response body');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
+    return new Promise<void>((resolve, reject) => {
+      this.xhr = new XMLHttpRequest();
       let eventBuffer = '';
+
+      this.buffer = '';
+      this.lastFlush = Date.now();
 
       // Flush buffer periodically
       this.flushTimer = setInterval(() => {
@@ -53,15 +42,22 @@ export class SSEClient {
         }
       }, STREAM_FLUSH_INTERVAL);
 
-      while (true) {
-        const { value, done } = await reader.read();
+      this.xhr.open('GET', url, true);
+      this.xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      this.xhr.setRequestHeader('Accept', 'text/event-stream');
+      this.xhr.setRequestHeader('Cache-Control', 'no-cache');
 
-        if (done) {
-          this.flush(callbacks.onToken);
-          break;
-        }
+      let lastIndex = 0;
 
-        eventBuffer += decoder.decode(value, { stream: true });
+      this.xhr.onprogress = () => {
+        if (!this.xhr) return;
+
+        const newData = this.xhr.responseText.substring(lastIndex);
+        lastIndex = this.xhr.responseText.length;
+
+        console.log('[SSE] Progress - new data length:', newData.length);
+
+        eventBuffer += newData;
 
         // Process complete events (separated by \n\n)
         let idx;
@@ -69,43 +65,100 @@ export class SSEClient {
           const event = eventBuffer.slice(0, idx);
           eventBuffer = eventBuffer.slice(idx + 2);
 
+          console.log('[SSE] Processing event:', event.substring(0, 100));
           this.processEvent(event, callbacks);
         }
-      }
+      };
 
-      if (this.flushTimer) {
-        clearInterval(this.flushTimer);
-      }
-    } catch (error: any) {
-      if (this.flushTimer) {
-        clearInterval(this.flushTimer);
-      }
+      this.xhr.onload = () => {
+        if (this.flushTimer) {
+          clearInterval(this.flushTimer);
+          this.flushTimer = null;
+        }
 
-      if (error.name === 'AbortError') {
-        // User cancelled
-        return;
-      }
+        if (!this.xhr) return;
 
-      if (callbacks.onError) {
-        callbacks.onError(error);
-      }
-    }
+        // Process any remaining data
+        if (eventBuffer.trim()) {
+          this.processEvent(eventBuffer, callbacks);
+        }
+
+        this.flush(callbacks.onToken);
+
+        if (this.xhr.status >= 200 && this.xhr.status < 300) {
+          resolve();
+        } else {
+          let errorMessage = 'Stream failed';
+
+          try {
+            const contentType = this.xhr.getResponseHeader('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const error = JSON.parse(this.xhr.responseText);
+              errorMessage = error.message || errorMessage;
+            } else {
+              errorMessage = this.xhr.responseText || this.xhr.statusText || errorMessage;
+            }
+          } catch {
+            errorMessage = this.xhr.statusText || errorMessage;
+          }
+
+          // Add status code context for specific errors
+          if (this.xhr.status === 403) {
+            reject(new Error(errorMessage));
+          } else if (this.xhr.status === 429) {
+            reject(new Error(errorMessage));
+          } else if (this.xhr.status === 401) {
+            reject(new Error('Oturum süresi doldu, lütfen tekrar giriş yapın'));
+          } else if (this.xhr.status >= 500) {
+            reject(new Error('Sunucu hatası: ' + errorMessage));
+          } else {
+            reject(new Error(errorMessage));
+          }
+        }
+      };
+
+      this.xhr.onerror = () => {
+        if (this.flushTimer) {
+          clearInterval(this.flushTimer);
+          this.flushTimer = null;
+        }
+
+        const error = new Error('Bağlantı hatası, internet bağlantınızı kontrol edin');
+        if (callbacks.onError) {
+          callbacks.onError(error);
+        }
+        reject(error);
+      };
+
+      this.xhr.onabort = () => {
+        if (this.flushTimer) {
+          clearInterval(this.flushTimer);
+          this.flushTimer = null;
+        }
+        resolve();
+      };
+
+      this.xhr.send();
+    });
   }
 
   private processEvent(eventStr: string, callbacks: SSECallbacks) {
     const lines = eventStr.split('\n');
     let eventType = 'message';
-    let data = '';
+    const dataLines: string[] = [];
 
     for (const line of lines) {
       if (line.startsWith('event: ')) {
         eventType = line.slice(7);
       } else if (line.startsWith('data: ')) {
-        data = line.slice(6);
+        dataLines.push(line.slice(6));
       }
     }
 
-    if (!data) return;
+    if (dataLines.length === 0) return;
+
+    // Join multiple data lines with newline
+    const data = dataLines.join('\n');
 
     switch (eventType) {
       case 'token':
@@ -166,9 +219,9 @@ export class SSEClient {
       this.flushTimer = null;
     }
 
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
+    if (this.xhr) {
+      this.xhr.abort();
+      this.xhr = null;
     }
   }
 }

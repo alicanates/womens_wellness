@@ -58,9 +58,14 @@ export function useNotifications() {
       const granted = await requestPermissions();
       if (!granted) return null;
 
-      // Get Expo push token
+      // Get Expo push token - only if EAS project ID is configured
+      if (!process.env.EXPO_PUBLIC_EAS_PROJECT_ID) {
+        console.warn('EAS Project ID not configured. Skipping push notification registration.');
+        return null;
+      }
+
       const token = await Notifications.getExpoPushTokenAsync({
-        projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID || 'wellness-app', // fallback for dev
+        projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID,
       });
 
       setExpoPushToken(token.data);

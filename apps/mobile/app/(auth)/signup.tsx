@@ -4,6 +4,7 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -31,7 +32,10 @@ export default function SignUpScreen() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.emoji}>🌸</Text>
+          <Image
+            source={require('../../assets/images/mascot/5.png')}
+            style={styles.mascot}
+          />
           <Text style={styles.title}>Sana Hoş Geldin!</Text>
           <Text style={styles.subtitle}>
             Sağlıklı yaşam yolculuğuna başlamak için hesap oluştur
@@ -94,9 +98,11 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       alignItems: 'center',
       marginTop: theme.spacing.xxl,
     },
-    emoji: {
-      fontSize: 80,
+    mascot: {
+      width: 140,
+      height: 140,
       marginBottom: theme.spacing.lg,
+      resizeMode: 'contain',
     },
     title: {
       ...theme.typography.title,

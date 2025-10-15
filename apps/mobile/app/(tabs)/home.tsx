@@ -274,10 +274,16 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickActionButton}
-              onPress={() => router.push('/(tabs)/calendar')}
+              onPress={() => {
+                // Navigate to calendar and trigger today's details
+                router.push({
+                  pathname: '/(tabs)/calendar',
+                  params: { openToday: 'true' }
+                });
+              }}
             >
-              <Text style={styles.quickActionIcon}>📝</Text>
-              <Text style={styles.quickActionText}>Semptom Ekle</Text>
+              <Text style={styles.quickActionIcon}>😊</Text>
+              <Text style={styles.quickActionText}>Ruh Hali Ekle</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickActionButton}

@@ -13,6 +13,7 @@ const pump = promisify(pipeline);
 class UpdateProfileDto {
   firstName?: string;
   lastName?: string;
+  email?: string;
   dateOfBirth?: string; // ISO date string
   heightCm?: number;
   weightKg?: number;
@@ -32,10 +33,27 @@ class UpdateUserDto {
   password?: string;
 }
 
+class SetupPinDto {
+  pin!: string;
+}
+
+class VerifyPinDto {
+  pin!: string;
+}
+
+class DisablePinDto {
+  pin!: string;
+}
+
+class ChangePinDto {
+  oldPin!: string;
+  newPin!: string;
+}
+
 @ApiTags('users')
 @Controller()
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Get('users/check-username')
   @ApiOperation({ summary: 'Check username availability' })
@@ -185,5 +203,46 @@ export class UsersController {
       }
       throw new BadRequestException('Failed to upload profile picture');
     }
+  }
+
+  // PIN Management Endpoints
+  @Get('me/pin-status')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get PIN status for current user' })
+  async getPinStatus(@CurrentUser() user: any) {
+    return this.usersService.getPinStatus(user.id);
+  }
+
+  @Post('me/pin/setup')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Setup PIN for app lock' })
+  async setupPin(@CurrentUser() user: any, @Body() dto: SetupPinDto) {
+    return this.usersService.setupPin(user.id, dto.pin);
+  }
+
+  @Post('me/pin/verify')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Verify PIN' })
+  async verifyPin(@CurrentUser() user: any, @Body() dto: VerifyPinDto) {
+    return this.usersService.verifyPin(user.id, dto.pin);
+  }
+
+  @Post('me/pin/disable')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Disable PIN lock' })
+  async disablePin(@CurrentUser() user: any, @Body() dto: DisablePinDto) {
+    return this.usersService.disablePin(user.id, dto.pin);
+  }
+
+  @Patch('me/pin/change')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change PIN' })
+  async changePin(@CurrentUser() user: any, @Body() dto: ChangePinDto) {
+    return this.usersService.changePin(user.id, dto.oldPin, dto.newPin);
   }
 }

@@ -21,6 +21,7 @@ import { FeatureFlagModule } from './feature-flag/feature-flag.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { HomeModule } from './home/home.module';
 import { WellnessModule } from './wellness/wellness.module';
+import aiConfig from './config/ai.config';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { WellnessModule } from './wellness/wellness.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
+      load: [aiConfig],
     }),
     // Rate limiting
     ThrottlerModule.forRoot([
@@ -69,4 +71,4 @@ import { WellnessModule } from './wellness/wellness.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

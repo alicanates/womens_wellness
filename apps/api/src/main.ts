@@ -8,6 +8,26 @@ import fastifyMultipart from '@fastify/multipart';
 import fastifyCors from '@fastify/cors';
 
 async function bootstrap() {
+  // Validate critical environment variables
+  const requiredEnvVars = [
+    'DATABASE_URL',
+    'JWT_SECRET',
+    'GOOGLE_GENERATIVE_AI_API_KEY',
+  ];
+
+  const missingEnvVars = requiredEnvVars.filter(
+    (varName) => !process.env[varName] || process.env[varName]?.includes('PLACEHOLDER'),
+  );
+
+  if (missingEnvVars.length > 0) {
+    console.error('❌ Missing or invalid required environment variables:');
+    missingEnvVars.forEach((varName) => {
+      console.error(`   - ${varName}`);
+    });
+    console.error('\n💡 Please check your .env.local file and ensure all required variables are set.');
+    process.exit(1);
+  }
+
   const fastifyAdapter = new FastifyAdapter();
 
   const app = await NestFactory.create<NestFastifyApplication>(

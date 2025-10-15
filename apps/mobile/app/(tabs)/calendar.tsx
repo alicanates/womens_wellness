@@ -17,7 +17,7 @@ import { cyclesService, pregnancyService } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
 import { usePregnancyStore } from '@/store/pregnancyStore';
 import { useTheme } from '@/hooks/useTheme';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Legend } from '@/components/calendar/Legend';
 import { DayMarkers, MarkerType } from '@/components/calendar/DayMarkers';
 import { InsightCards } from '@/components/calendar/InsightCards';
@@ -28,6 +28,7 @@ export default function CalendarScreen() {
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { isPregnancyMode, setPregnancyMode, initializePregnancyMode } = usePregnancyStore();
+  const { openToday } = useLocalSearchParams<{ openToday?: string }>();
   const today = new Date();
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth() + 1);
@@ -100,6 +101,27 @@ export default function CalendarScreen() {
     queryFn: () => cyclesService.getStats(),
     enabled: isAuthenticated && !isPregnancyMode,
   });
+
+  // Open today's details when navigated from home with openToday param
+  useEffect(() => {
+    if (openToday === 'true' && calendarData?.days) {
+      // Find today in the calendar data
+      const todayDay = calendarData.days.find((day: any) => {
+        const dayDate = typeof day.date === 'string' ? new Date(day.date) : day.date;
+        return (
+          dayDate.getDate() === today.getDate() &&
+          dayDate.getMonth() === today.getMonth() &&
+          dayDate.getFullYear() === today.getFullYear()
+        );
+      });
+
+      if (todayDay) {
+        const dayDate = typeof todayDay.date === 'string' ? new Date(todayDay.date) : todayDay.date;
+        setSelectedDay({ ...todayDay, date: dayDate });
+        setShowDayDetails(true);
+      }
+    }
+  }, [openToday, calendarData]);
 
   const monthNames = [
     'Ocak',

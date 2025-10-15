@@ -45,7 +45,7 @@ export interface HomeSnapshot {
 
 export interface PriorityCard {
   id: string;
-  type: 'hydration' | 'cycle_insight' | 'symptom_log' | 'medication' | 'reminder' | 'nova_prompt';
+  type: 'hydration' | 'cycle_insight' | 'medication' | 'reminder' | 'nova_prompt';
   priority: number;
   data: any;
   isDismissed: boolean;
@@ -338,29 +338,6 @@ export class HomeService {
           isPinned: pinnedCards.includes('cycle_insight'),
         });
       }
-    }
-
-    // Symptom log card - show only if user hasn't logged mood today
-    const todayLog = await this.prisma.dailyLog.findFirst({
-      where: {
-        userId,
-        date: startOfToday,
-      },
-    });
-
-    // Only show symptom log if:
-    // 1. User hasn't logged mood today (no dailyLog or empty mood array)
-    // 2. OR user hasn't dismissed it manually via X button
-    const hasMoodToday = todayLog && todayLog.mood && todayLog.mood.length > 0;
-    if (!hasMoodToday) {
-      cards.push({
-        id: 'symptom_log',
-        type: 'symptom_log',
-        priority: 60,
-        data: {},
-        isDismissed: isDismissed('symptom_log'),
-        isPinned: pinnedCards.includes('symptom_log'),
-      });
     }
 
     // Reminders card

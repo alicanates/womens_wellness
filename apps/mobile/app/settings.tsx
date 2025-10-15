@@ -20,6 +20,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import * as SecureStore from 'expo-secure-store';
 
 // Type assertion to fix TypeScript module resolution issue
 const { cacheDirectory, writeAsStringAsync } = FileSystem as any;
@@ -28,6 +29,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
 import { userService } from '@/services/api';
 import { useTheme } from '@/hooks/useTheme';
+import { PinInputModal } from '@/components/PinInputModal';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -40,53 +42,127 @@ export default function SettingsScreen() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [heightCm, setHeightCm] = useState(165);
   const [weightKg, setWeightKg] = useState(60);
   const [profilePictureUri, setProfilePictureUri] = useState<string | null>(null);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
 
-  const { data: userData, isLoading } = useQuery({
+  const { data: userData, isLoading, refetch } = useQuery({
     queryKey: ['me'],
     queryFn: () => userService.getMe(),
     staleTime: 0, // Always consider data stale
-    refetchOnMount: true, // Refetch on component mount
+    refetchOnMount: 'always', // Always refetch on component mount
+    refetchOnWindowFocus: true, // Refetch when window gains focus
   });
 
-  // Sync local state with query data
+  // Sync local state with query data - ALWAYS update when userData changes
   useEffect(() => {
     if (userData) {
       const data = userData as any;
+      console.log('Settings - Received userData:', data); // Debug log
+      console.log('Settings - Profile data:', data?.profile); // Debug log
+      console.log('Settings - Email:', data?.email); // Debug log
+      console.log('Settings - Username:', data?.username); // Debug log
+
       setFirstName(data?.profile?.firstName || '');
       setLastName(data?.profile?.lastName || '');
       setUsername(data?.username || '');
+      setEmail(data?.email || '');
+
       if (data?.profile?.dateOfBirth) {
         setBirthDate(new Date(data.profile.dateOfBirth));
+      } else {
+        setBirthDate(null);
       }
       setHeightCm(data?.profile?.heightCm || 165);
       setWeightKg(data?.profile?.weightKg || 60);
       if (data?.profile?.profilePictureUrl) {
         setProfilePictureUri(data.profile.profilePictureUrl);
+      } else {
+        setProfilePictureUri(null);
       }
+
+      console.log('Settings - State updated:', {
+        firstName: data?.profile?.firstName,
+        lastName: data?.profile?.lastName,
+        username: data?.username,
+        email: data?.email
+      }); // Debug log
     }
   }, [userData]);
 
+  // Check username availability in real-time (debounced)
+  useEffect(() => {
+    const currentUsername = (userData as any)?.username;
+
+    // Don't check if editing is not active
+    if (!isEditingProfile) {
+      setUsernameAvailable(null);
+      return;
+    }
+
+    // Don't check if username hasn't changed
+    if (!username || username.toLowerCase() === currentUsername?.toLowerCase()) {
+      setUsernameAvailable(null);
+      return;
+    }
+
+    // Don't check if username is too short
+    if (username.length < 3) {
+      setUsernameAvailable(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setCheckingUsername(true);
+      try {
+        const normalizedUsername = username.toLowerCase();
+        const response = await userService.checkUsernameAvailability(normalizedUsername);
+        setUsernameAvailable((response as any).available);
+      } catch (error) {
+        console.error('Username check failed:', error);
+        setUsernameAvailable(null);
+      } finally {
+        setCheckingUsername(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [username, isEditingProfile, userData]);
+
   const updateProfileMutation = useMutation({
     mutationFn: (data: any) => userService.updateMe(data),
-    onSuccess: (updatedData) => {
-      queryClient.invalidateQueries({ queryKey: ['me'] });
+    onSuccess: async (updatedData) => {
+      console.log('Profile update successful, received data:', updatedData);
+
+      // Set the query data directly to ensure immediate update
+      queryClient.setQueryData(['me'], updatedData);
+
+      // Invalidate all related queries to ensure fresh data everywhere
+      await queryClient.invalidateQueries({ queryKey: ['me'] });
+      await queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
+
       // Update the user in authStore with fresh data
       if (user && updatedData) {
-        useAuthStore.setState({
-          user: {
-            ...user,
-            profile: (updatedData as any).profile,
-          },
-        });
+        const updatedUser = {
+          ...user,
+          email: (updatedData as any).email,
+          username: (updatedData as any).username,
+          profile: (updatedData as any).profile,
+        };
+        useAuthStore.setState({ user: updatedUser });
+
+        // Also update SecureStore to persist changes
+        await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
       }
       setIsEditingProfile(false);
       Alert.alert('Başarılı', 'Profil güncellendi');
     },
     onError: (error: any) => {
+      console.error('Profile update failed:', error);
       Alert.alert('Hata', error.message || 'Profil güncellenemedi');
     },
   });
@@ -114,7 +190,24 @@ export default function SettingsScreen() {
         // Upload image to server
         const response = await userService.uploadProfilePicture(localUri);
         setProfilePictureUri(response.profilePictureUrl);
-        queryClient.invalidateQueries({ queryKey: ['me'] });
+
+        // Invalidate all related queries
+        await queryClient.invalidateQueries({ queryKey: ['me'] });
+        await queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
+
+        // Update authStore
+        if (user && user.profile) {
+          const updatedUser = {
+            ...user,
+            profile: {
+              ...user.profile,
+              profilePictureUrl: response.profilePictureUrl,
+            },
+          };
+          useAuthStore.setState({ user: updatedUser });
+          await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
+        }
+
         Alert.alert('Başarılı', 'Profil fotoğrafı güncellendi');
       } catch (error: any) {
         Alert.alert('Hata', error.message || 'Fotoğraf yüklenemedi');
@@ -145,7 +238,24 @@ export default function SettingsScreen() {
         // Upload image to server
         const response = await userService.uploadProfilePicture(localUri);
         setProfilePictureUri(response.profilePictureUrl);
-        queryClient.invalidateQueries({ queryKey: ['me'] });
+
+        // Invalidate all related queries
+        await queryClient.invalidateQueries({ queryKey: ['me'] });
+        await queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
+
+        // Update authStore
+        if (user && user.profile) {
+          const updatedUser = {
+            ...user,
+            profile: {
+              ...user.profile,
+              profilePictureUrl: response.profilePictureUrl,
+            },
+          };
+          useAuthStore.setState({ user: updatedUser });
+          await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
+        }
+
         Alert.alert('Başarılı', 'Profil fotoğrafı güncellendi');
       } catch (error: any) {
         Alert.alert('Hata', error.message || 'Fotoğraf yüklenemedi');
@@ -168,7 +278,24 @@ export default function SettingsScreen() {
               // Delete from server by setting to null
               await userService.updateMe({ profilePictureUrl: null });
               setProfilePictureUri(null);
-              queryClient.invalidateQueries({ queryKey: ['me'] });
+
+              // Invalidate all related queries
+              await queryClient.invalidateQueries({ queryKey: ['me'] });
+              await queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
+
+              // Update authStore
+              if (user && user.profile) {
+                const updatedUser = {
+                  ...user,
+                  profile: {
+                    ...user.profile,
+                    profilePictureUrl: undefined,
+                  },
+                };
+                useAuthStore.setState({ user: updatedUser });
+                await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
+              }
+
               Alert.alert('Başarılı', 'Profil fotoğrafı silindi');
             } catch (error: any) {
               Alert.alert('Hata', error.message || 'Fotoğraf silinemedi');
@@ -194,25 +321,62 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleSaveProfile = () => {
-    const profileData: any = {
-      firstName: firstName || undefined,
-      lastName: lastName || undefined,
-      dateOfBirth: birthDate ? birthDate.toISOString() : undefined,
-      heightCm: heightCm,
-      weightKg: weightKg,
-    };
+  const handleSaveProfile = async () => {
+    try {
+      // Check if username changed and validate it (case-insensitive)
+      const currentUsername = (userData as any)?.username;
+      if (username && username.toLowerCase() !== currentUsername?.toLowerCase()) {
+        // Check if username is available based on real-time check
+        if (usernameAvailable === false) {
+          Alert.alert('Hata', 'Bu kullanıcı adı zaten kullanılıyor');
+          return;
+        }
 
-    // Send username update separately if changed
-    const currentUsername = (userData as any)?.username;
-    if (username && username !== currentUsername) {
-      // Username update needs separate endpoint
-      userService.updateMe({ username }).catch((error: any) => {
-        Alert.alert('Hata', 'Kullanıcı adı güncellenemedi: ' + (error.message || ''));
-      });
+        // Validate username format
+        const normalizedUsername = username.toLowerCase();
+        if (!/^[a-z0-9._]+$/.test(normalizedUsername)) {
+          Alert.alert('Hata', 'Kullanıcı adı sadece küçük harf, rakam, nokta ve alt çizgi içerebilir');
+          return;
+        }
+        if (normalizedUsername.length < 3 || normalizedUsername.length > 24) {
+          Alert.alert('Hata', 'Kullanıcı adı 3-24 karakter arasında olmalıdır');
+          return;
+        }
+
+        // Update username first
+        const usernameResponse = await userService.updateUsername(normalizedUsername);
+
+        // Update queries and store with username change
+        queryClient.setQueryData(['me'], usernameResponse);
+        await queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
+
+        if (user) {
+          const updatedUser = {
+            ...user,
+            username: (usernameResponse as any).username,
+            profile: (usernameResponse as any).profile,
+          };
+          useAuthStore.setState({ user: updatedUser });
+          await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
+        }
+      }
+
+      // Update profile data (including email)
+      const profileData: any = {
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        dateOfBirth: birthDate ? birthDate.toISOString() : null,
+        heightCm: heightCm,
+        weightKg: weightKg,
+      };
+
+      console.log('Saving profile data:', profileData); // Debug log
+
+      updateProfileMutation.mutate(profileData);
+    } catch (error: any) {
+      Alert.alert('Hata', error.message || 'Profil güncellenemedi');
     }
-
-    updateProfileMutation.mutate(profileData);
   };
 
   const handleLogout = () => {
@@ -224,8 +388,11 @@ export default function SettingsScreen() {
         {
           text: 'Çıkış Yap',
           style: 'destructive',
-          onPress: () => {
-            logout();
+          onPress: async () => {
+            // Clear all React Query cache to prevent data leakage between users
+            await queryClient.clear();
+            // Clear auth state and tokens
+            await logout();
             router.replace('/(auth)/signin');
           },
         },
@@ -235,8 +402,11 @@ export default function SettingsScreen() {
 
   const deleteAccountMutation = useMutation({
     mutationFn: () => userService.deleteMe(),
-    onSuccess: () => {
-      logout();
+    onSuccess: async () => {
+      // Clear all React Query cache to prevent data leakage
+      await queryClient.clear();
+      // Clear auth state and tokens
+      await logout();
       router.replace('/(auth)/signin');
     },
     onError: (error: any) => {
@@ -279,6 +449,21 @@ export default function SettingsScreen() {
 
   const [isExporting, setIsExporting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [showPinChange, setShowPinChange] = useState(false);
+  const [pinEnabled, setPinEnabled] = useState(false);
+
+  // Fetch PIN status
+  const { data: pinStatus } = useQuery({
+    queryKey: ['pin-status'],
+    queryFn: () => userService.getPinStatus(),
+  });
+
+  useEffect(() => {
+    if (pinStatus) {
+      setPinEnabled(pinStatus.pinEnabled);
+    }
+  }, [pinStatus]);
 
   const handleSyncData = async () => {
     try {
@@ -338,6 +523,64 @@ export default function SettingsScreen() {
     }
   };
 
+  // PIN Handlers
+  const handleSetupPin = async (pin: string) => {
+    try {
+      await userService.setupPin(pin);
+      await queryClient.invalidateQueries({ queryKey: ['pin-status'] });
+      await SecureStore.setItemAsync('pinEnabled', 'true');
+      Alert.alert('Başarılı', 'PIN başarıyla oluşturuldu');
+    } catch (error: any) {
+      Alert.alert('Hata', error.message || 'PIN oluşturulamadı');
+    }
+  };
+
+  const handleChangePin = async (newPin: string) => {
+    // First, verify current PIN, then change
+    setShowPinChange(false);
+    Alert.prompt(
+      'Mevcut PIN',
+      'Mevcut PIN kodunuzu girin',
+      async (currentPin) => {
+        if (!currentPin) return;
+        try {
+          await userService.changePin(currentPin, newPin);
+          Alert.alert('Başarılı', 'PIN başarıyla değiştirildi');
+        } catch (error: any) {
+          Alert.alert('Hata', error.message || 'PIN değiştirilemedi');
+        }
+      },
+      'secure-text'
+    );
+  };
+
+  const handleDisablePin = () => {
+    Alert.prompt(
+      'PIN Kaldır',
+      'PIN kilidi kaldırmak için PIN kodunuzu girin',
+      async (pin) => {
+        if (!pin) return;
+        try {
+          await userService.disablePin(pin);
+          await queryClient.invalidateQueries({ queryKey: ['pin-status'] });
+          await SecureStore.deleteItemAsync('pinEnabled');
+          Alert.alert('Başarılı', 'PIN kilidi kaldırıldı');
+        } catch (error: any) {
+          Alert.alert('Hata', error.message || 'PIN kaldırılamadı');
+        }
+      },
+      'secure-text'
+    );
+  };
+
+  const handlePinToggle = () => {
+    if (pinEnabled) {
+      handleDisablePin();
+    } else {
+      setShowPinSetup(true);
+    }
+  };
+
   const currentDisplayName = (userData as any)?.profile?.displayName || user?.email?.split('@')[0] || 'Misafir';
 
   const styles = createStyles(theme);
@@ -389,8 +632,8 @@ export default function SettingsScreen() {
           <View style={styles.formGroup}>
             <Text style={styles.label}>Ad</Text>
             <TextInput
-              style={styles.input}
-              value={isEditingProfile ? firstName : ((userData as any)?.profile?.firstName || '')}
+              style={[styles.input, !isEditingProfile && styles.inputDisabled]}
+              value={firstName}
               onChangeText={setFirstName}
               placeholder="Adınız"
               placeholderTextColor={theme.colors.textLight}
@@ -401,8 +644,8 @@ export default function SettingsScreen() {
           <View style={styles.formGroup}>
             <Text style={styles.label}>Soyad</Text>
             <TextInput
-              style={styles.input}
-              value={isEditingProfile ? lastName : ((userData as any)?.profile?.lastName || '')}
+              style={[styles.input, !isEditingProfile && styles.inputDisabled]}
+              value={lastName}
               onChangeText={setLastName}
               placeholder="Soyadınız"
               placeholderTextColor={theme.colors.textLight}
@@ -413,23 +656,40 @@ export default function SettingsScreen() {
           <View style={styles.formGroup}>
             <Text style={styles.label}>Kullanıcı Adı</Text>
             <TextInput
-              style={styles.input}
-              value={isEditingProfile ? username : ((userData as any)?.username || '')}
+              style={[styles.input, !isEditingProfile && styles.inputDisabled]}
+              value={username}
               onChangeText={setUsername}
               placeholder="kullaniciadi"
               placeholderTextColor={theme.colors.textLight}
               editable={isEditingProfile}
               autoCapitalize="none"
             />
+            {isEditingProfile && username && username.toLowerCase() !== (userData as any)?.username?.toLowerCase() && (
+              <>
+                {checkingUsername && (
+                  <Text style={styles.helperText}>Kontrol ediliyor...</Text>
+                )}
+                {!checkingUsername && usernameAvailable === true && (
+                  <Text style={styles.successText}>✓ Kullanılabilir</Text>
+                )}
+                {!checkingUsername && usernameAvailable === false && (
+                  <Text style={styles.errorTextSmall}>✗ Bu kullanıcı adı alınmış</Text>
+                )}
+              </>
+            )}
           </View>
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>E-posta</Text>
             <TextInput
-              style={[styles.input, styles.inputDisabled]}
-              value={user?.email || ''}
+              style={[styles.input, !isEditingProfile && styles.inputDisabled]}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="E-posta adresiniz"
               placeholderTextColor={theme.colors.textLight}
-              editable={false}
+              editable={isEditingProfile}
+              keyboardType="email-address"
+              autoCapitalize="none"
             />
           </View>
 
@@ -439,7 +699,7 @@ export default function SettingsScreen() {
               <DatePickerButton value={birthDate} onChange={setBirthDate} theme={theme} />
             ) : (
               <TextInput
-                style={styles.input}
+                style={[styles.input, styles.inputDisabled]}
                 value={birthDate ? birthDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Belirtilmemiş'}
                 placeholderTextColor={theme.colors.textLight}
                 editable={false}
@@ -460,7 +720,7 @@ export default function SettingsScreen() {
               />
             ) : (
               <TextInput
-                style={styles.input}
+                style={[styles.input, styles.inputDisabled]}
                 value={`${heightCm} cm`}
                 placeholderTextColor={theme.colors.textLight}
                 editable={false}
@@ -481,7 +741,7 @@ export default function SettingsScreen() {
               />
             ) : (
               <TextInput
-                style={styles.input}
+                style={[styles.input, styles.inputDisabled]}
                 value={`${weightKg} kg`}
                 placeholderTextColor={theme.colors.textLight}
                 editable={false}
@@ -495,15 +755,21 @@ export default function SettingsScreen() {
                 style={[styles.button, styles.secondaryButton]}
                 onPress={() => {
                   setIsEditingProfile(false);
-                  // Reset values
+                  // Reset values to original userData
                   setFirstName((userData as any)?.profile?.firstName || '');
                   setLastName((userData as any)?.profile?.lastName || '');
                   setUsername((userData as any)?.username || '');
+                  setEmail((userData as any)?.email || '');
                   if ((userData as any)?.profile?.dateOfBirth) {
                     setBirthDate(new Date((userData as any).profile.dateOfBirth));
+                  } else {
+                    setBirthDate(null);
                   }
                   setHeightCm((userData as any)?.profile?.heightCm || 165);
                   setWeightKg((userData as any)?.profile?.weightKg || 60);
+                  // Reset username check state
+                  setUsernameAvailable(null);
+                  setCheckingUsername(false);
                 }}
               >
                 <Text style={styles.secondaryButtonText}>İptal</Text>
@@ -511,7 +777,7 @@ export default function SettingsScreen() {
               <TouchableOpacity
                 style={[styles.button, styles.primaryButton]}
                 onPress={handleSaveProfile}
-                disabled={updateProfileMutation.isPending}
+                disabled={updateProfileMutation.isPending || usernameAvailable === false || checkingUsername}
               >
                 <Text style={styles.primaryButtonText}>
                   {updateProfileMutation.isPending ? 'Kaydediliyor...' : 'Kaydet'}
@@ -544,6 +810,29 @@ export default function SettingsScreen() {
               thumbColor={Platform.OS === 'ios' ? undefined : '#fff'}
             />
           </View>
+
+          <View style={styles.settingItem}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>PIN Kilidi</Text>
+              <Text style={styles.settingDescription}>Uygulamayı açarken PIN iste</Text>
+            </View>
+            <Switch
+              value={pinEnabled}
+              onValueChange={handlePinToggle}
+              trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+              thumbColor={Platform.OS === 'ios' ? undefined : '#fff'}
+            />
+          </View>
+
+          {pinEnabled && (
+            <TouchableOpacity
+              style={styles.settingButton}
+              onPress={() => setShowPinChange(true)}
+            >
+              <Text style={styles.settingButtonText}>PIN Değiştir</Text>
+              <Text style={styles.settingButtonIcon}>›</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Privacy & Data Section */}
@@ -625,6 +914,28 @@ export default function SettingsScreen() {
           <Text style={styles.appInfoText}>Versiyon 1.0.0</Text>
         </View>
       </ScrollView>
+
+      {/* PIN Setup Modal */}
+      <PinInputModal
+        visible={showPinSetup}
+        onClose={() => setShowPinSetup(false)}
+        onSuccess={handleSetupPin}
+        title="PIN Kodu Oluştur"
+        subtitle="Uygulamanızı korumak için bir PIN kodu oluşturun"
+        mode="setup"
+        requireConfirm={true}
+      />
+
+      {/* PIN Change Modal */}
+      <PinInputModal
+        visible={showPinChange}
+        onClose={() => setShowPinChange(false)}
+        onSuccess={handleChangePin}
+        title="Yeni PIN Kodu"
+        subtitle="Yeni PIN kodunuzu oluşturun"
+        mode="setup"
+        requireConfirm={true}
+      />
     </SafeAreaView>
   );
 }
@@ -993,8 +1304,12 @@ const createStyles = (theme: any) =>
       color: theme.colors.text,
     },
     inputDisabled: {
-      opacity: 0.6,
-      color: theme.colors.textSecondary,
+      opacity: 0.7,
+      backgroundColor: theme.colors.backgroundCard,
+    },
+    inputText: {
+      fontSize: 16,
+      color: theme.colors.text,
     },
     buttonGroup: {
       flexDirection: 'row',
@@ -1099,6 +1414,21 @@ const createStyles = (theme: any) =>
       fontSize: 12,
       color: theme.colors.textSecondary,
       marginVertical: 2,
+    },
+    helperText: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      marginTop: 4,
+    },
+    successText: {
+      fontSize: 12,
+      color: theme.colors.success || '#10b981',
+      marginTop: 4,
+    },
+    errorTextSmall: {
+      fontSize: 12,
+      color: theme.colors.error || '#ef4444',
+      marginTop: 4,
     },
     infoCard: {
       flexDirection: 'row',

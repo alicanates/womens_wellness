@@ -7,6 +7,7 @@ import {
   UseGuards,
   Req,
   Sse,
+  Logger,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Observable } from 'rxjs';
@@ -20,13 +21,155 @@ interface MessageEvent {
   type?: 'token' | 'done' | 'error';
 }
 
+enum ErrorType {
+  TIMEOUT = 'timeout',
+  RATE_LIMIT = 'rate_limit',
+  API_KEY = 'api_key',
+  NETWORK = 'network',
+  INVALID_REQUEST = 'invalid_request',
+  UNKNOWN = 'unknown',
+}
+
 @Controller('chat')
 @UseGuards(AuthGuard('jwt'))
 export class ChatController {
+  private readonly logger = new Logger(ChatController.name);
+
   constructor(
     private readonly chatService: ChatService,
     private readonly quotaService: QuotaService,
-  ) {}
+  ) { }
+
+  /**
+   * Classifies error type based on error message and properties
+   */
+  private classifyError(error: any): ErrorType {
+    const errorMessage = error.message?.toLowerCase() || '';
+    const errorCode = error.code?.toLowerCase() || '';
+    const statusCode = error.statusCode || error.status;
+
+    // Timeout errors
+    if (
+      errorMessage.includes('timeout') ||
+      errorMessage.includes('timed out') ||
+      errorCode === 'etimedout' ||
+      errorCode === 'econnaborted'
+    ) {
+      return ErrorType.TIMEOUT;
+    }
+
+    // Rate limit errors
+    if (
+      errorMessage.includes('rate limit') ||
+      errorMessage.includes('too many requests') ||
+      statusCode === 429 ||
+      errorCode === 'rate_limit_exceeded'
+    ) {
+      return ErrorType.RATE_LIMIT;
+    }
+
+    // API key errors
+    if (
+      errorMessage.includes('api key') ||
+      errorMessage.includes('api_key') ||
+      errorMessage.includes('authentication') ||
+      errorMessage.includes('unauthorized') ||
+      errorMessage.includes('invalid key') ||
+      statusCode === 401
+    ) {
+      return ErrorType.API_KEY;
+    }
+
+    // Network errors
+    if (
+      errorMessage.includes('network') ||
+      errorMessage.includes('econnrefused') ||
+      errorMessage.includes('enotfound') ||
+      errorMessage.includes('econnreset') ||
+      errorCode === 'econnrefused' ||
+      errorCode === 'enotfound' ||
+      errorCode === 'econnreset' ||
+      statusCode === 503
+    ) {
+      return ErrorType.NETWORK;
+    }
+
+    // Invalid request errors
+    if (
+      errorMessage.includes('invalid') ||
+      errorMessage.includes('bad request') ||
+      statusCode === 400
+    ) {
+      return ErrorType.INVALID_REQUEST;
+    }
+
+    return ErrorType.UNKNOWN;
+  }
+
+  /**
+   * Returns user-friendly Turkish error message based on error type
+   */
+  private getUserFriendlyMessage(errorType: ErrorType): string {
+    const messages: Record<ErrorType, string> = {
+      [ErrorType.TIMEOUT]:
+        'İstek zaman aşımına uğradı, lütfen tekrar deneyin',
+      [ErrorType.RATE_LIMIT]:
+        'Sistem yoğun, lütfen birkaç saniye bekleyip tekrar deneyin',
+      [ErrorType.API_KEY]: 'Sistem yapılandırma hatası oluştu',
+      [ErrorType.NETWORK]:
+        'Bağlantı hatası, internet bağlantınızı kontrol edin',
+      [ErrorType.INVALID_REQUEST]: 'Geçersiz istek',
+      [ErrorType.UNKNOWN]: 'Yanıt alınamadı, lütfen tekrar deneyin',
+    };
+
+    return messages[errorType];
+  }
+
+  /**
+   * Logs error with context information
+   */
+  private logError(
+    error: any,
+    context: string,
+    userId?: string,
+    conversationId?: string,
+  ): void {
+    const errorType = this.classifyError(error);
+    const errorDetails = {
+      type: errorType,
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      statusCode: error.statusCode || error.status,
+      userId,
+      conversationId,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Log based on severity
+    if (errorType === ErrorType.API_KEY) {
+      this.logger.error(
+        `[${context}] Critical error - API configuration issue`,
+        errorDetails,
+      );
+    } else if (
+      errorType === ErrorType.TIMEOUT ||
+      errorType === ErrorType.RATE_LIMIT
+    ) {
+      this.logger.warn(`[${context}] Transient error`, errorDetails);
+    } else {
+      this.logger.error(`[${context}] Error occurred`, errorDetails);
+    }
+
+    // In production, this could send to error tracking service (e.g., Sentry)
+    if (process.env.NODE_ENV === 'production') {
+      // Example: Sentry.captureException(error, {
+      //   user: { id: userId },
+      //   tags: { context, errorType },
+      //   extra: errorDetails,
+      // });
+    }
+  }
 
   @Post(':conversationId/message')
   async sendMessage(
@@ -55,22 +198,29 @@ export class ChatController {
   async stream(
     @CurrentUser() user: any,
     @Param('conversationId') conversationId: string,
-    @Req() req: any,
   ): Promise<Observable<MessageEvent>> {
     // Get the last user message from this conversation
     const history = await this.chatService.getConversationHistory(
       conversationId,
       1,
     );
+
+    this.logger.debug(`[Stream] History length: ${history.length}, conversationId: ${conversationId}`);
+
     const lastMessage = history[0];
 
-    if (!lastMessage || lastMessage.role !== 'user') {
-      throw new Error('No user message to respond to');
+    if (!lastMessage) {
+      this.logger.error(`[Stream] No messages found for conversation ${conversationId}`);
+      throw new Error('No messages found in conversation');
+    }
+
+    if (lastMessage.role !== 'user') {
+      this.logger.error(`[Stream] Last message is not from user: ${lastMessage.role}`);
+      throw new Error('Last message must be from user');
     }
 
     // Create abort controller for client disconnect
     const abort = new AbortController();
-    req.on('close', () => abort.abort());
 
     return new Observable((subscriber) => {
       (async () => {
@@ -84,15 +234,15 @@ export class ChatController {
           let fullResponse = '';
           let tokenCount = 0;
 
-          // Stream tokens
-          for await (const chunk of result.textStream) {
-            fullResponse += chunk;
+          // Stream tokens using textStream async iterator
+          for await (const textPart of result.textStream) {
+            fullResponse += textPart;
             tokenCount++;
 
             subscriber.next({
+              data: textPart,
               type: 'token',
-              data: chunk,
-            });
+            } as any);
 
             // Check if aborted
             if (abort.signal.aborted) {
@@ -113,19 +263,28 @@ export class ChatController {
             await this.quotaService.increment(user.id);
 
             subscriber.next({
-              type: 'done',
               data: JSON.stringify({ tokens: tokenCount }),
-            });
+              type: 'done',
+            } as any);
           }
 
           subscriber.complete();
         } catch (error) {
+          // Classify error and get user-friendly message
+          const errorType = this.classifyError(error);
+          const userMessage = this.getUserFriendlyMessage(errorType);
+
+          // Log error with context
+          this.logError(error, 'ChatStream', user.id, conversationId);
+
+          // Send user-friendly error to client
           subscriber.next({
-            type: 'error',
             data: JSON.stringify({
-              message: error.message || 'Stream error occurred',
+              message: userMessage,
+              errorType,
             }),
-          });
+            type: 'error',
+          } as any);
           subscriber.error(error);
         }
       })();
