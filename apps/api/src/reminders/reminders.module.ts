@@ -21,6 +21,6 @@ import { PrismaModule } from '../prisma/prisma.module';
     PushService,
     RemindersProcessor,
   ],
-  exports: [RemindersService],
+  exports: [RemindersService, PushService],
 })
-export class RemindersModule {}
+export class RemindersModule { }

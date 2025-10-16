@@ -54,9 +54,12 @@ enum SubscriptionPlan {
 }
 
 enum SubscriptionStatus {
-  active
-  expired
-  cancelled
+  FREE
+  TRIAL
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  GRACE_PERIOD
 }
 
 enum SubscriptionTier {
@@ -469,16 +472,14 @@ model Subscription {
   userId                 String              @unique
   
   // Subscription Status
-  status                 SubscriptionStatus  @default(active)
+  status                 SubscriptionStatus  @default(FREE)
   tier                   SubscriptionTier?   // MONTHLY, YEARLY
-  plan                   SubscriptionPlan    @default(free) // Keep for backward compatibility
   
   // Dates
   startDate              DateTime?
   endDate                DateTime?
   cancelledAt            DateTime?
   trialEndDate           DateTime?
-  renewsAt               DateTime? // Keep for backward compatibility
   
   // Payment Provider
   provider               PaymentProvider?    // APPLE, GOOGLE

@@ -1,6 +1,15 @@
 import * as SecureStore from 'expo-secure-store';
 import type { AuthResponse, AuthTokens } from '@/types/auth';
 import { useAuthStore } from '@/store/authStore';
+import type {
+  Subscription,
+  Product,
+  Transaction,
+  Quota,
+  UsageStats,
+  PurchaseRequest,
+  RestoreRequest,
+} from '@/types/subscription';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:4000';
 
@@ -824,4 +833,43 @@ export const discoverService = {
   // Update user preferences
   updatePreferences: (data: UpdatePreferencesDto) =>
     api.patch<UserContentPreferencesDto>('/discover/preferences', data),
+};
+
+// Subscription endpoints
+export const subscriptionService = {
+  // Get subscription status
+  getStatus: () =>
+    api.get<Subscription>('/subscription/status'),
+
+  // Get available products
+  getProducts: (platform: 'ios' | 'android') =>
+    api.get<Product[]>(`/subscription/products?platform=${platform}`),
+
+  // Process purchase
+  processPurchase: (data: PurchaseRequest) =>
+    api.post<Subscription>('/subscription/purchase', data),
+
+  // Restore purchases
+  restorePurchases: (data: RestoreRequest) =>
+    api.post<Subscription>('/subscription/restore', data),
+
+  // Cancel subscription
+  cancelSubscription: () =>
+    api.post<{ success: boolean }>('/subscription/cancel'),
+
+  // Get transactions
+  getTransactions: () =>
+    api.get<Transaction[]>('/subscription/transactions'),
+
+  // Get quota
+  getQuota: () =>
+    api.get<Quota>('/subscription/quota'),
+
+  // Increment quota
+  incrementQuota: () =>
+    api.post<Quota>('/subscription/quota/increment'),
+
+  // Get usage stats
+  getUsageStats: () =>
+    api.get<UsageStats>('/subscription/usage-stats'),
 };

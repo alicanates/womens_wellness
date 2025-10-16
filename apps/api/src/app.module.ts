@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bullmq';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -22,6 +23,7 @@ import { AuditLogModule } from './audit-log/audit-log.module';
 import { HomeModule } from './home/home.module';
 import { WellnessModule } from './wellness/wellness.module';
 import { DiscoverModule } from './discover/discover.module';
+import { SubscriptionModule } from './subscription/subscription.module';
 import aiConfig from './config/ai.config';
 
 @Module({
@@ -46,6 +48,8 @@ import aiConfig from './config/ai.config';
         port: parseInt(process.env.REDIS_PORT || '6379'),
       },
     }),
+    // Scheduled jobs
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -63,6 +67,7 @@ import aiConfig from './config/ai.config';
     HomeModule,
     WellnessModule,
     DiscoverModule,
+    SubscriptionModule,
   ],
   controllers: [AppController],
   providers: [

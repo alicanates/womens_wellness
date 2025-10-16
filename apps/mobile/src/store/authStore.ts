@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import type { AuthTokens, AuthUser } from '@/types/auth';
 import { queryClient } from '@/lib/queryClient';
+import { subscriptionSyncService } from '@/services/subscriptionSync';
 
 interface AuthState {
   user: AuthUser | null;
@@ -37,6 +38,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   clearAuth: async () => {
     // Clear React Query cache to prevent data leakage between users
     queryClient.clear();
+    // Reset subscription sync service
+    subscriptionSyncService.reset();
     // Clear secure storage
     await SecureStore.deleteItemAsync('accessToken');
     await SecureStore.deleteItemAsync('refreshToken');
@@ -54,6 +57,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: async () => {
     // Clear React Query cache to prevent data leakage between users
     queryClient.clear();
+    // Reset subscription sync service
+    subscriptionSyncService.reset();
     // Clear secure storage
     await SecureStore.deleteItemAsync('accessToken');
     await SecureStore.deleteItemAsync('refreshToken');

@@ -30,6 +30,9 @@ import { useThemeStore } from '@/store/themeStore';
 import { userService } from '@/services/api';
 import { useTheme } from '@/hooks/useTheme';
 import { PinInputModal } from '@/components/PinInputModal';
+import { PremiumBadge } from '@/components/premium/PremiumBadge';
+import { GracePeriodBanner } from '@/components/premium/GracePeriodBanner';
+import { usePremium } from '@/hooks/usePremium';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -49,6 +52,9 @@ export default function SettingsScreen() {
   const [profilePictureUri, setProfilePictureUri] = useState<string | null>(null);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
+
+  // Premium subscription hook
+  const { subscription, isPremium, isLoading: isPremiumLoading } = usePremium();
 
   const { data: userData, isLoading, refetch } = useQuery({
     queryKey: ['me'],
@@ -613,15 +619,22 @@ export default function SettingsScreen() {
           {/* Profile Picture */}
           <View style={styles.profilePictureSection}>
             <TouchableOpacity onPress={handleProfilePicturePress}>
-              {profilePictureUri ? (
-                <Image source={{ uri: profilePictureUri }} style={styles.profileImageLarge} />
-              ) : (
-                <View style={styles.profilePlaceholderLarge}>
-                  <Text style={styles.profilePlaceholderTextLarge}>
-                    {currentDisplayName.charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-              )}
+              <View style={styles.profileImageContainer}>
+                {profilePictureUri ? (
+                  <Image source={{ uri: profilePictureUri }} style={styles.profileImageLarge} />
+                ) : (
+                  <View style={styles.profilePlaceholderLarge}>
+                    <Text style={styles.profilePlaceholderTextLarge}>
+                      {currentDisplayName.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                {isPremium && (
+                  <View style={styles.premiumBadgeOverlay}>
+                    <PremiumBadge size="medium" variant="icon" />
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleProfilePicturePress} style={styles.changePhotoButton}>
               <Text style={styles.changePhotoText}>Fotoğrafı Değiştir</Text>
@@ -791,6 +804,163 @@ export default function SettingsScreen() {
             >
               <Text style={styles.primaryButtonText}>Profili Düzenle</Text>
             </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Subscription Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Abonelik</Text>
+
+          {isPremium ? (
+            <>
+              {/* Grace Period Banner */}
+              {subscription && subscription.isInGracePeriod && (
+                <View style={{ marginBottom: theme.spacing.md }}>
+                  <GracePeriodBanner subscription={subscription} />
+                </View>
+              )}
+
+              {/* Premium Status Card */}
+              <View style={styles.premiumCard}>
+                <View style={styles.premiumHeader}>
+                  <PremiumBadge size="medium" variant="full" />
+                  <Text style={styles.premiumTitle}>Premium Üye</Text>
+                </View>
+
+                <View style={styles.premiumDetails}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Plan</Text>
+                    <Text style={styles.detailValue}>
+                      {subscription?.tier === 'YEARLY' ? 'Yıllık' : 'Aylık'}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Başlangıç</Text>
+                    <Text style={styles.detailValue}>
+                      {subscription?.startDate
+                        ? new Date(subscription.startDate).toLocaleDateString('tr-TR', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })
+                        : '-'}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Yenileme</Text>
+                    <Text style={styles.detailValue}>
+                      {subscription?.endDate
+                        ? new Date(subscription.endDate).toLocaleDateString('tr-TR', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })
+                        : '-'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* AI Quota */}
+                <View style={styles.quotaCard}>
+                  <Text style={styles.quotaLabel}>AI Mesaj Kotası</Text>
+                  <View style={styles.quotaBar}>
+                    <View
+                      style={[
+                        styles.quotaFill,
+                        {
+                          width: `${((subscription?.aiMessagesUsed || 0) /
+                            (subscription?.aiMessagesLimit || 1)) *
+                            100
+                            }%`,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.quotaText}>
+                    {subscription?.aiMessagesUsed || 0} / {subscription?.aiMessagesLimit || 0}{' '}
+                    kullanıldı
+                  </Text>
+                  <Text style={styles.quotaReset}>
+                    {subscription?.quotaResetDate
+                      ? new Date(subscription.quotaResetDate).toLocaleDateString('tr-TR', {
+                        day: 'numeric',
+                        month: 'long',
+                      })
+                      : '-'}{' '}
+                    tarihinde sıfırlanır
+                  </Text>
+                </View>
+              </View>
+
+              {/* Manage Subscription */}
+              <TouchableOpacity
+                style={styles.settingButton}
+                onPress={() => {
+                  const url =
+                    Platform.OS === 'ios'
+                      ? 'https://apps.apple.com/account/subscriptions'
+                      : 'https://play.google.com/store/account/subscriptions';
+                  Linking.openURL(url).catch(() => {
+                    Alert.alert('Hata', 'Abonelik yönetimi açılamadı');
+                  });
+                }}
+              >
+                <Text style={styles.settingButtonText}>Aboneliği Yönet</Text>
+                <Text style={styles.settingButtonIcon}>›</Text>
+              </TouchableOpacity>
+
+              {/* Usage Stats */}
+              <TouchableOpacity
+                style={styles.settingButton}
+                onPress={() => router.push('/premium/stats' as any)}
+              >
+                <Text style={styles.settingButtonText}>Kullanım İstatistikleri</Text>
+                <Text style={styles.settingButtonIcon}>›</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              {/* Free Plan Info */}
+              <View style={styles.freePlanCard}>
+                <Text style={styles.freePlanTitle}>Ücretsiz Plan</Text>
+                <Text style={styles.freePlanText}>Temel özelliklere erişiminiz var</Text>
+
+                {/* AI Quota for Free */}
+                <View style={styles.quotaCard}>
+                  <Text style={styles.quotaLabel}>AI Mesaj Kotası</Text>
+                  <View style={styles.quotaBar}>
+                    <View
+                      style={[
+                        styles.quotaFill,
+                        {
+                          width: `${((subscription?.aiMessagesUsed || 0) / 100) * 100}%`,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.quotaText}>
+                    {subscription?.aiMessagesUsed || 0} / 100 kullanıldı
+                  </Text>
+                  <Text style={styles.quotaReset}>
+                    {subscription?.quotaResetDate
+                      ? new Date(subscription.quotaResetDate).toLocaleDateString('tr-TR', {
+                        day: 'numeric',
+                        month: 'long',
+                      })
+                      : '-'}{' '}
+                    tarihinde sıfırlanır
+                  </Text>
+                </View>
+              </View>
+
+              {/* Upgrade CTA */}
+              <TouchableOpacity
+                style={[styles.button, styles.premiumButton]}
+                onPress={() => router.push('/premium' as any)}
+              >
+                <Text style={styles.premiumButtonText}>✨ Premium'a Geç</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
 
@@ -1255,6 +1425,22 @@ const createStyles = (theme: any) =>
       alignItems: 'center',
       marginBottom: theme.spacing.lg,
     },
+    profileImageContainer: {
+      position: 'relative',
+    },
+    premiumBadgeOverlay: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      backgroundColor: theme.colors.background,
+      borderRadius: 16,
+      padding: 4,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 4,
+    },
     profileImageLarge: {
       width: 120,
       height: 120,
@@ -1456,5 +1642,107 @@ const createStyles = (theme: any) =>
       fontSize: 14,
       color: theme.colors.textSecondary,
       lineHeight: 20,
+    },
+    // Premium Subscription Styles
+    premiumCard: {
+      backgroundColor: theme.colors.backgroundCard,
+      borderRadius: 16,
+      padding: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+    },
+    premiumHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+      marginBottom: theme.spacing.lg,
+    },
+    premiumTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: theme.colors.text,
+    },
+    premiumDetails: {
+      marginBottom: theme.spacing.lg,
+    },
+    detailRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: theme.spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    detailLabel: {
+      fontSize: 15,
+      color: theme.colors.textSecondary,
+      fontWeight: '500',
+    },
+    detailValue: {
+      fontSize: 15,
+      color: theme.colors.text,
+      fontWeight: '600',
+    },
+    quotaCard: {
+      backgroundColor: theme.colors.overlay,
+      borderRadius: 12,
+      padding: theme.spacing.md,
+    },
+    quotaLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: theme.spacing.sm,
+    },
+    quotaBar: {
+      height: 8,
+      backgroundColor: theme.colors.border,
+      borderRadius: 4,
+      overflow: 'hidden',
+      marginBottom: theme.spacing.xs,
+    },
+    quotaFill: {
+      height: '100%',
+      backgroundColor: theme.colors.primary,
+      borderRadius: 4,
+    },
+    quotaText: {
+      fontSize: 13,
+      color: theme.colors.text,
+      fontWeight: '600',
+      marginBottom: 4,
+    },
+    quotaReset: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+    },
+    freePlanCard: {
+      backgroundColor: theme.colors.backgroundCard,
+      borderRadius: 16,
+      padding: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    freePlanTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.colors.text,
+      marginBottom: 4,
+    },
+    freePlanText: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      marginBottom: theme.spacing.lg,
+    },
+    premiumButton: {
+      backgroundColor: theme.colors.primary,
+      marginTop: theme.spacing.sm,
+    },
+    premiumButtonText: {
+      color: theme.colors.textOnPrimary,
+      fontSize: 16,
+      fontWeight: '700',
     },
   });

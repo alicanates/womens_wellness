@@ -20,6 +20,10 @@ import { SSEClient } from '@/lib/sse';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '@/hooks/useTheme';
+import { usePremium, useQuota } from '@/hooks/usePremium';
+import { UpgradePrompt } from '@/components/premium/UpgradePrompt';
+import { QuotaExceededModal } from '@/components/premium/QuotaExceededModal';
+import { useRouter } from 'expo-router';
 
 interface Message {
   id: string;
@@ -31,6 +35,7 @@ interface Message {
 
 export default function ChatScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const queryClient = useQueryClient();
@@ -39,10 +44,16 @@ export default function ChatScreen() {
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [showQuotaExceeded, setShowQuotaExceeded] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const sseClient = useRef<SSEClient>(new SSEClient());
   const streamingContentRef = useRef('');
   const quotaAnimValue = useRef(new Animated.Value(1)).current;
+
+  // Premium and quota hooks
+  const { isPremium } = usePremium();
+  const { quota, isDepleted, isLow, increment: incrementQuota } = useQuota();
 
   // Load or create conversation ID on mount
   useEffect(() => {
@@ -89,17 +100,9 @@ export default function ChatScreen() {
     loadConversation();
   }, []);
 
-  // Fetch quota status
-  const { data: quotaData, isLoading: isQuotaLoading } = useQuery({
-    queryKey: ['quota'],
-    queryFn: () => quotaService.getStatus(),
-    refetchInterval: 30000, // Refresh every 30s
-    enabled: isAuthenticated,
-  });
-
   // Animate quota when it updates
   useEffect(() => {
-    if (quotaData) {
+    if (quota) {
       Animated.sequence([
         Animated.timing(quotaAnimValue, {
           toValue: 1.2,
@@ -113,7 +116,7 @@ export default function ChatScreen() {
         }),
       ]).start();
     }
-  }, [quotaData]);
+  }, [quota]);
 
   // Send message mutation
   const sendMessageMutation = useMutation({
@@ -146,21 +149,8 @@ export default function ChatScreen() {
 
     // Check for specific error types
     if (errorMessage.includes('kota') || errorMessage.includes('quota')) {
-      // Quota exceeded error
-      Alert.alert(
-        'Mesaj Kotası Doldu',
-        errorMessage,
-        [
-          { text: 'Tamam', style: 'cancel' },
-          {
-            text: 'Premium\'a Geç',
-            onPress: () => {
-              // TODO: Navigate to premium/upgrade screen
-              Alert.alert('Yakında', 'Premium özellikler yakında eklenecek');
-            },
-          },
-        ]
-      );
+      // Quota exceeded error - show upgrade prompt
+      setShowUpgradePrompt(true);
     } else if (
       errorMessage.includes('network') ||
       errorMessage.includes('bağlantı') ||
@@ -266,7 +256,7 @@ export default function ChatScreen() {
           streamingContentRef.current += chunk;
           setStreamingContent((prev) => prev + chunk);
         },
-        onDone: (data) => {
+        onDone: async (data) => {
           console.log('[Chat] Stream done. Final content length:', streamingContentRef.current.length);
           setIsStreaming(false);
           // Replace temp message with final
@@ -284,11 +274,17 @@ export default function ChatScreen() {
           );
           setStreamingContent('');
           streamingContentRef.current = '';
-          // Refresh quota immediately after streaming completes
-          queryClient.invalidateQueries({ queryKey: ['quota'] });
+
+          // Increment quota after successful message
+          try {
+            await incrementQuota();
+            console.log('[Chat] Quota incremented successfully');
+          } catch (error) {
+            console.error('[Chat] Failed to increment quota:', error);
+          }
 
           // Log for verification
-          console.log('[Chat] Streaming completed, quota invalidated');
+          console.log('[Chat] Streaming completed, quota updated');
         },
         onError: (error) => {
           setIsStreaming(false);
@@ -307,8 +303,30 @@ export default function ChatScreen() {
     }
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!inputText.trim()) return;
+
+    // Check quota before sending (Requirements: 6.1, 6.2, 6.4, 6.5)
+    if (isDepleted) {
+      // Show quota exceeded modal
+      setShowQuotaExceeded(true);
+      return;
+    }
+
+    // Show warning if quota is low (Requirements: 6.3)
+    if (isLow && !isPremium) {
+      Alert.alert(
+        'Mesaj Kotası Azalıyor',
+        `Kalan mesaj kotanız: ${quota?.remaining || 0}. Premium'a geçerek sınırsız mesaj gönderin.`,
+        [
+          { text: 'Devam Et', style: 'default' },
+          {
+            text: 'Premium\'a Geç',
+            onPress: () => router.push('/premium' as any),
+          },
+        ]
+      );
+    }
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -411,14 +429,22 @@ export default function ChatScreen() {
         <View style={[styles.header, { paddingTop: insets.top }]}>
           <View style={styles.headerLeft}>
             <Text style={styles.headerTitle}>NOVA - AI Arkadaşın</Text>
-            {isQuotaLoading ? (
-              <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginTop: 4 }} />
-            ) : quotaData ? (
+            {quota ? (
               <Animated.View style={{ transform: [{ scale: quotaAnimValue }] }}>
-                <Text style={styles.quotaText}>
-                  {(quotaData as any).used}/{(quotaData as any).limit} mesaj kullanıldı
-                  {(quotaData as any).used >= (quotaData as any).limit && ' ⚠️'}
-                </Text>
+                <TouchableOpacity
+                  onPress={() => router.push('/settings' as any)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.quotaText,
+                    isDepleted && styles.quotaTextDepleted,
+                    isLow && !isDepleted && styles.quotaTextLow,
+                  ]}>
+                    {quota.used}/{quota.limit} mesaj
+                    {isDepleted && ' ⚠️'}
+                    {isLow && !isDepleted && ' ⚡'}
+                  </Text>
+                </TouchableOpacity>
               </Animated.View>
             ) : null}
           </View>
@@ -494,6 +520,22 @@ export default function ChatScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
+
+      {/* Upgrade Prompt Modal */}
+      <UpgradePrompt
+        visible={showUpgradePrompt}
+        onClose={() => setShowUpgradePrompt(false)}
+        feature="Sınırsız AI Mesajları"
+        description="Mesaj kotanız doldu. Premium'a geçerek sınırsız mesaj gönderin ve gelişmiş AI özelliklerinden yararlanın."
+      />
+
+      {/* Quota Exceeded Modal */}
+      <QuotaExceededModal
+        visible={showQuotaExceeded}
+        onClose={() => setShowQuotaExceeded(false)}
+        quota={quota}
+        isPremium={isPremium}
+      />
     </View>
   );
 }
@@ -527,6 +569,13 @@ const createStyles = (theme: ReturnType<typeof useTheme>) => StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textSecondary,
     marginTop: 4,
+  },
+  quotaTextLow: {
+    color: '#F59E0B', // Amber color for low quota warning
+  },
+  quotaTextDepleted: {
+    color: theme.colors.error,
+    fontWeight: '600',
   },
   forgetButton: {
     paddingHorizontal: 12,

@@ -25,8 +25,13 @@ async function main() {
       },
       subscription: {
         create: {
-          plan: 'premium',
-          status: 'active',
+          status: 'ACTIVE',
+          tier: 'YEARLY',
+          startDate: new Date(),
+          endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+          aiMessagesLimit: 1000,
+          aiMessagesUsed: 0,
+          quotaResetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
         },
       },
     },
@@ -51,8 +56,10 @@ async function main() {
       },
       subscription: {
         create: {
-          plan: 'free',
-          status: 'active',
+          status: 'FREE',
+          aiMessagesLimit: 100,
+          aiMessagesUsed: 0,
+          quotaResetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
         },
       },
       usageQuota: {
@@ -85,8 +92,13 @@ async function main() {
       },
       subscription: {
         create: {
-          plan: 'premium',
-          status: 'active',
+          status: 'ACTIVE',
+          tier: 'MONTHLY',
+          startDate: new Date(),
+          endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+          aiMessagesLimit: 1000,
+          aiMessagesUsed: 0,
+          quotaResetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
         },
       },
       usageQuota: {

@@ -11,6 +11,10 @@ import { StatusPill } from '@/components/home/StatusPill';
 import { PriorityCard } from '@/components/home/PriorityCard';
 import { WaterTile, StepsTile, MeditationTile, SleepTile } from '@/components/wellness';
 import { ArticleCard } from '@/components/discover/ArticleCard';
+import { usePremium } from '@/hooks/usePremium';
+import { PremiumFeatureGate } from '@/components/premium/PremiumFeatureGate';
+import { FEATURES } from '@/types/subscription';
+import { PremiumBadge } from '@/components/premium/PremiumBadge';
 
 export default function HomeScreen() {
   const theme = useTheme();
@@ -21,6 +25,9 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   // Track in-session dismissed cards (resets on app restart)
   const [sessionDismissedCards, setSessionDismissedCards] = useState<Set<string>>(new Set());
+
+  // Premium access
+  const { isPremium, canUseFeature } = usePremium();
 
   const {
     data: snapshot,
@@ -129,15 +136,29 @@ export default function HomeScreen() {
             onPress={() => router.push('/settings')}
           >
             {snapshot?.user.profilePictureUrl ? (
-              <Image
-                source={{ uri: snapshot.user.profilePictureUrl }}
-                style={styles.profileImage}
-              />
+              <View style={styles.profileImageContainer}>
+                <Image
+                  source={{ uri: snapshot.user.profilePictureUrl }}
+                  style={styles.profileImage}
+                />
+                {isPremium && (
+                  <View style={styles.premiumBadgeOverlay}>
+                    <PremiumBadge size="small" variant="icon" />
+                  </View>
+                )}
+              </View>
             ) : (
-              <View style={styles.profilePlaceholder}>
-                <Text style={styles.profilePlaceholderText}>
-                  {snapshot?.user.displayName?.charAt(0).toUpperCase() || 'M'}
-                </Text>
+              <View style={styles.profileImageContainer}>
+                <View style={styles.profilePlaceholder}>
+                  <Text style={styles.profilePlaceholderText}>
+                    {snapshot?.user.displayName?.charAt(0).toUpperCase() || 'M'}
+                  </Text>
+                </View>
+                {isPremium && (
+                  <View style={styles.premiumBadgeOverlay}>
+                    <PremiumBadge size="small" variant="icon" />
+                  </View>
+                )}
               </View>
             )}
           </TouchableOpacity>
@@ -246,118 +267,121 @@ export default function HomeScreen() {
           );
         })()}
 
-        {/* Wellness Tiles - 2x2 Grid */}
+        {/* Wellness Tiles - 2x2 Grid - Premium Feature (Advanced Analytics) */}
         {snapshot?.wellnessTiles && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>İyilik Hali</Text>
-            <View style={styles.tilesGrid}>
-              {/* Top Row: Water + Steps */}
-              <View style={styles.tilesRow}>
-                <View style={styles.tileWrapper}>
-                  <WaterTile data={snapshot.todaySnapshot.waterProgress} />
-                </View>
-                <View style={styles.tileWrapper}>
-                  <StepsTile data={snapshot.wellnessTiles.steps} />
-                </View>
-              </View>
-
-              {/* Bottom Row: Meditation + Sleep */}
-              <View style={styles.tilesRow}>
-                <View style={styles.tileWrapper}>
-                  <MeditationTile data={snapshot.wellnessTiles.meditation} />
-                </View>
-                <View style={styles.tileWrapper}>
-                  <SleepTile data={snapshot.wellnessTiles.sleep} />
-                </View>
-              </View>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>İyilik Hali</Text>
+              {!isPremium && (
+                <TouchableOpacity
+                  onPress={() => router.push('/premium')}
+                  style={styles.premiumBadgeButton}
+                >
+                  <PremiumBadge size="small" variant="text" />
+                </TouchableOpacity>
+              )}
             </View>
+            <PremiumFeatureGate
+              feature={FEATURES.ADVANCED_ANALYTICS}
+              featureDescription="Detaylı iyilik hali analizleri premium kullanıcılara özeldir. Premium'a geçerek gelişmiş sağlık takibinden yararlanın."
+            >
+              <View style={styles.tilesGrid}>
+                {/* Top Row: Water + Steps */}
+                <View style={styles.tilesRow}>
+                  <View style={styles.tileWrapper}>
+                    <WaterTile data={snapshot.todaySnapshot.waterProgress} />
+                  </View>
+                  <View style={styles.tileWrapper}>
+                    <StepsTile data={snapshot.wellnessTiles.steps} />
+                  </View>
+                </View>
+
+                {/* Bottom Row: Meditation + Sleep */}
+                <View style={styles.tilesRow}>
+                  <View style={styles.tileWrapper}>
+                    <MeditationTile data={snapshot.wellnessTiles.meditation} />
+                  </View>
+                  <View style={styles.tileWrapper}>
+                    <SleepTile data={snapshot.wellnessTiles.sleep} />
+                  </View>
+                </View>
+              </View>
+            </PremiumFeatureGate>
           </View>
         )}
 
-        {/* Zone C: Priority Cards */}
+        {/* Zone C: Priority Cards - Premium Feature (Insights) */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Öncelikler</Text>
-          {(() => {
-            const visibleCards = snapshot?.priorityCards
-              ?.filter((card) => !sessionDismissedCards.has(card.id))
-              .slice(0, 4) || [];
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Öncelikler</Text>
+            {!isPremium && (
+              <TouchableOpacity
+                onPress={() => router.push('/premium')}
+                style={styles.premiumBadgeButton}
+              >
+                <PremiumBadge size="small" variant="text" />
+              </TouchableOpacity>
+            )}
+          </View>
+          <PremiumFeatureGate
+            feature={FEATURES.INSIGHTS}
+            featureDescription="Kişiselleştirilmiş öncelikler ve içgörüler premium kullanıcılara özeldir. Premium'a geçerek size özel önerilerden yararlanın."
+          >
+            {(() => {
+              const visibleCards = snapshot?.priorityCards
+                ?.filter((card) => !sessionDismissedCards.has(card.id))
+                .slice(0, 4) || [];
 
-            return visibleCards.length > 0 ? (
-              visibleCards.map((card) => (
-                <PriorityCard
-                  key={card.id}
-                  card={card}
-                  onDismiss={() => dismissCardMutation.mutate(card.id)}
-                />
-              ))
-            ) : (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyText}>Harika! Şu an için öncelikli bir şey yok.</Text>
-              </View>
-            );
-          })()}
+              return visibleCards.length > 0 ? (
+                visibleCards.map((card) => (
+                  <PriorityCard
+                    key={card.id}
+                    card={card}
+                    onDismiss={() => dismissCardMutation.mutate(card.id)}
+                  />
+                ))
+              ) : (
+                <View style={styles.emptyCard}>
+                  <Text style={styles.emptyText}>Harika! Şu an için öncelikli bir şey yok.</Text>
+                </View>
+              );
+            })()}
+          </PremiumFeatureGate>
         </View>
 
-        {/* Zone D: Educational Articles (Keşfet) */}
-        {snapshot?.educationalArticles && snapshot.educationalArticles.length > 0 && (
-          <View style={styles.discoverSection}>
-            <View style={styles.discoverHeader}>
-              <Text style={styles.discoverTitle}>Keşfet 📚</Text>
-              <TouchableOpacity onPress={() => router.push('/discover')}>
-                <Text style={styles.discoverSeeAll}>Tümünü Gör →</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.discoverScroll}
+        {/* Zone D: Keşfet Section */}
+        <View style={styles.discoverSection}>
+          <Text style={styles.discoverTitle}>Keşfet 📚</Text>
+
+          <View style={styles.discoverCardsGrid}>
+            {/* Bilgiler Card */}
+            <TouchableOpacity
+              style={styles.discoverSquareCard}
+              onPress={() => router.push('/discover')}
             >
-              {snapshot.educationalArticles.map((article, index) => (
-                <TouchableOpacity
-                  key={article.id}
-                  style={[
-                    styles.discoverCard,
-                    index === 0 && styles.discoverCardFirst,
-                  ]}
-                  onPress={() => router.push(`/discover/article/${article.id}`)}
-                >
-                  {article.imageUrl && (
-                    <Image
-                      source={{ uri: article.imageUrl }}
-                      style={styles.discoverCardImage}
-                      resizeMode="cover"
-                    />
-                  )}
-                  <View style={styles.discoverCardContent}>
-                    <View style={styles.discoverCardCategory}>
-                      <Text style={styles.discoverCardCategoryText}>
-                        {article.category}
-                      </Text>
-                    </View>
-                    <Text style={styles.discoverCardTitle} numberOfLines={2}>
-                      {article.title}
-                    </Text>
-                    <View style={styles.discoverCardFooter}>
-                      <Text style={styles.discoverCardTime}>
-                        {article.readTimeMin} dk
-                      </Text>
-                      <TouchableOpacity
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          toggleSaveMutation.mutate(article.id);
-                        }}
-                      >
-                        <Text style={styles.discoverCardSave}>
-                          {article.isSaved ? '❤️' : '🤍'}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+              <View style={styles.discoverSquareCardGradient}>
+                <Text style={styles.discoverSquareCardIcon}>📖</Text>
+                <Text style={styles.discoverSquareCardTitle}>Bilgiler</Text>
+                <Text style={styles.discoverSquareCardSubtitle}>Sağlık rehberleri</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Astroloji Card */}
+            <TouchableOpacity
+              style={styles.discoverSquareCard}
+              onPress={() => {
+                // Navigate to astrology section
+                router.push('/astrology');
+              }}
+            >
+              <View style={[styles.discoverSquareCardGradient, styles.astrologyCardGradient]}>
+                <Text style={styles.discoverSquareCardIcon}>✨</Text>
+                <Text style={styles.discoverSquareCardTitle}>Astroloji</Text>
+                <Text style={styles.discoverSquareCardSubtitle}>Burç yorumları</Text>
+              </View>
+            </TouchableOpacity>
           </View>
-        )}
+        </View>
 
         {/* Zone E: Quick Actions */}
         <View style={styles.section}>
@@ -590,85 +614,58 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     discoverSection: {
       marginTop: theme.spacing.xl,
       marginBottom: theme.spacing.lg,
-    },
-    discoverHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
       paddingHorizontal: theme.spacing.lg,
-      marginBottom: theme.spacing.md,
     },
     discoverTitle: {
       fontSize: 22,
       fontWeight: '700',
       color: theme.colors.text,
+      marginBottom: theme.spacing.lg,
     },
-    discoverSeeAll: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.colors.primary,
-    },
-    discoverScroll: {
-      paddingHorizontal: theme.spacing.lg,
+    discoverCardsGrid: {
+      flexDirection: 'row',
       gap: theme.spacing.md,
     },
-    discoverCard: {
-      width: 280,
-      backgroundColor: theme.colors.backgroundCard,
-      borderRadius: 16,
+    discoverSquareCard: {
+      flex: 1,
+      aspectRatio: 1,
+      borderRadius: 20,
       overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: theme.colors.border,
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 8,
-      elevation: 3,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 5,
     },
-    discoverCardFirst: {
-      marginLeft: 0,
-    },
-    discoverCardImage: {
-      width: '100%',
-      height: 140,
-      backgroundColor: theme.colors.border,
-    },
-    discoverCardContent: {
-      padding: theme.spacing.md,
-    },
-    discoverCardCategory: {
-      alignSelf: 'flex-start',
-      backgroundColor: theme.colors.primary + '20',
-      paddingHorizontal: theme.spacing.sm,
-      paddingVertical: 4,
-      borderRadius: 8,
-      marginBottom: theme.spacing.sm,
-    },
-    discoverCardCategoryText: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: theme.colors.primary,
-      textTransform: 'uppercase',
-    },
-    discoverCardTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.colors.text,
-      lineHeight: 22,
-      marginBottom: theme.spacing.sm,
-    },
-    discoverCardFooter: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+    discoverSquareCardGradient: {
+      flex: 1,
+      backgroundColor: '#FEF3C7',
+      justifyContent: 'center',
       alignItems: 'center',
+      padding: theme.spacing.lg,
+      borderWidth: 2,
+      borderColor: '#FDE68A',
     },
-    discoverCardTime: {
+    astrologyCardGradient: {
+      backgroundColor: '#DDD6FE',
+      borderColor: '#C4B5FD',
+    },
+    discoverSquareCardIcon: {
+      fontSize: 48,
+      marginBottom: theme.spacing.md,
+    },
+    discoverSquareCardTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: '#1F2937',
+      marginBottom: 4,
+      textAlign: 'center',
+    },
+    discoverSquareCardSubtitle: {
       fontSize: 13,
       fontWeight: '500',
-      color: theme.colors.textSecondary,
-    },
-    discoverCardSave: {
-      fontSize: 20,
+      color: '#4B5563',
+      textAlign: 'center',
     },
     sectionTitle: {
       fontSize: 20,
@@ -677,6 +674,27 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       paddingHorizontal: theme.spacing.lg,
       marginBottom: theme.spacing.md,
       letterSpacing: 0.3,
+    },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
+    },
+    premiumBadgeButton: {
+      marginRight: theme.spacing.sm,
+    },
+    profileImageContainer: {
+      position: 'relative',
+    },
+    premiumBadgeOverlay: {
+      position: 'absolute',
+      bottom: -2,
+      right: -2,
+      backgroundColor: theme.colors.background,
+      borderRadius: 12,
+      padding: 2,
     },
     seeAllText: {
       fontSize: 14,

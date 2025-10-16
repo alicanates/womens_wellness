@@ -6,9 +6,10 @@ import { ContextBuilderService } from './context-builder.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { MemoryModule } from '../memory/memory.module';
 import { QuotaModule } from '../quota/quota.module';
+import { SubscriptionModule } from '../subscription/subscription.module';
 
 @Module({
-  imports: [PrismaModule, MemoryModule, QuotaModule],
+  imports: [PrismaModule, MemoryModule, QuotaModule, SubscriptionModule],
   controllers: [ChatController],
   providers: [ChatService, ModelSelectorService, ContextBuilderService],
   exports: [ChatService],

@@ -11,7 +11,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   async isEmailAvailable(email: string): Promise<boolean> {
     const user = await this.prisma.user.findUnique({
@@ -126,8 +126,10 @@ export class AuthService {
         },
         subscription: {
           create: {
-            plan: 'free',
-            status: 'active',
+            status: 'FREE',
+            aiMessagesLimit: 100,
+            aiMessagesUsed: 0,
+            quotaResetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
           },
         },
         usageQuota: {

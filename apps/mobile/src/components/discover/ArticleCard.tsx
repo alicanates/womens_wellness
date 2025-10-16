@@ -17,7 +17,7 @@ interface ArticleCardProps {
     };
     onPress: () => void;
     onSave: () => void;
-    variant?: 'horizontal' | 'vertical';
+    variant?: 'horizontal' | 'vertical' | 'grid';
 }
 
 export const ArticleCard = memo(function ArticleCard({
@@ -32,9 +32,7 @@ export const ArticleCard = memo(function ArticleCard({
     const [imageError, setImageError] = useState(false);
 
     // Prefer thumbnail for list views, full image for detail
-    const imageSource = variant === 'vertical'
-        ? (article.thumbnailUrl || article.imageUrl)
-        : article.thumbnailUrl || article.imageUrl;
+    const imageSource = article.thumbnailUrl || article.imageUrl;
 
     if (variant === 'horizontal') {
         return (
@@ -87,6 +85,55 @@ export const ArticleCard = memo(function ArticleCard({
                         color={article.isSaved ? theme.colors.error : theme.colors.textSecondary}
                     />
                 </TouchableOpacity>
+            </TouchableOpacity>
+        );
+    }
+
+    // Grid variant - Pinterest/Instagram style
+    if (variant === 'grid') {
+        return (
+            <TouchableOpacity
+                style={styles.gridContainer}
+                onPress={onPress}
+                activeOpacity={0.9}
+            >
+                {imageSource && !imageError && (
+                    <View style={styles.gridImageContainer}>
+                        {!imageLoaded && (
+                            <View style={[styles.gridImage, styles.imagePlaceholder]} />
+                        )}
+                        <Image
+                            source={{ uri: imageSource }}
+                            style={[styles.gridImage, !imageLoaded && styles.imageHidden]}
+                            resizeMode="cover"
+                            onLoad={() => setImageLoaded(true)}
+                            onError={() => setImageError(true)}
+                            fadeDuration={150}
+                            progressiveRenderingEnabled={true}
+                        />
+                        <TouchableOpacity
+                            style={styles.gridSaveButton}
+                            onPress={(e) => {
+                                e.stopPropagation();
+                                onSave();
+                            }}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                            <Ionicons
+                                name={article.isSaved ? 'heart' : 'heart-outline'}
+                                size={18}
+                                color={article.isSaved ? theme.colors.error : '#fff'}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                )}
+                <View style={styles.gridContent}>
+                    <CategoryBadge category={article.category} size="small" />
+                    <Text style={styles.gridTitle} numberOfLines={2}>
+                        {article.title}
+                    </Text>
+                    <Text style={styles.gridReadTime}>{article.readTimeMin} dk okuma</Text>
+                </View>
             </TouchableOpacity>
         );
     }
@@ -147,25 +194,75 @@ export const ArticleCard = memo(function ArticleCard({
     );
 });
 
-const createStyles = (theme: ReturnType<typeof useTheme>, variant: 'horizontal' | 'vertical') =>
+const createStyles = (theme: ReturnType<typeof useTheme>, variant: 'horizontal' | 'vertical' | 'grid') =>
     StyleSheet.create({
+        // Grid variant styles - Pinterest/Instagram style
+        gridContainer: {
+            backgroundColor: theme.colors.backgroundCard,
+            borderRadius: 16,
+            overflow: 'hidden',
+            marginBottom: theme.spacing.sm,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            elevation: 3,
+        },
+        gridImageContainer: {
+            position: 'relative',
+            width: '100%',
+            aspectRatio: 0.75, // Portrait ratio like Pinterest
+        },
+        gridImage: {
+            width: '100%',
+            height: '100%',
+            backgroundColor: theme.colors.border,
+        },
+        gridSaveButton: {
+            position: 'absolute',
+            top: theme.spacing.sm,
+            right: theme.spacing.sm,
+            width: 32,
+            height: 32,
+            borderRadius: 16,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backdropFilter: 'blur(10px)',
+        },
+        gridContent: {
+            padding: theme.spacing.sm,
+        },
+        gridTitle: {
+            fontSize: 14,
+            fontWeight: '700',
+            color: theme.colors.text,
+            marginTop: theme.spacing.xs,
+            marginBottom: theme.spacing.xs,
+            lineHeight: 20,
+        },
+        gridReadTime: {
+            fontSize: 11,
+            color: theme.colors.textLight,
+            fontWeight: '500',
+        },
+
         // Vertical variant styles
         verticalContainer: {
             backgroundColor: theme.colors.backgroundCard,
-            borderRadius: 20,
+            borderRadius: 24,
             overflow: 'hidden',
             width: 300,
             marginRight: theme.spacing.md,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.1,
-            shadowRadius: 12,
-            elevation: 5,
-            borderWidth: 0,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.12,
+            shadowRadius: 16,
+            elevation: 8,
         },
         verticalImage: {
             width: '100%',
-            height: 180,
+            height: 200,
             backgroundColor: theme.colors.border,
         },
         verticalContent: {
@@ -183,16 +280,16 @@ const createStyles = (theme: ReturnType<typeof useTheme>, variant: 'horizontal' 
             gap: theme.spacing.sm,
         },
         verticalTitle: {
-            fontSize: 17,
-            fontWeight: '700',
+            fontSize: 18,
+            fontWeight: '800',
             color: theme.colors.text,
             marginBottom: theme.spacing.sm,
-            lineHeight: 24,
+            lineHeight: 26,
         },
         verticalExcerpt: {
             fontSize: 14,
             color: theme.colors.textSecondary,
-            lineHeight: 20,
+            lineHeight: 21,
         },
 
         // Horizontal variant styles
@@ -201,13 +298,12 @@ const createStyles = (theme: ReturnType<typeof useTheme>, variant: 'horizontal' 
             borderRadius: 20,
             overflow: 'hidden',
             flexDirection: 'row',
-            marginBottom: theme.spacing.md,
+            marginBottom: theme.spacing.lg,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 3 },
+            shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.08,
-            shadowRadius: 10,
+            shadowRadius: 12,
             elevation: 4,
-            borderWidth: 0,
             position: 'relative',
             minHeight: 140,
         },
@@ -219,7 +315,7 @@ const createStyles = (theme: ReturnType<typeof useTheme>, variant: 'horizontal' 
         horizontalContent: {
             flex: 1,
             padding: theme.spacing.lg,
-            paddingRight: 48, // Space for save button
+            paddingRight: 48,
             justifyContent: 'space-between',
         },
         horizontalHeader: {
@@ -229,11 +325,11 @@ const createStyles = (theme: ReturnType<typeof useTheme>, variant: 'horizontal' 
             marginBottom: theme.spacing.sm,
         },
         horizontalTitle: {
-            fontSize: 16,
-            fontWeight: '700',
+            fontSize: 17,
+            fontWeight: '800',
             color: theme.colors.text,
             marginBottom: theme.spacing.sm,
-            lineHeight: 22,
+            lineHeight: 24,
         },
         horizontalExcerpt: {
             fontSize: 14,
@@ -244,17 +340,17 @@ const createStyles = (theme: ReturnType<typeof useTheme>, variant: 'horizontal' 
             position: 'absolute',
             top: theme.spacing.lg,
             right: theme.spacing.lg,
-            width: 36,
-            height: 36,
-            borderRadius: 18,
+            width: 40,
+            height: 40,
+            borderRadius: 20,
             backgroundColor: 'rgba(255, 255, 255, 0.95)',
             justifyContent: 'center',
             alignItems: 'center',
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.15,
-            shadowRadius: 6,
-            elevation: 3,
+            shadowRadius: 8,
+            elevation: 4,
         },
 
         // Common styles

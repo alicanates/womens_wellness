@@ -14,7 +14,7 @@ export class GoogleAuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
-  ) {}
+  ) { }
 
   async verifyIdToken(idToken: string): Promise<TokenPayload> {
     try {
@@ -112,8 +112,10 @@ export class GoogleAuthService {
                 },
                 subscription: {
                   create: {
-                    plan: 'free',
-                    status: 'active',
+                    status: 'FREE',
+                    aiMessagesLimit: 100,
+                    aiMessagesUsed: 0,
+                    quotaResetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
                   },
                 },
                 usageQuota: {

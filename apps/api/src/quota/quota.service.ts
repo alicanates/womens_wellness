@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class QuotaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /**
    * Get current month key (YYYY-MM format)
@@ -36,8 +36,8 @@ export class QuotaService {
         include: { subscription: true },
       });
 
-      const plan = user?.subscription?.plan || 'free';
-      const limit = plan === 'premium' ? 1000 : 100;
+      const isPremium = user?.subscription?.status === 'ACTIVE' || user?.subscription?.status === 'TRIAL';
+      const limit = isPremium ? 1000 : 100;
 
       quota = await this.prisma.usageQuota.create({
         data: {

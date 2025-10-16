@@ -8,15 +8,12 @@ import { SearchBar } from '@/components/discover/SearchBar';
 import { useInfiniteArticles, useSavedArticles, useToggleSave } from '@/hooks/useDiscover';
 
 const CATEGORIES = [
-    { id: 'all', label: 'Tümü' },
-    { id: 'menstrual_health', label: 'Regl Sağlığı' },
-    { id: 'pregnancy', label: 'Hamilelik' },
-    { id: 'fertility', label: 'Doğurganlık' },
-    { id: 'nutrition', label: 'Beslenme' },
-    { id: 'exercise', label: 'Egzersiz' },
-    { id: 'mental_health', label: 'Mental Sağlık' },
-    { id: 'sleep', label: 'Uyku' },
-    { id: 'hydration', label: 'Hidrasyon' },
+    { id: 'all', label: '✨ Tümü', emoji: '✨' },
+    { id: 'pregnancy', label: '🤰 Hamilelik', emoji: '🤰' },
+    { id: 'menstrual_health', label: '🩸 Regl', emoji: '🩸' },
+    { id: 'fertility', label: '💕 Doğurganlık', emoji: '💕' },
+    { id: 'nutrition', label: '🥗 Beslenme', emoji: '🥗' },
+    { id: 'exercise', label: '💪 Egzersiz', emoji: '💪' },
 ];
 
 export default function DiscoverScreen() {
@@ -110,41 +107,46 @@ export default function DiscoverScreen() {
     return (
         <SafeAreaView style={styles.safeArea} edges={['top']}>
             <View style={styles.container}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                        <Text style={styles.backIcon}>←</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.title}>Keşfet</Text>
-                    <View style={styles.headerSpacer} />
+                {/* Modern Header with Gradient */}
+                <View style={styles.headerContainer}>
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                            <Text style={styles.backIcon}>←</Text>
+                        </TouchableOpacity>
+                        <View style={styles.titleContainer}>
+                            <Text style={styles.title}>Keşfet</Text>
+                            <Text style={styles.subtitle}>Sağlık ve yaşam rehberleri</Text>
+                        </View>
+                        <View style={styles.headerSpacer} />
+                    </View>
+
+                    {/* Search Bar */}
+                    <View style={styles.searchContainer}>
+                        <SearchBar value={searchQuery} onChange={handleSearchChange} />
+                    </View>
+
+                    {/* Tabs */}
+                    <View style={styles.tabs}>
+                        <TouchableOpacity
+                            style={[styles.tab, activeTab === 'all' && styles.tabActive]}
+                            onPress={() => handleTabChange('all')}
+                        >
+                            <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>
+                                ✨ Tümü
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.tab, activeTab === 'saved' && styles.tabActive]}
+                            onPress={() => handleTabChange('saved')}
+                        >
+                            <Text style={[styles.tabText, activeTab === 'saved' && styles.tabTextActive]}>
+                                ❤️ Kaydedilenler
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
-                {/* Search Bar */}
-                <View style={styles.searchContainer}>
-                    <SearchBar value={searchQuery} onChange={handleSearchChange} />
-                </View>
-
-                {/* Tabs */}
-                <View style={styles.tabs}>
-                    <TouchableOpacity
-                        style={[styles.tab, activeTab === 'all' && styles.tabActive]}
-                        onPress={() => handleTabChange('all')}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>
-                            Tümü
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.tab, activeTab === 'saved' && styles.tabActive]}
-                        onPress={() => handleTabChange('saved')}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'saved' && styles.tabTextActive]}>
-                            Kaydedilenler
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Category Filter (only for "all" tab) */}
+                {/* Category Pills - Instagram style */}
                 {activeTab === 'all' && (
                     <ScrollView
                         horizontal
@@ -155,18 +157,19 @@ export default function DiscoverScreen() {
                             <TouchableOpacity
                                 key={category.id}
                                 style={[
-                                    styles.categoryChip,
-                                    selectedCategory === category.id && styles.categoryChipActive,
+                                    styles.categoryPill,
+                                    selectedCategory === category.id && styles.categoryPillActive,
                                 ]}
                                 onPress={() => handleCategoryChange(category.id)}
                             >
+                                <Text style={styles.categoryEmoji}>{category.emoji}</Text>
                                 <Text
                                     style={[
-                                        styles.categoryChipText,
-                                        selectedCategory === category.id && styles.categoryChipTextActive,
+                                        styles.categoryPillText,
+                                        selectedCategory === category.id && styles.categoryPillTextActive,
                                     ]}
                                 >
-                                    {category.label}
+                                    {category.label.split(' ')[1]}
                                 </Text>
                             </TouchableOpacity>
                         ))}
@@ -194,13 +197,15 @@ export default function DiscoverScreen() {
                     <FlatList
                         data={articles || []}
                         keyExtractor={(item) => item.id}
-                        renderItem={({ item }) => (
-                            <View style={styles.articleWrapper}>
+                        numColumns={2}
+                        columnWrapperStyle={styles.gridRow}
+                        renderItem={({ item, index }) => (
+                            <View style={[styles.gridItem, index % 2 === 0 ? styles.gridItemLeft : styles.gridItemRight]}>
                                 <ArticleCard
                                     article={item}
                                     onPress={() => router.push(`/discover/article/${item.id}`)}
                                     onSave={() => toggleSaveMutation.mutate(item.id)}
-                                    variant="vertical"
+                                    variant="grid"
                                 />
                             </View>
                         )}
@@ -264,96 +269,133 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
         container: {
             flex: 1,
         },
+        headerContainer: {
+            backgroundColor: theme.colors.backgroundCard,
+            borderBottomLeftRadius: 24,
+            borderBottomRightRadius: 24,
+            paddingBottom: theme.spacing.md,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.05,
+            shadowRadius: 12,
+            elevation: 3,
+        },
         header: {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingHorizontal: theme.spacing.lg,
-            paddingVertical: theme.spacing.md,
+            paddingTop: theme.spacing.md,
+            paddingBottom: theme.spacing.sm,
         },
         backButton: {
             width: 40,
             height: 40,
             justifyContent: 'center',
             alignItems: 'center',
+            borderRadius: 20,
+            backgroundColor: theme.colors.background,
         },
         backIcon: {
             fontSize: 24,
             color: theme.colors.text,
         },
+        titleContainer: {
+            flex: 1,
+            alignItems: 'center',
+        },
         title: {
-            fontSize: 20,
-            fontWeight: '700',
+            fontSize: 28,
+            fontWeight: '800',
             color: theme.colors.text,
+            letterSpacing: 0.5,
+        },
+        subtitle: {
+            fontSize: 12,
+            color: theme.colors.textSecondary,
+            marginTop: 2,
         },
         headerSpacer: {
             width: 40,
         },
         searchContainer: {
             paddingHorizontal: theme.spacing.lg,
-            marginBottom: theme.spacing.md,
+            marginBottom: theme.spacing.sm,
         },
         tabs: {
             flexDirection: 'row',
-            paddingHorizontal: theme.spacing.lg,
-            marginBottom: theme.spacing.md,
+            marginHorizontal: theme.spacing.lg,
             gap: theme.spacing.sm,
         },
         tab: {
             flex: 1,
-            paddingVertical: theme.spacing.sm,
+            paddingVertical: theme.spacing.md,
             alignItems: 'center',
-            borderRadius: 8,
-            backgroundColor: theme.colors.backgroundCard,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
+            borderRadius: 16,
+            backgroundColor: theme.colors.background,
         },
         tabActive: {
             backgroundColor: theme.colors.primary,
-            borderColor: theme.colors.primary,
         },
         tabText: {
-            fontSize: 14,
-            fontWeight: '600',
+            fontSize: 15,
+            fontWeight: '700',
             color: theme.colors.textSecondary,
         },
         tabTextActive: {
             color: theme.colors.textOnPrimary,
         },
         categoriesContainer: {
-            paddingHorizontal: theme.spacing.lg,
-            paddingBottom: theme.spacing.md,
-            gap: theme.spacing.sm,
-        },
-        categoryChip: {
             paddingHorizontal: theme.spacing.md,
             paddingVertical: theme.spacing.sm,
+            gap: theme.spacing.xs,
+        },
+        categoryPill: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: theme.spacing.md,
+            paddingVertical: theme.spacing.xs,
             borderRadius: 20,
             backgroundColor: theme.colors.backgroundCard,
             borderWidth: 1,
             borderColor: theme.colors.border,
+            gap: theme.spacing.xs,
         },
-        categoryChipActive: {
+        categoryPillActive: {
             backgroundColor: theme.colors.primary,
             borderColor: theme.colors.primary,
         },
-        categoryChipText: {
+        categoryEmoji: {
+            fontSize: 16,
+        },
+        categoryPillText: {
             fontSize: 13,
             fontWeight: '600',
-            color: theme.colors.textSecondary,
+            color: theme.colors.text,
         },
-        categoryChipTextActive: {
+        categoryPillTextActive: {
             color: theme.colors.textOnPrimary,
+        },
+        gridRow: {
+            gap: theme.spacing.xs,
+        },
+        gridItem: {
+            flex: 1,
+            maxWidth: '50%',
+        },
+        gridItemLeft: {
+            paddingRight: theme.spacing.xs / 2,
+        },
+        gridItemRight: {
+            paddingLeft: theme.spacing.xs / 2,
         },
         articlesScroll: {
             flex: 1,
         },
         articlesContent: {
-            paddingHorizontal: theme.spacing.lg,
-            paddingBottom: theme.spacing.xl,
-        },
-        articleWrapper: {
-            marginBottom: theme.spacing.md,
+            paddingHorizontal: theme.spacing.md,
+            paddingTop: theme.spacing.xs,
+            paddingBottom: theme.spacing.xl * 2,
         },
         loadingContainer: {
             flex: 1,

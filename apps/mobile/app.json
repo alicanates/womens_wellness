@@ -22,7 +22,9 @@
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"],
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true,
           "NSAllowsLocalNetworking": true,
@@ -37,7 +39,10 @@
             }
           }
         }
-      }
+      },
+      "associatedDomains": [
+        "applinks:wellness-companion.app"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -48,7 +53,8 @@
       "permissions": [
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.SCHEDULE_EXACT_ALARM",
-        "android.permission.VIBRATE"
+        "android.permission.VIBRATE",
+        "com.android.vending.BILLING"
       ]
     },
     "web": {
@@ -64,7 +70,9 @@
         {
           "icon": "./assets/notification-icon.png",
           "color": "#ffffff",
-          "sounds": ["./assets/notification-sound.wav"],
+          "sounds": [
+            "./assets/notification-sound.wav"
+          ],
           "mode": "production"
         }
       ]
