@@ -601,11 +601,15 @@ export const homeService = {
       educationalArticles: Array<{
         id: string;
         title: string;
-        content: string;
+        excerpt: string;
         category: string;
         tags: string[];
         imageUrl?: string;
+        thumbnailUrl?: string;
+        readTimeMin: number;
         publishedAt: string;
+        isSaved: boolean;
+        isViewed: boolean;
       }>;
     }>(`/home/snapshot?locale=${locale}`),
 
@@ -725,4 +729,99 @@ export const wellnessService = {
       quality?: string;
     } | null;
   }>('/wellness/v1/summary'),
+};
+
+// Discover types
+export interface ArticleCardDto {
+  id: string;
+  title: string;
+  excerpt: string;
+  category: string;
+  tags: string[];
+  imageUrl?: string;
+  thumbnailUrl?: string;
+  readTimeMin: number;
+  publishedAt: string;
+  isSaved: boolean;
+  isViewed: boolean;
+}
+
+export interface ArticleDetailDto extends ArticleCardDto {
+  content: string;
+  author?: string;
+  relatedArticles: ArticleCardDto[];
+}
+
+export interface PaginatedArticlesDto {
+  articles: ArticleCardDto[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+export interface UserContentPreferencesDto {
+  categoryWeights: Record<string, number>;
+  favoriteCategories: string[];
+  showPregnancyContent: boolean;
+  showCycleContent: boolean;
+}
+
+export interface UpdatePreferencesDto {
+  categoryWeights?: Record<string, number>;
+  showPregnancyContent?: boolean;
+  showCycleContent?: boolean;
+}
+
+// Discover endpoints
+export const discoverService = {
+  // Get personalized articles for home screen
+  getHomeFeed: (locale: string = 'tr', limit: number = 5) =>
+    api.get<ArticleCardDto[]>(`/discover/home-feed?locale=${locale}&limit=${limit}`),
+
+  // Get all articles with filters
+  getArticles: (params: {
+    category?: string;
+    search?: string;
+    locale?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams(
+      Object.entries(params)
+        .filter(([_, value]) => value !== undefined)
+        .map(([key, value]) => [key, String(value)])
+    ).toString();
+    return api.get<PaginatedArticlesDto>(`/discover/articles${query ? `?${query}` : ''}`);
+  },
+
+  // Get single article detail
+  getArticle: (id: string, locale: string = 'tr') =>
+    api.get<ArticleDetailDto>(`/discover/articles/${id}?locale=${locale}`),
+
+  // Get saved articles
+  getSavedArticles: (locale: string = 'tr') =>
+    api.get<ArticleCardDto[]>(`/discover/saved?locale=${locale}`),
+
+  // Toggle save/unsave article
+  toggleSave: (id: string) =>
+    api.post<{ saved: boolean }>(`/discover/articles/${id}/save`),
+
+  // Track article view
+  trackView: (id: string, readTimeMs?: number) =>
+    api.post<{ success: boolean }>(`/discover/articles/${id}/view`,
+      readTimeMs !== undefined ? { readTimeMs } : undefined
+    ),
+
+  // Track article share
+  trackShare: (id: string) =>
+    api.post<{ success: boolean }>(`/discover/articles/${id}/share`),
+
+  // Get user preferences
+  getPreferences: () =>
+    api.get<UserContentPreferencesDto>('/discover/preferences'),
+
+  // Update user preferences
+  updatePreferences: (data: UpdatePreferencesDto) =>
+    api.patch<UserContentPreferencesDto>('/discover/preferences', data),
 };

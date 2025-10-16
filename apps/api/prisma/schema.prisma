@@ -59,6 +59,32 @@ enum SubscriptionStatus {
   cancelled
 }
 
+enum SubscriptionTier {
+  MONTHLY
+  YEARLY
+}
+
+enum PaymentProvider {
+  APPLE
+  GOOGLE
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum TransactionType {
+  INITIAL_PURCHASE
+  RENEWAL
+  UPGRADE
+  DOWNGRADE
+  REFUND
+}
+
 enum AIProvider {
   openai
   anthropic
@@ -81,24 +107,27 @@ model User {
   updatedAt  DateTime   @updatedAt
 
   // Relations
-  profile             Profile?
-  oauthAccounts       OAuthAccount[]
-  healthMetrics       HealthMetric[]
-  periodCycles        PeriodCycle[]
-  dailyLogs           DailyLog[]
-  pregnancy           Pregnancy?
-  waterLogs           WaterLog[]
-  reminders           Reminder[]
-  conversations       Conversation[]
-  memories            Memory[]
-  subscription        Subscription?
-  usageQuota          UsageQuota?
-  auditLogs           AuditLog[]
-  homePreferences     UserHomePreferences?
-  dailySteps          DailySteps[]
-  meditationSessions  MeditationSession[]
-  sleepLogs           SleepLog[]
-  wellnessPreferences WellnessPreferences?
+  profile              Profile?
+  oauthAccounts        OAuthAccount[]
+  healthMetrics        HealthMetric[]
+  periodCycles         PeriodCycle[]
+  dailyLogs            DailyLog[]
+  pregnancy            Pregnancy?
+  waterLogs            WaterLog[]
+  reminders            Reminder[]
+  conversations        Conversation[]
+  memories             Memory[]
+  subscription         Subscription?
+  usageQuota           UsageQuota?
+  auditLogs            AuditLog[]
+  homePreferences      UserHomePreferences?
+  dailySteps           DailySteps[]
+  meditationSessions   MeditationSession[]
+  sleepLogs            SleepLog[]
+  wellnessPreferences  WellnessPreferences?
+  articleInteractions  ArticleInteraction[]
+  contentPreferences   UserContentPreferences?
+  premiumFeatureUsage  PremiumFeatureUsage[]
 
   @@index([email])
   @@index([username])
@@ -436,15 +465,100 @@ model Memory {
 // ────────────────────────────────────────────────────────────────────────────
 
 model Subscription {
-  id        String             @id @default(cuid())
-  userId    String             @unique
-  plan      SubscriptionPlan   @default(free)
-  status    SubscriptionStatus @default(active)
-  renewsAt  DateTime?
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  id                     String              @id @default(cuid())
+  userId                 String              @unique
+  
+  // Subscription Status
+  status                 SubscriptionStatus  @default(active)
+  tier                   SubscriptionTier?   // MONTHLY, YEARLY
+  plan                   SubscriptionPlan    @default(free) // Keep for backward compatibility
+  
+  // Dates
+  startDate              DateTime?
+  endDate                DateTime?
+  cancelledAt            DateTime?
+  trialEndDate           DateTime?
+  renewsAt               DateTime? // Keep for backward compatibility
+  
+  // Payment Provider
+  provider               PaymentProvider?    // APPLE, GOOGLE
+  originalTransactionId  String?             @unique
+  latestReceiptData      String?             @db.Text
+  
+  // Quota Management
+  aiMessagesUsed         Int                 @default(0)
+  aiMessagesLimit        Int                 @default(100)
+  quotaResetDate         DateTime            @default(now())
+  
+  // Grace Period
+  isInGracePeriod        Boolean             @default(false)
+  gracePeriodEndDate     DateTime?
+  
+  // Trial tracking
+  hasHadTrial            Boolean             @default(false)
+  
+  // Relations
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions           SubscriptionTransaction[]
+  
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  
+  @@index([status, endDate])
+  @@index([userId, status])
+}
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+model SubscriptionTransaction {
+  id                    String              @id @default(cuid())
+  subscriptionId        String
+  
+  // Transaction Details
+  transactionId         String              @unique
+  originalTransactionId String?
+  productId             String
+  
+  // Amount
+  amount                Float
+  currency              String              @default("TRY")
+  
+  // Status
+  status                TransactionStatus   @default(PENDING)
+  type                  TransactionType
+  
+  // Receipt
+  receiptData           String?             @db.Text
+  validatedAt           DateTime?
+  
+  // Provider
+  provider              PaymentProvider
+  
+  // Relations
+  subscription          Subscription        @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  @@index([subscriptionId])
+  @@index([transactionId])
+}
+
+model PremiumFeatureUsage {
+  id          String   @id @default(cuid())
+  userId      String
+  
+  // Feature Tracking
+  feature     String   // 'advanced_ai', 'priority_response', 'insights'
+  usageCount  Int      @default(0)
+  lastUsedAt  DateTime @default(now())
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([userId, feature])
+  @@index([userId])
 }
 
 model UsageQuota {
@@ -524,25 +638,95 @@ model UserHomePreferences {
   @@index([userId])
 }
 
-// Educational content feed for Zone D
+// Educational content feed for Zone D and Discover Section
 model EducationalArticle {
-  id          String   @id @default(cuid())
-  titleTr     String
-  titleEn     String?
-  contentTr   String   @db.Text
-  contentEn   String?  @db.Text
-  category    String // menstrual_health, hydration, sleep, exercise, mindfulness
-  tags        String[] @default([])
-  imageUrl    String?
-  priority    Int      @default(0) // higher = shown first
-  publishedAt DateTime @default(now())
-  expiresAt   DateTime?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  
+  // Content (Multi-language)
+  titleTr      String
+  titleEn      String?
+  contentTr    String   @db.Text
+  contentEn    String?  @db.Text
+  excerpt      String?  @db.Text // Short summary for cards
+  
+  // Categorization
+  category     String   // menstrual_health, pregnancy, fertility, nutrition, exercise, mental_health, sleep, hydration, contraception, pms, menopause, sexual_health
+  tags         String[] @default([])
+  
+  // Media
+  imageUrl     String?
+  thumbnailUrl String?
+  
+  // Metadata
+  author       String?
+  readTimeMin  Int      @default(5) // Estimated reading time
+  priority     Int      @default(0) // Higher = more important
+  
+  // Lifecycle
+  isActive     Boolean  @default(true)
+  publishedAt  DateTime @default(now())
+  expiresAt    DateTime? // Optional expiration
+  
+  // Relations
+  interactions ArticleInteraction[]
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  @@index([category, publishedAt])
-  @@index([isActive, priority])
+  @@index([category, isActive, priority])
+  @@index([publishedAt])
+}
+
+// User interactions with educational articles
+model ArticleInteraction {
+  id         String   @id @default(cuid())
+  userId     String
+  articleId  String
+  
+  // Interaction types
+  viewed     Boolean  @default(false)
+  saved      Boolean  @default(false)
+  shared     Boolean  @default(false)
+  
+  // Engagement metrics
+  viewedAt   DateTime?
+  savedAt    DateTime?
+  sharedAt   DateTime?
+  readTimeMs Int?     // Actual time spent reading
+  
+  // Relations
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article    EducationalArticle  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@unique([userId, articleId])
+  @@index([userId, saved])
+  @@index([articleId])
+}
+
+// User content preferences for personalization
+model UserContentPreferences {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  
+  // Preferred categories (weighted)
+  categoryWeights      Json     @default("{}") // { "pregnancy": 0.8, "nutrition": 0.6 }
+  
+  // Interaction history summary
+  totalArticlesRead    Int      @default(0)
+  favoriteCategories   String[] @default([])
+  
+  // Personalization settings
+  showPregnancyContent Boolean  @default(false)
+  showCycleContent     Boolean  @default(true)
+  
+  // Relations
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 // ────────────────────────────────────────────────────────────────────────────

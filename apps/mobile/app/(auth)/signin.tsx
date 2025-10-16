@@ -25,6 +25,7 @@ export default function SignInScreen() {
   const [identifier, setIdentifier] = useState(''); // Can be email or username
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSignIn = async () => {
     if (!identifier || !password) {
@@ -85,15 +86,24 @@ export default function SignInScreen() {
                 editable={!loading}
               />
 
-              <TextInput
-                style={styles.input}
-                placeholder="Şifre"
-                placeholderTextColor={theme.colors.textLight}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                editable={!loading}
-              />
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={[styles.input, styles.passwordInput]}
+                  placeholder="Şifre"
+                  placeholderTextColor={theme.colors.textLight}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                  disabled={loading}
+                >
+                  <Text style={styles.eyeText}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+                </TouchableOpacity>
+              </View>
 
               <TouchableOpacity
                 onPress={() => router.push('/(auth)/forgot-password')}
@@ -191,6 +201,23 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       shadowOpacity: 0.05,
       shadowRadius: 4,
       elevation: 2,
+    },
+    passwordContainer: {
+      position: 'relative',
+      marginBottom: theme.spacing.md,
+    },
+    passwordInput: {
+      paddingRight: 50,
+      marginBottom: 0,
+    },
+    eyeButton: {
+      position: 'absolute',
+      right: theme.spacing.md,
+      top: theme.spacing.md,
+      padding: theme.spacing.xs,
+    },
+    eyeText: {
+      fontSize: 20,
     },
     forgotPasswordContainer: {
       alignSelf: 'flex-end',

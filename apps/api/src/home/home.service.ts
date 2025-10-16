@@ -4,6 +4,7 @@ import { CyclesService } from '../cycles/cycles.service';
 import { WaterService } from '../water/water.service';
 import { PregnancyService } from '../pregnancy/pregnancy.service';
 import { WellnessService, WellnessSummary } from '../wellness/wellness.service';
+import { DiscoverService } from '../discover/discover.service';
 
 export interface HomeSnapshot {
   user: {
@@ -55,11 +56,15 @@ export interface PriorityCard {
 export interface EducationalArticleDto {
   id: string;
   title: string;
-  content: string;
+  excerpt: string;
   category: string;
   tags: string[];
   imageUrl?: string;
+  thumbnailUrl?: string;
+  readTimeMin: number;
   publishedAt: Date;
+  isSaved: boolean;
+  isViewed: boolean;
 }
 
 @Injectable()
@@ -70,7 +75,8 @@ export class HomeService {
     private waterService: WaterService,
     private pregnancyService: PregnancyService,
     private wellnessService: WellnessService,
-  ) {}
+    private discoverService: DiscoverService,
+  ) { }
 
   async getHomeSnapshot(userId: string, locale: string = 'tr'): Promise<HomeSnapshot> {
     // Get user profile
@@ -100,8 +106,8 @@ export class HomeService {
     // Get priority cards
     const priorityCards = await this.getPriorityCards(userId, preferences);
 
-    // Get educational articles
-    const educationalArticles = await this.getEducationalArticles(locale);
+    // Get educational articles with personalization
+    const educationalArticles = await this.getEducationalArticles(userId, locale);
 
     // Get wellness tiles summary
     const wellnessTiles = await this.wellnessService.getWellnessSummary(userId);
@@ -419,31 +425,12 @@ export class HomeService {
     return prompts[Math.floor(Math.random() * prompts.length)];
   }
 
-  private async getEducationalArticles(locale: string): Promise<EducationalArticleDto[]> {
-    const articles = await this.prisma.educationalArticle.findMany({
-      where: {
-        isActive: true,
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gte: new Date() } },
-        ],
-      },
-      orderBy: [
-        { priority: 'desc' },
-        { publishedAt: 'desc' },
-      ],
-      take: 5,
-    });
+  private async getEducationalArticles(userId: string, locale: string): Promise<EducationalArticleDto[]> {
+    // Use DiscoverService to get personalized home feed
+    // This integrates the recommendation engine and user interaction status
+    const articles = await this.discoverService.getHomeFeed(userId, locale, 5);
 
-    return articles.map(article => ({
-      id: article.id,
-      title: locale === 'en' && article.titleEn ? article.titleEn : article.titleTr,
-      content: locale === 'en' && article.contentEn ? article.contentEn : article.contentTr,
-      category: article.category,
-      tags: article.tags,
-      imageUrl: article.imageUrl || undefined,
-      publishedAt: article.publishedAt,
-    }));
+    return articles;
   }
 
   async dismissCard(userId: string, cardId: string, days: number = 7): Promise<void> {

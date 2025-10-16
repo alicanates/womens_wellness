@@ -21,6 +21,7 @@ import { FeatureFlagModule } from './feature-flag/feature-flag.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { HomeModule } from './home/home.module';
 import { WellnessModule } from './wellness/wellness.module';
+import { DiscoverModule } from './discover/discover.module';
 import aiConfig from './config/ai.config';
 
 @Module({
@@ -61,6 +62,7 @@ import aiConfig from './config/ai.config';
     AuditLogModule,
     HomeModule,
     WellnessModule,
+    DiscoverModule,
   ],
   controllers: [AppController],
   providers: [
