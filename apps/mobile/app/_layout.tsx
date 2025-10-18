@@ -6,19 +6,28 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import { useNotifications } from '../src/hooks/useNotifications';
+import { useQnaNotificationHandler } from '../src/hooks/useQnaNotificationHandler';
 import { useAuthStore } from '../src/store/authStore';
 import { queryClient } from '../src/lib/queryClient';
 import { iapManager } from '../src/services/iap.wrapper';
 import { subscriptionSyncService } from '../src/services/subscriptionSync';
 
 function AppContent() {
+  // CRITICAL: ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
+  // This prevents "Rendered fewer hooks than expected" error
+
+  // 1. Call all hooks first (unconditionally)
   const { registerForPushNotifications } = useNotifications();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const initialize = useAuthStore((state) => state.initialize);
   const isLoading = useAuthStore((state) => state.isLoading);
   const router = useRouter();
-
   const [pinCheckComplete, setPinCheckComplete] = useState(false);
+
+  // Initialize QnA notification handler
+  useQnaNotificationHandler();
+
+  // 2. All useEffect hooks (unconditionally)
 
   // Initialize app
   useEffect(() => {
@@ -43,7 +52,7 @@ function AppContent() {
 
     // Cleanup on unmount
     return () => {
-      iapManager.cleanup().catch(error => {
+      iapManager.cleanup().catch((error: any) => {
         console.error('[App] IAP cleanup failed:', error);
       });
     };
@@ -123,20 +132,23 @@ function AppContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isLoading]);
 
-  if (isLoading || !pinCheckComplete) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#007AFF" />
-      </View>
-    );
-  }
+  // 3. NOW we can do conditional rendering (after all hooks are called)
+  const showLoading = isLoading || !pinCheckComplete;
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-      }}
-    />
+    <>
+      {showLoading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      ) : (
+        <Stack
+          screenOptions={{
+            headerShown: false,
+          }}
+        />
+      )}
+    </>
   );
 }
 

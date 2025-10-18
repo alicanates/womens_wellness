@@ -1,0 +1,150 @@
+import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { useTheme } from '@/hooks/useTheme';
+import { Comment } from '@/types/qna';
+import { memo } from 'react';
+
+interface CommentListProps {
+    comments: Comment[];
+    loading?: boolean;
+    emptyMessage?: string;
+}
+
+export const CommentList = memo(function CommentList({
+    comments,
+    loading = false,
+    emptyMessage = 'Henüz yorum yapılmamış',
+}: CommentListProps) {
+    const theme = useTheme();
+    const styles = createStyles(theme);
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+            </View>
+        );
+    }
+
+    if (comments.length === 0) {
+        return (
+            <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>{emptyMessage}</Text>
+            </View>
+        );
+    }
+
+    return (
+        <FlatList
+            data={comments}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => <CommentItem comment={item} />}
+            scrollEnabled={false}
+            ItemSeparatorComponent={() => <View style={styles.separator} />}
+        />
+    );
+});
+
+interface CommentItemProps {
+    comment: Comment;
+}
+
+const CommentItem = memo(function CommentItem({ comment }: CommentItemProps) {
+    const theme = useTheme();
+    const styles = createStyles(theme);
+
+    return (
+        <View style={styles.commentContainer}>
+            <View style={styles.commentHeader}>
+                <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                        {comment.user?.displayName?.charAt(0).toUpperCase() || '?'}
+                    </Text>
+                </View>
+                <View style={styles.commentInfo}>
+                    <Text style={styles.authorName}>{comment.user?.displayName}</Text>
+                    <Text style={styles.timestamp}>{formatTimestamp(comment.createdAt)}</Text>
+                </View>
+            </View>
+            <Text style={styles.commentContent}>{comment.content}</Text>
+        </View>
+    );
+});
+
+function formatTimestamp(timestamp: string): string {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Şimdi';
+    if (diffMins < 60) return `${diffMins} dk önce`;
+    if (diffHours < 24) return `${diffHours} saat önce`;
+    if (diffDays < 7) return `${diffDays} gün önce`;
+
+    return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+}
+
+const createStyles = (theme: ReturnType<typeof useTheme>) =>
+    StyleSheet.create({
+        loadingContainer: {
+            padding: theme.spacing.lg,
+            alignItems: 'center',
+        },
+        emptyContainer: {
+            padding: theme.spacing.lg,
+            alignItems: 'center',
+        },
+        emptyText: {
+            fontSize: 14,
+            color: theme.colors.textSecondary,
+            fontStyle: 'italic',
+        },
+        commentContainer: {
+            paddingVertical: theme.spacing.md,
+        },
+        commentHeader: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: theme.spacing.sm,
+            marginBottom: theme.spacing.xs,
+        },
+        avatar: {
+            width: 28,
+            height: 28,
+            borderRadius: 14,
+            backgroundColor: theme.colors.primary,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        avatarText: {
+            fontSize: 12,
+            fontWeight: '700',
+            color: '#fff',
+        },
+        commentInfo: {
+            flex: 1,
+        },
+        authorName: {
+            fontSize: 13,
+            fontWeight: '600',
+            color: theme.colors.text,
+        },
+        timestamp: {
+            fontSize: 11,
+            color: theme.colors.textLight,
+            marginTop: 2,
+        },
+        commentContent: {
+            fontSize: 14,
+            color: theme.colors.text,
+            lineHeight: 20,
+            marginLeft: 36,
+        },
+        separator: {
+            height: 1,
+            backgroundColor: theme.colors.border,
+            marginVertical: theme.spacing.xs,
+        },
+    });

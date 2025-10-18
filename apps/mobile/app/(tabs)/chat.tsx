@@ -121,9 +121,13 @@ export default function ChatScreen() {
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
-      return chatService.sendMessage(conversationId, content);
+      console.log('[Chat] sendMessage mutation called with conversationId:', conversationId);
+      const result = await chatService.sendMessage(conversationId, content);
+      console.log('[Chat] sendMessage response:', result);
+      return result;
     },
     onSuccess: async (response: any) => {
+      console.log('[Chat] sendMessage onSuccess, response:', response);
       // Update conversation ID if backend created a new one
       const newConvId = response.conversationId;
       if (newConvId && newConvId !== conversationId) {
@@ -134,10 +138,12 @@ export default function ChatScreen() {
       }
       // Wait a bit for the message to be committed to DB
       await new Promise(resolve => setTimeout(resolve, 100));
+      console.log('[Chat] About to start streaming with convId:', newConvId || conversationId);
       // Use the new conversation ID for streaming
       startStreaming(newConvId || conversationId);
     },
     onError: (error: any) => {
+      console.error('[Chat] sendMessage onError:', error);
       // Remove the user message that failed to send
       setMessages((prev) => prev.slice(0, -1));
       handleError(error);
@@ -250,11 +256,16 @@ export default function ChatScreen() {
 
       const streamUrl = chatService.streamUrl(activeConvId);
 
+      console.log('[Chat] Stream URL:', streamUrl);
+
       await sseClient.current.stream(streamUrl, token, {
         onToken: (chunk) => {
-          console.log('[Chat] Token received:', chunk.substring(0, 50));
+          console.log('[Chat] Token received, chunk length:', chunk.length, 'first 50 chars:', chunk.substring(0, 50));
           streamingContentRef.current += chunk;
-          setStreamingContent((prev) => prev + chunk);
+          console.log('[Chat] Total content length now:', streamingContentRef.current.length);
+          // Update streaming content immediately
+          setStreamingContent(streamingContentRef.current);
+          console.log('[Chat] setStreamingContent called with length:', streamingContentRef.current.length);
         },
         onDone: async (data) => {
           console.log('[Chat] Stream done. Final content length:', streamingContentRef.current.length);
@@ -335,6 +346,7 @@ export default function ChatScreen() {
       createdAt: new Date().toISOString(),
     };
 
+    console.log('[Chat] Sending message:', userMessage.content);
     setMessages((prev) => [...prev, userMessage]);
     setInputText('');
 
@@ -382,12 +394,20 @@ export default function ChatScreen() {
 
   // Update streaming message content
   useEffect(() => {
+    console.log('[Chat] useEffect - isStreaming:', isStreaming, 'streamingContent length:', streamingContent.length);
     if (isStreaming && streamingContent) {
-      setMessages((prev) =>
-        prev.map((msg) =>
+      setMessages((prev) => {
+        const updated = prev.map((msg) =>
           msg.isStreaming ? { ...msg, content: streamingContent } : msg
-        )
-      );
+        );
+        console.log('[Chat] Updated messages, streaming message content length:',
+          updated.find(m => m.isStreaming)?.content.length || 0);
+        return updated;
+      });
+      // Auto-scroll to bottom during streaming
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     }
   }, [streamingContent, isStreaming]);
 
@@ -395,6 +415,11 @@ export default function ChatScreen() {
 
   const renderMessage = ({ item }: { item: Message }) => {
     const isUser = item.role === 'user';
+
+    // Debug log
+    if (!isUser && item.isStreaming) {
+      console.log('[Chat] Rendering streaming message, content length:', item.content.length);
+    }
 
     return (
       <View
@@ -406,14 +431,16 @@ export default function ChatScreen() {
         {!isUser && (
           <Text style={styles.assistantLabel}>NOVA</Text>
         )}
-        <Text style={[styles.messageText, isUser && styles.userMessageText]}>
-          {item.content}
-        </Text>
-        {item.isStreaming && (
+        {item.content ? (
+          <Text style={[styles.messageText, isUser && styles.userMessageText]}>
+            {item.content}
+          </Text>
+        ) : item.isStreaming ? (
           <View style={styles.typingIndicator}>
-            <ActivityIndicator size="small" color="#007AFF" />
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <Text style={styles.typingText}>Yazıyor...</Text>
           </View>
-        )}
+        ) : null}
       </View>
     );
   };
@@ -425,28 +452,11 @@ export default function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
-        {/* Header with quota */}
+        {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top }]}>
           <View style={styles.headerLeft}>
             <Text style={styles.headerTitle}>NOVA - AI Arkadaşın</Text>
-            {quota ? (
-              <Animated.View style={{ transform: [{ scale: quotaAnimValue }] }}>
-                <TouchableOpacity
-                  onPress={() => router.push('/settings' as any)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[
-                    styles.quotaText,
-                    isDepleted && styles.quotaTextDepleted,
-                    isLow && !isDepleted && styles.quotaTextLow,
-                  ]}>
-                    {quota.used}/{quota.limit} mesaj
-                    {isDepleted && ' ⚠️'}
-                    {isLow && !isDepleted && ' ⚡'}
-                  </Text>
-                </TouchableOpacity>
-              </Animated.View>
-            ) : null}
+            <Text style={styles.headerSubtitle}>Yapay zeka destekli sağlık asistanınız</Text>
           </View>
           <TouchableOpacity onPress={handleForget} style={styles.forgetButton}>
             <Text style={styles.forgetButtonText}>Sil</Text>
@@ -464,10 +474,14 @@ export default function ChatScreen() {
             messages.length === 0 && { flex: 1 }
           ]}
           onContentSizeChange={() => {
-            flatListRef.current?.scrollToEnd({ animated: false });
+            if (messages.length > 0) {
+              flatListRef.current?.scrollToEnd({ animated: true });
+            }
           }}
           onLayout={() => {
-            flatListRef.current?.scrollToEnd({ animated: false });
+            if (messages.length > 0) {
+              flatListRef.current?.scrollToEnd({ animated: false });
+            }
           }}
           ListEmptyComponent={() => (
             <View style={styles.emptyState}>
@@ -565,17 +579,10 @@ const createStyles = (theme: ReturnType<typeof useTheme>) => StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.text,
   },
-  quotaText: {
+  headerSubtitle: {
     fontSize: 12,
     color: theme.colors.textSecondary,
-    marginTop: 4,
-  },
-  quotaTextLow: {
-    color: '#F59E0B', // Amber color for low quota warning
-  },
-  quotaTextDepleted: {
-    color: theme.colors.error,
-    fontWeight: '600',
+    marginTop: 2,
   },
   forgetButton: {
     paddingHorizontal: 12,
@@ -638,7 +645,14 @@ const createStyles = (theme: ReturnType<typeof useTheme>) => StyleSheet.create({
     color: theme.colors.textOnPrimary,
   },
   typingIndicator: {
-    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  typingText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic',
   },
   inputContainer: {
     position: 'absolute',

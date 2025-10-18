@@ -1094,6 +1094,190 @@ Sexual health is an important part of your overall health and requires open comm
   }
 
   console.log('✅ Created all educational articles');
+
+  // Seed Q&A Badges
+  console.log('🏅 Seeding Q&A badges...');
+
+  const badges = [
+    // Başlangıç Rozetleri
+    {
+      key: 'first_question',
+      nameTr: 'İlk Soru',
+      nameEn: 'First Question',
+      description: 'İlk sorunuzu sordunuz!',
+      requirement: { type: 'questions_asked', count: 1 },
+      iconUrl: '🎯',
+    },
+    {
+      key: 'first_answer',
+      nameTr: 'İlk Cevap',
+      nameEn: 'First Answer',
+      description: 'İlk cevabınızı verdiniz!',
+      requirement: { type: 'answers_given', count: 1 },
+      iconUrl: '💬',
+    },
+    {
+      key: 'first_best_answer',
+      nameTr: 'İlk En İyi Cevap',
+      nameEn: 'First Best Answer',
+      description: 'İlk en iyi cevabınızı aldınız!',
+      requirement: { type: 'best_answers', count: 1 },
+      iconUrl: '⭐',
+    },
+    // Soru Rozetleri
+    {
+      key: 'curious_mind',
+      nameTr: 'Meraklı Zihin',
+      nameEn: 'Curious Mind',
+      description: '10 soru sordunuz',
+      requirement: { type: 'questions_asked', count: 10 },
+      iconUrl: '🤔',
+    },
+    {
+      key: 'question_master',
+      nameTr: 'Soru Ustası',
+      nameEn: 'Question Master',
+      description: '50 soru sordunuz',
+      requirement: { type: 'questions_asked', count: 50 },
+      iconUrl: '🎓',
+    },
+    // Cevap Rozetleri
+    {
+      key: 'helpful_member',
+      nameTr: 'Yardımsever Üye',
+      nameEn: 'Helpful Member',
+      description: '10 cevap verdiniz',
+      requirement: { type: 'answers_given', count: 10 },
+      iconUrl: '🤝',
+    },
+    {
+      key: 'knowledge_sharer',
+      nameTr: 'Bilgi Paylaşan',
+      nameEn: 'Knowledge Sharer',
+      description: '50 cevap verdiniz',
+      requirement: { type: 'answers_given', count: 50 },
+      iconUrl: '📚',
+    },
+    {
+      key: 'expert_contributor',
+      nameTr: 'Uzman Katkıcı',
+      nameEn: 'Expert Contributor',
+      description: '100 cevap verdiniz',
+      requirement: { type: 'answers_given', count: 100 },
+      iconUrl: '👨‍⚕️',
+    },
+    // En İyi Cevap Rozetleri
+    {
+      key: 'rising_star',
+      nameTr: 'Yükselen Yıldız',
+      nameEn: 'Rising Star',
+      description: '5 en iyi cevap aldınız',
+      requirement: { type: 'best_answers', count: 5 },
+      iconUrl: '🌟',
+    },
+    {
+      key: 'trusted_advisor',
+      nameTr: 'Güvenilir Danışman',
+      nameEn: 'Trusted Advisor',
+      description: '10 en iyi cevap aldınız',
+      requirement: { type: 'best_answers', count: 10 },
+      iconUrl: '💎',
+    },
+    {
+      key: 'community_expert',
+      nameTr: 'Topluluk Uzmanı',
+      nameEn: 'Community Expert',
+      description: '25 en iyi cevap aldınız',
+      requirement: { type: 'best_answers', count: 25 },
+      iconUrl: '👑',
+    },
+    // Oy Rozetleri
+    {
+      key: 'upvote_beginner',
+      nameTr: 'Beğeni Başlangıcı',
+      nameEn: 'Upvote Beginner',
+      description: '10 upvote aldınız',
+      requirement: { type: 'upvotes_received', count: 10 },
+      iconUrl: '👍',
+    },
+    {
+      key: 'popular_contributor',
+      nameTr: 'Popüler Katkıcı',
+      nameEn: 'Popular Contributor',
+      description: '50 upvote aldınız',
+      requirement: { type: 'upvotes_received', count: 50 },
+      iconUrl: '🔥',
+    },
+    {
+      key: 'highly_valued',
+      nameTr: 'Çok Değerli',
+      nameEn: 'Highly Valued',
+      description: '100 upvote aldınız',
+      requirement: { type: 'upvotes_received', count: 100 },
+      iconUrl: '💯',
+    },
+    // İtibar Rozetleri
+    {
+      key: 'reputation_100',
+      nameTr: '100 İtibar',
+      nameEn: '100 Reputation',
+      description: '100 itibar puanına ulaştınız',
+      requirement: { type: 'total_points', count: 100 },
+      iconUrl: '🥉',
+    },
+    {
+      key: 'reputation_500',
+      nameTr: '500 İtibar',
+      nameEn: '500 Reputation',
+      description: '500 itibar puanına ulaştınız',
+      requirement: { type: 'total_points', count: 500 },
+      iconUrl: '🥈',
+    },
+    {
+      key: 'reputation_1000',
+      nameTr: '1000 İtibar',
+      nameEn: '1000 Reputation',
+      description: '1000 itibar puanına ulaştınız',
+      requirement: { type: 'total_points', count: 1000 },
+      iconUrl: '🥇',
+    },
+    // Özel Rozetler
+    {
+      key: 'early_adopter',
+      nameTr: 'Erken Katılan',
+      nameEn: 'Early Adopter',
+      description: 'Q&A topluluğunun ilk üyelerinden birisiniz',
+      requirement: { type: 'special', count: 1 },
+      iconUrl: '🚀',
+    },
+    {
+      key: 'supportive_member',
+      nameTr: 'Destekleyici Üye',
+      nameEn: 'Supportive Member',
+      description: '50 yorum yaptınız',
+      requirement: { type: 'comments_made', count: 50 },
+      iconUrl: '💭',
+    },
+    {
+      key: 'active_voter',
+      nameTr: 'Aktif Oylayıcı',
+      nameEn: 'Active Voter',
+      description: '100 oy kullandınız',
+      requirement: { type: 'votes_cast', count: 100 },
+      iconUrl: '🗳️',
+    },
+  ];
+
+  for (const badge of badges) {
+    await prisma.badge.upsert({
+      where: { key: badge.key },
+      update: {},
+      create: badge,
+    });
+    console.log(`  ✅ Created badge: ${badge.nameTr}`);
+  }
+
+  console.log('✅ Q&A badges seeded successfully!');
   console.log('🎉 Seeding completed successfully!');
 }
 

@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { join } from 'path';
 import fastifyStatic from '@fastify/static';
@@ -33,6 +34,18 @@ async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     fastifyAdapter,
+  );
+
+  // Enable global validation pipe with transformation
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true, // Enable transformation
+      transformOptions: {
+        enableImplicitConversion: true, // Auto-convert types
+      },
+      whitelist: true, // Strip properties that don't have decorators
+      forbidNonWhitelisted: false, // Don't throw error for extra properties
+    }),
   );
 
   // Register CORS plugin

@@ -873,3 +873,231 @@ export const subscriptionService = {
   getUsageStats: () =>
     api.get<UsageStats>('/subscription/usage-stats'),
 };
+
+import type {
+  Question,
+  Answer,
+  QuestionComment,
+  AnswerComment,
+  CreateQuestionDto,
+  UpdateQuestionDto,
+  CreateAnswerDto,
+  UpdateAnswerDto,
+  CreateCommentDto,
+  VoteDto,
+  VoteResult,
+  ReportContentDto,
+  QuestionFilters,
+  PaginatedQuestions,
+  UserReputation,
+  ReputationDetail,
+  Badge,
+  UserBadge,
+  Leaderboard,
+  QnaMetrics,
+  ShareMetadata,
+  QnaQuota,
+} from '@/types/qna';
+
+// QnA endpoints
+export const qnaService = {
+  // Questions
+  getQuestions: (filters: QuestionFilters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.category) params.append('category', filters.category);
+    if (filters.tags?.length) params.append('tags', filters.tags.join(','));
+    if (filters.status) params.append('status', filters.status);
+    if (filters.sort) params.append('sort', filters.sort);
+    if (filters.search) params.append('search', filters.search);
+    if (filters.page) params.append('page', String(filters.page));
+    if (filters.limit) params.append('limit', String(filters.limit));
+    return api.get<PaginatedQuestions>(`/qna/questions${params.toString() ? `?${params.toString()}` : ''}`);
+  },
+
+  getQuestion: (id: string) =>
+    api.get<Question>(`/qna/questions/${id}`),
+
+  createQuestion: (data: CreateQuestionDto) =>
+    api.post<Question>('/qna/questions', data),
+
+  updateQuestion: (id: string, data: UpdateQuestionDto) =>
+    api.patch<Question>(`/qna/questions/${id}`, data),
+
+  deleteQuestion: (id: string) =>
+    api.delete<{ success: boolean }>(`/qna/questions/${id}`),
+
+  getMyQuestions: (page?: number, limit?: number) => {
+    const params = new URLSearchParams();
+    if (page) params.append('page', String(page));
+    if (limit) params.append('limit', String(limit));
+    return api.get<PaginatedQuestions>(`/qna/questions/my${params.toString() ? `?${params.toString()}` : ''}`);
+  },
+
+  getFavoriteQuestions: (page?: number, limit?: number) => {
+    const params = new URLSearchParams();
+    if (page) params.append('page', String(page));
+    if (limit) params.append('limit', String(limit));
+    return api.get<PaginatedQuestions>(`/qna/questions/favorites${params.toString() ? `?${params.toString()}` : ''}`);
+  },
+
+  getFollowingQuestions: (page?: number, limit?: number) => {
+    const params = new URLSearchParams();
+    if (page) params.append('page', String(page));
+    if (limit) params.append('limit', String(limit));
+    return api.get<PaginatedQuestions>(`/qna/questions/following${params.toString() ? `?${params.toString()}` : ''}`);
+  },
+
+  // Answers
+  getAnswers: (questionId: string, sort?: 'best' | 'votes' | 'recent') => {
+    const params = new URLSearchParams();
+    if (sort) params.append('sort', sort);
+    return api.get<Answer[]>(`/qna/questions/${questionId}/answers${params.toString() ? `?${params.toString()}` : ''}`);
+  },
+
+  createAnswer: (questionId: string, data: CreateAnswerDto) =>
+    api.post<Answer>(`/qna/questions/${questionId}/answers`, data),
+
+  updateAnswer: (id: string, data: UpdateAnswerDto) =>
+    api.patch<Answer>(`/qna/answers/${id}`, data),
+
+  deleteAnswer: (id: string) =>
+    api.delete<{ success: boolean }>(`/qna/answers/${id}`),
+
+  markBestAnswer: (questionId: string, answerId: string) =>
+    api.post<{ success: boolean }>(`/qna/questions/${questionId}/answers/${answerId}/mark-best`, {}),
+
+  getMyAnswers: (page?: number, limit?: number) => {
+    const params = new URLSearchParams();
+    if (page) params.append('page', String(page));
+    if (limit) params.append('limit', String(limit));
+    return api.get<Answer[]>(`/qna/answers/my${params.toString() ? `?${params.toString()}` : ''}`);
+  },
+
+  // Votes
+  voteAnswer: (answerId: string, data: VoteDto) =>
+    api.post<VoteResult>(`/qna/answers/${answerId}/vote`, data),
+
+  removeVote: (answerId: string) =>
+    api.delete<{ success: boolean }>(`/qna/answers/${answerId}/vote`),
+
+  getUserVote: (answerId: string) =>
+    api.get<{ voteType: string | null }>(`/qna/answers/${answerId}/vote`),
+
+  // Comments
+  createQuestionComment: (questionId: string, data: CreateCommentDto) =>
+    api.post<QuestionComment>(`/qna/questions/${questionId}/comments`, data),
+
+  getQuestionComments: (questionId: string) =>
+    api.get<QuestionComment[]>(`/qna/questions/${questionId}/comments`),
+
+  createAnswerComment: (answerId: string, data: CreateCommentDto) =>
+    api.post<AnswerComment>(`/qna/answers/${answerId}/comments`, data),
+
+  getAnswerComments: (answerId: string) =>
+    api.get<AnswerComment[]>(`/qna/answers/${answerId}/comments`),
+
+  deleteComment: (id: string) =>
+    api.delete<{ success: boolean }>(`/qna/comments/${id}`),
+
+  // Interactions
+  favoriteQuestion: (questionId: string) =>
+    api.post<{ success: boolean }>(`/qna/questions/${questionId}/favorite`, {}),
+
+  unfavoriteQuestion: (questionId: string) =>
+    api.delete<{ success: boolean }>(`/qna/questions/${questionId}/favorite`),
+
+  followQuestion: (questionId: string) =>
+    api.post<{ success: boolean }>(`/qna/questions/${questionId}/follow`, {}),
+
+  unfollowQuestion: (questionId: string) =>
+    api.delete<{ success: boolean }>(`/qna/questions/${questionId}/follow`),
+
+  followUser: (userId: string) =>
+    api.post<{ success: boolean }>(`/qna/users/${userId}/follow`, {}),
+
+  unfollowUser: (userId: string) =>
+    api.delete<{ success: boolean }>(`/qna/users/${userId}/follow`),
+
+  getUserFollowers: (userId: string) =>
+    api.get<Array<{ id: string; username: string; displayName: string; profilePictureUrl?: string }>>(`/qna/users/${userId}/followers`),
+
+  getUserFollowing: (userId: string) =>
+    api.get<Array<{ id: string; username: string; displayName: string; profilePictureUrl?: string }>>(`/qna/users/${userId}/following`),
+
+  // Reputation
+  getMyReputation: () =>
+    api.get<ReputationDetail>('/qna/reputation/me'),
+
+  getUserReputation: (userId: string) =>
+    api.get<ReputationDetail>(`/qna/reputation/${userId}`),
+
+  getLeaderboard: (page?: number, limit?: number) => {
+    const params = new URLSearchParams();
+    if (page) params.append('page', String(page));
+    if (limit) params.append('limit', String(limit));
+    return api.get<Leaderboard>(`/qna/reputation/leaderboard${params.toString() ? `?${params.toString()}` : ''}`);
+  },
+
+  getAllBadges: () =>
+    api.get<Badge[]>('/qna/reputation/badges'),
+
+  getMyBadges: () =>
+    api.get<UserBadge[]>('/qna/reputation/my-badges'),
+
+  // Moderation
+  reportContent: (data: ReportContentDto) =>
+    api.post<{ success: boolean }>('/qna/moderation/report', data),
+
+  // Sharing
+  getShareLink: (questionId: string) =>
+    api.get<{ shareUrl: string }>(`/qna/questions/${questionId}/share-link`),
+
+  getShareMetadata: (questionId: string) =>
+    api.get<ShareMetadata>(`/qna/questions/${questionId}/share-metadata`),
+
+  trackShare: (questionId: string) =>
+    api.post<{ success: boolean }>(`/qna/questions/${questionId}/track-share`, {}),
+
+  // Analytics (admin/stats)
+  getMetrics: () =>
+    api.get<QnaMetrics>('/qna/analytics/overview'),
+
+  // Quota
+  getQuota: () =>
+    api.get<QnaQuota>('/qna/quota/status'),
+};
+
+// Pages endpoints
+export const pagesService = {
+  // Get all pages
+  getPages: (isActive?: boolean) => {
+    const params = isActive !== undefined ? `?isActive=${isActive}` : '';
+    return api.get<Array<{
+      id: string;
+      slug: string;
+      titleTr: string;
+      titleEn?: string;
+      contentTr: string;
+      contentEn?: string;
+      isActive: boolean;
+      sortOrder: number;
+      createdAt: string;
+      updatedAt: string;
+    }>>(`/pages${params}`, false); // Public endpoint, no auth needed
+  },
+
+  // Get page by slug
+  getPageBySlug: (slug: string) =>
+    api.get<{
+      id: string;
+      slug: string;
+      titleTr: string;
+      titleEn?: string;
+      contentTr: string;
+      contentEn?: string;
+      isActive: boolean;
+      sortOrder: number;
+      createdAt: string;
+      updatedAt: string;
+    }>(`/pages/slug/${slug}`, false), // Public endpoint, no auth needed
+};

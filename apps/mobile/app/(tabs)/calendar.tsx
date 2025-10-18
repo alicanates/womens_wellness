@@ -256,184 +256,184 @@ export default function CalendarScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-      {/* Page Header */}
-      <View style={styles.pageHeader}>
-        <Text style={styles.pageTitle}>Regl Takibi</Text>
-      </View>
+        {/* Page Header */}
+        <View style={styles.pageHeader}>
+          <Text style={styles.pageTitle}>Regl Takibi</Text>
+        </View>
 
-      {/* Pregnancy Mode Toggle */}
-      <View style={styles.pregnancyToggle}>
-        <Text style={styles.pregnancyToggleLabel}>
-          {isPregnancyMode ? '🤰 Hamileyim' : '📅 Hamile Değilim'}
-        </Text>
-        <Switch
-          value={isPregnancyMode}
-          onValueChange={handlePregnancyToggle}
-          trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-          thumbColor="#fff"
-        />
-      </View>
-
-      {/* Legend - Symbol explanations */}
-      {!isPregnancyMode && <Legend />}
-
-      {/* Month Navigation */}
-      <View style={styles.monthNavigation}>
-        <TouchableOpacity onPress={goToPreviousMonth} style={styles.navButton}>
-          <Text style={styles.navButtonText}>←</Text>
-        </TouchableOpacity>
-
-        <View style={styles.headerCenter}>
-          <Text style={styles.monthText}>
-            {monthNames[selectedMonth - 1]} {selectedYear}
+        {/* Pregnancy Mode Toggle */}
+        <View style={styles.pregnancyToggle}>
+          <Text style={styles.pregnancyToggleLabel}>
+            {isPregnancyMode ? '🤰 Hamileyim' : '📅 Hamile Misin?'}
           </Text>
-          <TouchableOpacity onPress={goToToday}>
-            <Text style={styles.todayButton}>Bugün</Text>
+          <Switch
+            value={isPregnancyMode}
+            onValueChange={handlePregnancyToggle}
+            trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+            thumbColor="#fff"
+          />
+        </View>
+
+        {/* Legend - Symbol explanations */}
+        {!isPregnancyMode && <Legend />}
+
+        {/* Month Navigation */}
+        <View style={styles.monthNavigation}>
+          <TouchableOpacity onPress={goToPreviousMonth} style={styles.navButton}>
+            <Text style={styles.navButtonText}>←</Text>
+          </TouchableOpacity>
+
+          <View style={styles.headerCenter}>
+            <Text style={styles.monthText}>
+              {monthNames[selectedMonth - 1]} {selectedYear}
+            </Text>
+            <TouchableOpacity onPress={goToToday}>
+              <Text style={styles.todayButton}>Bugün</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity onPress={goToNextMonth} style={styles.navButton}>
+            <Text style={styles.navButtonText}>→</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity onPress={goToNextMonth} style={styles.navButton}>
-          <Text style={styles.navButtonText}>→</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Calendar grid */}
+        <View style={styles.calendar}>
+          {/* Day headers */}
+          <View style={styles.weekRow}>
+            {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map((day) => (
+              <Text key={day} style={styles.dayHeader}>
+                {day}
+              </Text>
+            ))}
+          </View>
 
-      {/* Calendar grid */}
-      <View style={styles.calendar}>
-        {/* Day headers */}
-        <View style={styles.weekRow}>
-          {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map((day) => (
-            <Text key={day} style={styles.dayHeader}>
-              {day}
-            </Text>
-          ))}
+          {/* Calendar days */}
+          {!isLoading && calendarData ? (
+            <View style={styles.daysContainer}>
+              {/* Calculate starting offset (Monday = 0) */}
+              {leadingPlaceholders.map((index) => (
+                <View key={`empty-${index}`} style={calendarStyles.day} />
+              ))}
+
+              {((calendarData as any).days || []).map((day: any, index: number) => {
+                const dayDate = typeof day.date === 'string' ? new Date(day.date) : day.date;
+                const isToday =
+                  dayDate.getDate() === today.getDate() &&
+                  dayDate.getMonth() === today.getMonth() &&
+                  dayDate.getFullYear() === today.getFullYear();
+
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      calendarStyles.day,
+                      isToday && calendarStyles.today,
+                    ]}
+                    onPress={() => handleDayPress({ ...day, date: dayDate })}
+                  >
+                    <Text
+                      style={[
+                        calendarStyles.dayText,
+                        isToday && calendarStyles.todayText,
+                      ]}
+                    >
+                      {dayDate.getDate()}
+                    </Text>
+                    {day.cycleDay && (
+                      <Text style={calendarStyles.cycleDayText}>
+                        {day.cycleDay}
+                      </Text>
+                    )}
+                    <DayMarkers
+                      markers={day.markers || []}
+                      isPredicted={day.isPredicted}
+                      mood={day.dailyLog?.mood || []}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : null}
         </View>
 
-        {/* Calendar days */}
-        {!isLoading && calendarData ? (
-          <View style={styles.daysContainer}>
-            {/* Calculate starting offset (Monday = 0) */}
-            {leadingPlaceholders.map((index) => (
-              <View key={`empty-${index}`} style={calendarStyles.day} />
-            ))}
-
-            {((calendarData as any).days || []).map((day: any, index: number) => {
-              const dayDate = typeof day.date === 'string' ? new Date(day.date) : day.date;
-              const isToday =
-                dayDate.getDate() === today.getDate() &&
-                dayDate.getMonth() === today.getMonth() &&
-                dayDate.getFullYear() === today.getFullYear();
-
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    calendarStyles.day,
-                    isToday && calendarStyles.today,
-                  ]}
-                  onPress={() => handleDayPress({ ...day, date: dayDate })}
-                >
-                  <Text
-                    style={[
-                      calendarStyles.dayText,
-                      isToday && calendarStyles.todayText,
-                    ]}
-                  >
-                    {dayDate.getDate()}
-                  </Text>
-                  {day.cycleDay && (
-                    <Text style={calendarStyles.cycleDayText}>
-                      {day.cycleDay}
-                    </Text>
-                  )}
-                  <DayMarkers
-                    markers={day.markers || []}
-                    isPredicted={day.isPredicted}
-                    mood={day.dailyLog?.mood || []}
-                  />
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ) : null}
-      </View>
-
-      {/* Animated Content */}
-      <Animated.View style={{ opacity: fadeAnim }}>
-        {isPregnancyMode ? (
-          // Pregnancy Mode Content
-          pregnancySummary ? (
-            <View style={styles.pregnancyCard}>
-              <Text style={styles.pregnancyTitle}>Hamilelik Özeti</Text>
-              <View style={styles.pregnancyRow}>
-                <Text style={styles.pregnancyLabel}>Gebelik Yaşı</Text>
-                <Text style={styles.pregnancyValue}>
-                  {pregnancySummary.gestationalAge.weeks} hafta{' '}
-                  {pregnancySummary.gestationalAge.days} gün
-                </Text>
-              </View>
-              <View style={styles.pregnancyRow}>
-                <Text style={styles.pregnancyLabel}>Trimester</Text>
-                <Text style={styles.pregnancyValue}>
-                  {pregnancySummary.trimester}. Trimester
-                </Text>
-              </View>
-              {pregnancySummary.dueDate && (
-                <View style={[styles.pregnancyRow, { marginBottom: 0 }]}>
-                  <Text style={styles.pregnancyLabel}>Tahmini Doğum</Text>
+        {/* Animated Content */}
+        <Animated.View style={{ opacity: fadeAnim }}>
+          {isPregnancyMode ? (
+            // Pregnancy Mode Content
+            pregnancySummary ? (
+              <View style={styles.pregnancyCard}>
+                <Text style={styles.pregnancyTitle}>Hamilelik Özeti</Text>
+                <View style={styles.pregnancyRow}>
+                  <Text style={styles.pregnancyLabel}>Gebelik Yaşı</Text>
                   <Text style={styles.pregnancyValue}>
-                    {new Date(pregnancySummary.dueDate).toLocaleDateString('tr-TR', {
-                      day: 'numeric',
-                      month: 'short',
-                    })}
+                    {pregnancySummary.gestationalAge.weeks} hafta{' '}
+                    {pregnancySummary.gestationalAge.days} gün
                   </Text>
                 </View>
+                <View style={styles.pregnancyRow}>
+                  <Text style={styles.pregnancyLabel}>Trimester</Text>
+                  <Text style={styles.pregnancyValue}>
+                    {pregnancySummary.trimester}. Trimester
+                  </Text>
+                </View>
+                {pregnancySummary.dueDate && (
+                  <View style={[styles.pregnancyRow, { marginBottom: 0 }]}>
+                    <Text style={styles.pregnancyLabel}>Tahmini Doğum</Text>
+                    <Text style={styles.pregnancyValue}>
+                      {new Date(pregnancySummary.dueDate).toLocaleDateString('tr-TR', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                    </Text>
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={styles.viewDetailsButton}
+                  onPress={() => router.push('/pregnancy')}
+                >
+                  <Text style={styles.viewDetailsText}>Detaylı Görünüm →</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null
+          ) : (
+            // Period Mode Content
+            <>
+              {/* Insight Cards */}
+              {predictionData && (predictionData as any).prediction && (
+                <InsightCards
+                  prediction={(predictionData as any).prediction}
+                  stats={statsData as any}
+                />
               )}
-              <TouchableOpacity
-                style={styles.viewDetailsButton}
-                onPress={() => router.push('/pregnancy')}
-              >
-                <Text style={styles.viewDetailsText}>Detaylı Görünüm →</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null
-        ) : (
-          // Period Mode Content
-          <>
-            {/* Insight Cards */}
-            {predictionData && (predictionData as any).prediction && (
-              <InsightCards
-                prediction={(predictionData as any).prediction}
-                stats={statsData as any}
-              />
-            )}
 
-      {/* Reset button */}
-      {!isPregnancyMode && (
-        <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
-          <Text style={styles.resetButtonText}>🔄 Döngüyü Sıfırla</Text>
-        </TouchableOpacity>
+              {/* Reset button */}
+              {!isPregnancyMode && (
+                <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
+                  <Text style={styles.resetButtonText}>🔄 Döngüyü Sıfırla</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+        </Animated.View>
+      </ScrollView>
+
+      {/* Day Details Sheet */}
+      {selectedDay && (
+        <DayDetailsSheet
+          visible={showDayDetails}
+          onClose={() => {
+            setShowDayDetails(false);
+            setSelectedDay(null);
+          }}
+          date={selectedDay.date}
+          dayData={selectedDay}
+          isPeriod={selectedDay.isPeriod}
+          isFertile={selectedDay.isFertile}
+          isPredicted={selectedDay.isPredicted}
+          isOvulation={selectedDay.isOvulation}
+        />
       )}
-          </>
-        )}
-      </Animated.View>
-    </ScrollView>
-
-    {/* Day Details Sheet */}
-    {selectedDay && (
-      <DayDetailsSheet
-        visible={showDayDetails}
-        onClose={() => {
-          setShowDayDetails(false);
-          setSelectedDay(null);
-        }}
-        date={selectedDay.date}
-        dayData={selectedDay}
-        isPeriod={selectedDay.isPeriod}
-        isFertile={selectedDay.isFertile}
-        isPredicted={selectedDay.isPredicted}
-        isOvulation={selectedDay.isOvulation}
-      />
-    )}
     </SafeAreaView>
   );
 }

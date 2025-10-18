@@ -229,5 +229,233 @@
     "networkError": "Bağlantı hatası",
     "serverError": "Sunucu hatası",
     "unauthorized": "Yetkisiz erişim"
+  },
+  "qna": {
+    "community": "Topluluk",
+    "askQuestion": "Soru Sor",
+    "title": "Başlık",
+    "titlePlaceholder": "Sorunuzu kısaca özetleyin",
+    "content": "Açıklama",
+    "contentPlaceholder": "Sorunuzu detaylı olarak açıklayın...",
+    "category": "Kategori",
+    "selectCategory": "Kategori Seçin",
+    "tags": "Etiketler",
+    "tagsPlaceholder": "Etiket ekleyin (virgülle ayırın)",
+    "anonymousMode": "Anonim Olarak Sor",
+    "anonymousModeDesc": "Kimliğiniz gizli kalacak",
+    "anonymousUser": "Anonim Kullanıcı",
+    "publish": "Yayınla",
+    "saveDraft": "Taslak Kaydet",
+    "cancel": "İptal",
+    "search": "Soru ara...",
+    "filter": "Filtrele",
+    "sort": {
+      "recent": "En Yeni",
+      "popular": "Popüler",
+      "unanswered": "Cevaplanmamış"
+    },
+    "status": {
+      "all": "Tümü",
+      "open": "Açık",
+      "answered": "Cevaplanmış",
+      "closed": "Kapalı"
+    },
+    "categoryFilter": {
+      "all": "Tümü",
+      "menstrualHealth": "Adet",
+      "pregnancy": "Hamilelik",
+      "fertility": "Doğurganlık",
+      "nutrition": "Beslenme",
+      "exercise": "Egzersiz",
+      "mentalHealth": "Ruh Sağlığı",
+      "general": "Genel"
+    },
+    "questionDetail": {
+      "title": "Soru Detayı",
+      "loading": "Yükleniyor...",
+      "error": "Hata",
+      "notFound": "Soru bulunamadı",
+      "goBack": "Geri Dön",
+      "views": "görüntülenme",
+      "answers": "cevap",
+      "answer": "cevap",
+      "comments": "Yorumlar",
+      "favorite": "Favorile",
+      "follow": "Takip Et",
+      "share": "Paylaş",
+      "report": "Raporla",
+      "answerQuestion": "Cevap Ver",
+      "submitAnswer": "Cevabı Gönder",
+      "noAnswers": "Henüz cevap yok",
+      "beFirst": "İlk cevabı siz verin!",
+      "bestAnswer": "En İyi Cevap",
+      "markAsBest": "En İyi Olarak İşaretle",
+      "changeBestAnswer": "Zaten bir en iyi cevap seçilmiş. Değiştirmek istiyor musunuz?",
+      "change": "Değiştir",
+      "bestAnswerMarked": "Cevap en iyi cevap olarak işaretlendi",
+      "bestAnswerUpdated": "En iyi cevap güncellendi",
+      "cannotVoteOwn": "Kendi cevabınıza oy veremezsiniz",
+      "onlyAuthorCanMarkBest": "Sadece soru sahibi en iyi cevabı seçebilir",
+      "addComment": "Soruya yorum yap...",
+      "now": "Şimdi",
+      "minutesAgo": "{count} dk önce",
+      "hoursAgo": "{count} saat önce",
+      "daysAgo": "{count} gün önce",
+      "reputation": "puan"
+    },
+    "list": {
+      "questions": "soru",
+      "noQuestions": "Henüz soru yok",
+      "beFirstToAsk": "İlk soruyu sormak için yukarıdaki butona tıklayın",
+      "errorLoading": "Bir hata oluştu",
+      "errorLoadingQuestions": "Sorular yüklenirken bir sorun oluştu",
+      "retry": "Tekrar Dene"
+    },
+    "myQuestions": {
+      "title": "Sorularım",
+      "empty": "Henüz soru sormadınız",
+      "startAsking": "Topluluktan cevap almak için soru sormaya başlayın"
+    },
+    "myAnswers": {
+      "title": "Cevaplarım",
+      "empty": "Henüz cevap vermediniz",
+      "startAnswering": "Topluluğa yardımcı olmak için cevap vermeye başlayın"
+    },
+    "favorites": {
+      "title": "Favoriler",
+      "empty": "Favori soru yok",
+      "startFavoriting": "Daha sonra kolayca erişmek için soruları favorileyin"
+    },
+    "following": {
+      "title": "Takip Edilenler",
+      "questions": "Sorular",
+      "users": "Kullanıcılar",
+      "emptyQuestions": "Takip edilen soru yok",
+      "emptyUsers": "Takip edilen kullanıcı yok",
+      "startFollowing": "Güncellemeler almak için soruları ve kullanıcıları takip edin"
+    },
+    "badges": {
+      "title": "Rozetler",
+      "earned": "Kazanıldı",
+      "notEarned": "Henüz Kazanılmadı",
+      "progress": "İlerleme"
+    },
+    "notifications": {
+      "title": "Bildirim Tercihleri",
+      "description": "Hangi topluluk aktivitelerinden bildirim almak istediğinizi seçin",
+      "newAnswers": "Yeni Cevaplar",
+      "newAnswersDesc": "Sorularınıza yeni cevap geldiğinde bildirim alın",
+      "answerVotes": "Cevap Oyları",
+      "answerVotesDesc": "Cevaplarınız oy aldığında bildirim alın",
+      "bestAnswerSelected": "En İyi Cevap",
+      "bestAnswerSelectedDesc": "Cevabınız en iyi cevap seçildiğinde bildirim alın",
+      "comments": "Yorumlar",
+      "commentsDesc": "Sorularınıza veya cevaplarınıza yorum yapıldığında bildirim alın",
+      "followedContent": "Takip Edilen İçerik",
+      "followedContentDesc": "Takip ettiğiniz sorulara ve kullanıcılara ait güncellemeler",
+      "badgesEarned": "Rozetler",
+      "badgesEarnedDesc": "Yeni rozet kazandığınızda bildirim alın",
+      "footer": "💡 Bildirimleri tamamen kapatmak için cihaz ayarlarınızdan uygulama bildirimlerini devre dışı bırakabilirsiniz."
+    },
+    "quota": {
+      "title": "Soru Kotası",
+      "remaining": "Kalan: {count}/{limit}",
+      "exceeded": "Aylık soru limitinize ulaştınız",
+      "upgradeToPremium": "Premium'a Geç",
+      "premiumBenefit": "Premium üyeler ayda {limit} soru sorabilir"
+    },
+    "validation": {
+      "titleRequired": "Başlık gerekli",
+      "titleMinLength": "Başlık en az 10 karakter olmalı",
+      "titleMaxLength": "Başlık en fazla 200 karakter olabilir",
+      "contentRequired": "Açıklama gerekli",
+      "contentMinLength": "Açıklama en az 20 karakter olmalı",
+      "contentMaxLength": "Açıklama en fazla 5000 karakter olabilir",
+      "categoryRequired": "Kategori seçmelisiniz",
+      "tagsMaxCount": "En fazla 5 etiket ekleyebilirsiniz",
+      "commentMaxLength": "Yorum en fazla 300 karakter olabilir"
+    },
+    "categories": {
+      "MENSTRUAL_HEALTH": "Regl Sağlığı",
+      "PREGNANCY": "Hamilelik",
+      "FERTILITY": "Doğurganlık",
+      "NUTRITION": "Beslenme",
+      "EXERCISE": "Egzersiz",
+      "MENTAL_HEALTH": "Ruh Sağlığı",
+      "SLEEP": "Uyku",
+      "CONTRACEPTION": "Doğum Kontrolü",
+      "PMS": "PMS",
+      "MENOPAUSE": "Menopoz",
+      "SEXUAL_HEALTH": "Cinsel Sağlık",
+      "GENERAL": "Genel"
+    },
+    "draft": {
+      "saved": "Taslak kaydedildi",
+      "restored": "Taslak geri yüklendi",
+      "discardTitle": "Taslağı Sil",
+      "discardMessage": "Kaydedilmiş taslağınız var. Silmek istiyor musunuz?",
+      "discard": "Sil",
+      "keep": "Tut"
+    },
+    "success": {
+      "questionCreated": "Sorunuz başarıyla yayınlandı",
+      "answerSubmitted": "Cevabınız gönderildi",
+      "commentAdded": "Yorumunuz eklendi",
+      "draftSaved": "Taslak kaydedildi",
+      "favorited": "Favorilere eklendi",
+      "unfavorited": "Favorilerden çıkarıldı",
+      "following": "Takip ediliyor",
+      "unfollowing": "Takip bırakıldı"
+    },
+    "errors": {
+      "createFailed": "Soru oluşturulamadı",
+      "submitFailed": "Gönderim başarısız",
+      "quotaExceeded": "Aylık soru limitinize ulaştınız",
+      "networkError": "Bağlantı hatası. Lütfen tekrar deneyin.",
+      "notFound": "Bulunamadı",
+      "unauthorized": "Bu işlem için yetkiniz yok"
+    },
+    "share": {
+      "title": "Paylaş",
+      "copyLink": "Linki Kopyala",
+      "linkCopied": "Link kopyalandı",
+      "share": "Paylaş",
+      "whatsapp": "WhatsApp",
+      "twitter": "Twitter",
+      "facebook": "Facebook",
+      "failed": "Paylaşılamadı"
+    },
+    "report": {
+      "title": "İçeriği Raporla",
+      "question": "Bu soruyu neden raporlamak istiyorsunuz?",
+      "answer": "Bu cevabı neden raporlamak istiyorsunuz?",
+      "reasons": {
+        "spam": "Spam veya Reklam",
+        "inappropriate": "Uygunsuz İçerik",
+        "misleading": "Yanıltıcı Bilgi",
+        "harassment": "Taciz veya Zorbalık",
+        "violence": "Şiddet veya Tehdit",
+        "hate": "Nefret Söylemi",
+        "privacy": "Gizlilik İhlali",
+        "other": "Diğer"
+      },
+      "additionalDetails": "Ek Açıklama (İsteğe Bağlı)",
+      "detailsPlaceholder": "Daha fazla detay ekleyin...",
+      "info": "Raporunuz gizli tutulacak ve moderasyon ekibimiz tarafından incelenecektir.",
+      "submit": "Gönder",
+      "cancel": "İptal",
+      "success": "Raporunuz alındı. İnceleme yapılacaktır.",
+      "failed": "Rapor gönderilemedi"
+    },
+    "search": {
+      "title": "Ara",
+      "placeholder": "Soru ara...",
+      "noResults": "Sonuç bulunamadı",
+      "tryDifferent": "Farklı anahtar kelimeler deneyin",
+      "suggestions": "Öneriler",
+      "relatedQuestions": "İlgili Sorular",
+      "popularQuestions": "Popüler Sorular",
+      "seeAll": "Tümünü Gör"
+    }
   }
 }

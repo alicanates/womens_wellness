@@ -8,6 +8,22 @@ import { dataProvider } from '@/providers/dataProvider';
 import { authProvider } from '@/providers/authProvider';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
+import {
+  UserOutlined,
+  SettingOutlined,
+  FlagOutlined,
+  DashboardOutlined,
+  FileTextOutlined,
+  BellOutlined,
+  CrownOutlined,
+  QuestionCircleOutlined,
+  BookOutlined,
+  HeartOutlined,
+  CalendarOutlined,
+  BulbOutlined,
+  TrophyOutlined,
+  WarningOutlined,
+} from '@ant-design/icons';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
@@ -28,51 +44,179 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           notificationProvider={useNotificationProvider}
           resources={[
             {
+              name: 'dashboard',
+              list: '/',
+              meta: {
+                label: 'Kontrol Paneli',
+                icon: <DashboardOutlined />,
+              },
+            },
+            {
               name: 'users',
               list: '/users',
               create: '/users/create',
               edit: '/users/edit/:id',
               show: '/users/show/:id',
               meta: {
-                label: 'Users',
+                label: 'Kullanıcılar',
+                icon: <UserOutlined />,
               },
             },
             {
-              name: 'model-policies',
-              list: '/model-policies',
-              create: '/model-policies/create',
-              edit: '/model-policies/edit/:id',
+              name: 'subscriptions',
+              list: '/subscriptions',
+              show: '/subscriptions/show/:id',
               meta: {
-                label: 'Model Policies',
+                label: 'Abonelikler',
+                icon: <CrownOutlined />,
               },
             },
             {
-              name: 'feature-flags',
-              list: '/feature-flags',
-              edit: '/feature-flags/edit/:id',
+              name: 'qna',
               meta: {
-                label: 'Feature Flags',
+                label: 'Soru & Cevap',
+                icon: <QuestionCircleOutlined />,
               },
             },
             {
-              name: 'quotas',
-              list: '/quotas',
+              name: 'qna/questions',
+              list: '/qna/questions',
+              show: '/qna/questions/show/:id',
               meta: {
-                label: 'Usage Quotas',
+                label: 'Sorular',
+                parent: 'qna',
+              },
+            },
+            {
+              name: 'qna/answers',
+              list: '/qna/answers',
+              meta: {
+                label: 'Cevaplar',
+                parent: 'qna',
+              },
+            },
+            {
+              name: 'qna/reports',
+              list: '/qna/reports',
+              show: '/qna/reports/show/:id',
+              meta: {
+                label: 'Raporlar',
+                parent: 'qna',
+              },
+            },
+            {
+              name: 'content',
+              meta: {
+                label: 'İçerik Yönetimi',
+                icon: <BookOutlined />,
+              },
+            },
+            {
+              name: 'content/articles',
+              list: '/content/articles',
+              create: '/content/articles/create',
+              edit: '/content/articles/edit/:id',
+              meta: {
+                label: 'Makaleler',
+                parent: 'content',
+              },
+            },
+            {
+              name: 'content/pages',
+              list: '/pages',
+              meta: {
+                label: 'Sayfalar',
+                parent: 'content',
+              },
+            },
+            {
+              name: 'health',
+              meta: {
+                label: 'Sağlık Takibi',
+                icon: <HeartOutlined />,
+              },
+            },
+            {
+              name: 'health/cycles',
+              list: '/health/cycles',
+              show: '/health/cycles/show/:id',
+              meta: {
+                label: 'Regl Döngüleri',
+                parent: 'health',
+              },
+            },
+            {
+              name: 'health/pregnancy',
+              list: '/health/pregnancy',
+              show: '/health/pregnancy/show/:id',
+              meta: {
+                label: 'Hamilelik',
+                parent: 'health',
+              },
+            },
+            {
+              name: 'health/wellness',
+              list: '/health/wellness',
+              meta: {
+                label: 'Wellness Verileri',
+                parent: 'health',
               },
             },
             {
               name: 'reminders',
               list: '/reminders',
               meta: {
-                label: 'Reminders',
+                label: 'Hatırlatıcılar',
+                icon: <BellOutlined />,
               },
             },
             {
-              name: 'audit-logs',
-              list: '/audit-logs',
+              name: 'ai',
               meta: {
-                label: 'Audit Logs',
+                label: 'AI Yapılandırması',
+                icon: <BulbOutlined />,
+              },
+            },
+            {
+              name: 'ai/model-policies',
+              list: '/ai/model-policies',
+              create: '/ai/model-policies/create',
+              edit: '/ai/model-policies/edit/:id',
+              meta: {
+                label: 'Model Politikaları',
+                parent: 'ai',
+              },
+            },
+            {
+              name: 'ai/quotas',
+              list: '/ai/quotas',
+              meta: {
+                label: 'Kullanım Kotaları',
+                parent: 'ai',
+              },
+            },
+            {
+              name: 'system',
+              meta: {
+                label: 'Sistem',
+                icon: <SettingOutlined />,
+              },
+            },
+            {
+              name: 'system/feature-flags',
+              list: '/system/feature-flags',
+              edit: '/system/feature-flags/edit/:id',
+              meta: {
+                label: 'Özellik Bayrakları',
+                parent: 'system',
+              },
+            },
+            {
+              name: 'system/audit-logs',
+              list: '/system/audit-logs',
+              meta: {
+                label: 'Denetim Kayıtları',
+                parent: 'system',
               },
             },
           ]}

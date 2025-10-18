@@ -24,6 +24,11 @@ export default function ArticleDetailScreen() {
     const router = useRouter();
     const queryClient = useQueryClient();
     const { id } = useLocalSearchParams<{ id: string }>();
+
+    // CRITICAL FIX: Stabilize articleId to prevent hook count changes
+    const articleId = typeof id === 'string' && id.length > 0 ? id : 'INVALID_ID';
+    const hasValidId = typeof id === 'string' && id.length > 0;
+
     const [readStartTime] = useState(Date.now());
     const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -37,18 +42,18 @@ export default function ArticleDetailScreen() {
         error,
         refetch
     } = useQuery({
-        queryKey: ['article', id],
-        queryFn: () => discoverService.getArticle(id!, 'tr'),
-        enabled: !!id,
+        queryKey: ['article', articleId],
+        queryFn: () => discoverService.getArticle(articleId, 'tr'),
+        enabled: hasValidId,
         retry: 2,
         retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000),
     });
 
     // Toggle save mutation
     const toggleSaveMutation = useMutation({
-        mutationFn: () => discoverService.toggleSave(id!),
+        mutationFn: () => discoverService.toggleSave(articleId),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['article', id] });
+            queryClient.invalidateQueries({ queryKey: ['article', articleId] });
             queryClient.invalidateQueries({ queryKey: ['articles'] });
             queryClient.invalidateQueries({ queryKey: ['savedArticles'] });
             queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
@@ -57,30 +62,30 @@ export default function ArticleDetailScreen() {
 
     // Track view on mount and read time on unmount
     useEffect(() => {
-        if (id) {
-            discoverService.trackView(id);
+        if (hasValidId) {
+            discoverService.trackView(articleId);
         }
 
         return () => {
-            if (id) {
+            if (hasValidId) {
                 const readTime = Date.now() - readStartTime;
-                discoverService.trackView(id, readTime);
+                discoverService.trackView(articleId, readTime);
             }
         };
-    }, [id, readStartTime]);
+    }, [articleId, hasValidId, readStartTime]);
 
     const handleShare = useCallback(async () => {
         try {
             await Share.share({
                 message: `${article?.title}\n\nWellness Companion uygulamasından paylaşıldı.`,
             });
-            if (id) {
-                discoverService.trackShare(id);
+            if (hasValidId) {
+                discoverService.trackShare(articleId);
             }
         } catch (error) {
             Alert.alert('Hata', 'Paylaşım başarısız oldu');
         }
-    }, [article?.title, id]);
+    }, [article?.title, articleId, hasValidId]);
 
     // Loading state
     if (isLoading) {

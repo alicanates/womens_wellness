@@ -168,3 +168,134 @@ export function calculateCompatibility(sign1: ZodiacSign, sign2: ZodiacSign): nu
     // Neutral compatibility
     return 50 + Math.floor(Math.random() * 20);
 }
+
+// Calculate rising sign based on birth time and date
+export function calculateRisingSign(birthDate: Date, birthTime: string): ZodiacSign {
+    // Parse time (HH:MM format)
+    const [hours, minutes] = birthTime.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) {
+        return getZodiacSign(birthDate); // Fallback to sun sign
+    }
+
+    // Calculate total minutes from midnight
+    const totalMinutes = hours * 60 + minutes;
+
+    // Get day of year (1-365/366)
+    const start = new Date(birthDate.getFullYear(), 0, 0);
+    const diff = birthDate.getTime() - start.getTime();
+    const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    // Rising sign changes approximately every 2 hours
+    // This is a simplified calculation based on time and date
+    const risingIndex = Math.floor(((totalMinutes / 120) + (dayOfYear / 30.5)) % 12);
+
+    const signs: ZodiacSign[] = [
+        'aries', 'taurus', 'gemini', 'cancer',
+        'leo', 'virgo', 'libra', 'scorpio',
+        'sagittarius', 'capricorn', 'aquarius', 'pisces'
+    ];
+
+    return signs[risingIndex];
+}
+
+// Calculate moon sign based on birth date
+export function calculateMoonSign(birthDate: Date): ZodiacSign {
+    // Moon changes sign approximately every 2.5 days
+    // This is a simplified calculation
+    const start = new Date(2000, 0, 1); // Reference date (Moon was in Pisces)
+    const diff = birthDate.getTime() - start.getTime();
+    const daysSinceRef = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    // Calculate moon position (approximately 2.5 days per sign)
+    const moonIndex = Math.floor((daysSinceRef / 2.5) % 12);
+
+    const signs: ZodiacSign[] = [
+        'pisces', 'aries', 'taurus', 'gemini',
+        'cancer', 'leo', 'virgo', 'libra',
+        'scorpio', 'sagittarius', 'capricorn', 'aquarius'
+    ];
+
+    return signs[moonIndex];
+}
+
+// Calculate element distribution for birth chart
+export function calculateElementDistribution(
+    sunSign: ZodiacSign,
+    risingSign: ZodiacSign,
+    moonSign: ZodiacSign
+): Record<string, number> {
+    type ElementType = 'fire' | 'earth' | 'air' | 'water';
+
+    const elements: Record<ElementType, number> = {
+        fire: 0,
+        earth: 0,
+        air: 0,
+        water: 0,
+    };
+
+    // Count elements from the three main signs
+    const signs: ZodiacSign[] = [sunSign, risingSign, moonSign];
+    signs.forEach((sign: ZodiacSign) => {
+        const element: ElementType = ZODIAC_SIGNS[sign].element;
+        elements[element] = elements[element] + 1;
+    });
+
+    // Convert to percentages
+    const total = 3;
+    return {
+        fire: Math.round((elements.fire / total) * 100),
+        earth: Math.round((elements.earth / total) * 100),
+        air: Math.round((elements.air / total) * 100),
+        water: Math.round((elements.water / total) * 100),
+    };
+}
+
+// Get detailed description for each sign position
+export function getSignDescription(position: 'sun' | 'rising' | 'moon', sign: ZodiacSign): string {
+    const descriptions = {
+        sun: {
+            aries: 'Enerjik, cesur ve öncü bir kişiliğe sahipsiniz. Liderlik özellikleri güçlüdür.',
+            taurus: 'Kararlı, güvenilir ve pratik bir yapınız var. Güzelliğe ve konfora değer verirsiniz.',
+            gemini: 'Meraklı, iletişim yeteneği güçlü ve çok yönlü bir kişiliğiniz var.',
+            cancer: 'Duygusal, koruyucu ve sezgisel bir yapınız var. Aile ve yuva önemlidir.',
+            leo: 'Yaratıcı, cömert ve karizmatik bir kişiliğe sahipsiniz. Dikkat çekmeyi seversiniz.',
+            virgo: 'Analitik, detaycı ve pratik bir yapınız var. Mükemmeliyetçi eğilimleriniz güçlüdür.',
+            libra: 'Dengeli, diplomatik ve sosyal bir kişiliğiniz var. Uyum ve adalet önemlidir.',
+            scorpio: 'Tutkulu, derin ve güçlü bir yapınız var. Dönüşüm ve yenilenme yeteneğiniz yüksektir.',
+            sagittarius: 'İyimser, özgür ruhlu ve maceracı bir kişiliğiniz var. Öğrenmeyi ve keşfetmeyi seversiniz.',
+            capricorn: 'Disiplinli, sorumlu ve hırslı bir yapınız var. Başarı ve statü önemlidir.',
+            aquarius: 'Özgün, yenilikçi ve bağımsız bir kişiliğiniz var. İnsanlığa hizmet etmek istersiniz.',
+            pisces: 'Empatik, yaratıcı ve ruhani bir yapınız var. Hayal gücünüz ve sezgileriniz güçlüdür.',
+        },
+        rising: {
+            aries: 'İlk izleniminiz enerjik ve dinamiktir. İnsanlar sizi cesur ve girişken görür.',
+            taurus: 'Sakin, güvenilir ve çekici bir dış görünüşünüz var. İnsanlar size güvenir.',
+            gemini: 'Canlı, konuşkan ve meraklı görünürsünüz. İletişim yeteneğiniz dikkat çeker.',
+            cancer: 'Sıcak, koruyucu ve duygusal bir izlenim bırakırsınız. İnsanlar size yakınlık hisseder.',
+            leo: 'Karizmatik, özgüvenli ve dikkat çekici bir dış görünüşünüz var.',
+            virgo: 'Düzenli, temiz ve detaycı görünürsünüz. İnsanlar sizi güvenilir bulur.',
+            libra: 'Zarif, nazik ve dengeli bir izlenim bırakırsınız. Estetik anlayışınız dikkat çeker.',
+            scorpio: 'Gizemli, güçlü ve etkileyici bir dış görünüşünüz var. İnsanlar sizi unutamaz.',
+            sagittarius: 'Neşeli, özgür ve maceracı görünürsünüz. İyimserliğiniz bulaşıcıdır.',
+            capricorn: 'Ciddi, olgun ve sorumlu bir izlenim bırakırsınız. İnsanlar size saygı duyar.',
+            aquarius: 'Özgün, farklı ve ilginç görünürsünüz. Bireyselliğiniz dikkat çeker.',
+            pisces: 'Hassas, rüyacı ve gizemli bir dış görünüşünüz var. İnsanlar size empati duyar.',
+        },
+        moon: {
+            aries: 'Duygusal olarak hızlı ve spontansınız. Heyecan ve aksiyon ihtiyacınız var.',
+            taurus: 'Duygusal güvenlik ve istikrar önemlidir. Rahatlık ve konfor arayışındasınız.',
+            gemini: 'Duygularınızı konuşarak ifade edersiniz. Zihinsel uyarım ihtiyacınız var.',
+            cancer: 'Çok duygusal ve hassassınız. Aile ve yuva duygusal ihtiyaçlarınızın merkezindedir.',
+            leo: 'Duygusal olarak cömert ve sıcaksınız. Takdir edilme ihtiyacınız var.',
+            virgo: 'Duygularınızı analiz edersiniz. Düzen ve yararlı olma ihtiyacınız var.',
+            libra: 'Duygusal denge ve uyum arayışındasınız. İlişkiler çok önemlidir.',
+            scorpio: 'Derin ve yoğun duygular yaşarsınız. Duygusal dönüşüm yeteneğiniz güçlüdür.',
+            sagittarius: 'Duygusal özgürlük ve macera ihtiyacınız var. İyimser bir duygusal yapınız var.',
+            capricorn: 'Duygularınızı kontrol edersiniz. Güvenlik ve başarı duygusal ihtiyaçlarınızdır.',
+            aquarius: 'Duygusal bağımsızlık önemlidir. Farklı ve özgün duygusal tepkiler verirsiniz.',
+            pisces: 'Son derece empatik ve hassassınız. Duygusal sınırlarınız belirsiz olabilir.',
+        },
+    };
+
+    return descriptions[position][sign];
+}

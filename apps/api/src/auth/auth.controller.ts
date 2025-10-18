@@ -1,5 +1,6 @@
 import { Body, Controller, Post, UnauthorizedException, Get, Query, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { IsString, IsEmail, IsNotEmpty, IsOptional, MinLength } from 'class-validator';
 import { FastifyReply } from 'fastify';
 import { AuthService } from './auth.service';
 import { GoogleAuthService } from './google-auth.service';
@@ -7,33 +8,68 @@ import { MailService } from '../mail/mail.service';
 import { join } from 'path';
 
 class RegisterDto {
+  @IsEmail()
+  @IsNotEmpty()
   email!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6)
   password!: string;
+
+  @IsString()
+  @IsNotEmpty()
   username!: string;
+
+  @IsString()
+  @IsNotEmpty()
   firstName!: string;
+
+  @IsString()
+  @IsNotEmpty()
   lastName!: string;
+
+  @IsString()
+  @IsOptional()
   dateOfBirth?: string; // ISO date string
 }
 
 class LoginDto {
+  @IsString()
+  @IsNotEmpty()
   identifier!: string; // Can be email or username
+
+  @IsString()
+  @IsNotEmpty()
   password!: string;
 }
 
 class GoogleAuthDto {
+  @IsString()
+  @IsNotEmpty()
   idToken!: string;
 }
 
 class RefreshDto {
+  @IsString()
+  @IsNotEmpty()
   refreshToken!: string;
 }
 
 class ForgotPasswordDto {
+  @IsEmail()
+  @IsNotEmpty()
   email!: string;
 }
 
 class ResetPasswordDto {
+  @IsString()
+  @IsNotEmpty()
   token!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6)
   newPassword!: string;
 }
 
@@ -44,7 +80,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly googleAuthService: GoogleAuthService,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   @Get('check-email')
   @ApiOperation({ summary: 'Check if email is available' })

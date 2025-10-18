@@ -55,7 +55,7 @@ export class SSEClient {
         const newData = this.xhr.responseText.substring(lastIndex);
         lastIndex = this.xhr.responseText.length;
 
-        console.log('[SSE] Progress - new data length:', newData.length);
+        console.log('[SSE] Progress - new data length:', newData.length, 'total response length:', this.xhr.responseText.length);
 
         eventBuffer += newData;
 
@@ -65,7 +65,7 @@ export class SSEClient {
           const event = eventBuffer.slice(0, idx);
           eventBuffer = eventBuffer.slice(idx + 2);
 
-          console.log('[SSE] Processing event:', event.substring(0, 100));
+          console.log('[SSE] Processing event (first 200 chars):', event.substring(0, 200));
           this.processEvent(event, callbacks);
         }
       };
@@ -155,17 +155,23 @@ export class SSEClient {
       }
     }
 
-    if (dataLines.length === 0) return;
+    if (dataLines.length === 0) {
+      console.log('[SSE] No data lines found in event');
+      return;
+    }
 
     // Join multiple data lines with newline
     const data = dataLines.join('\n');
+    console.log('[SSE] Event type:', eventType, 'data length:', data.length);
 
     switch (eventType) {
       case 'token':
+        console.log('[SSE] Token event, data:', data.substring(0, 50));
         this.addToBuffer(data, callbacks.onToken);
         break;
 
       case 'done':
+        console.log('[SSE] Done event');
         this.flush(callbacks.onToken);
         if (callbacks.onDone) {
           try {
@@ -178,6 +184,7 @@ export class SSEClient {
         break;
 
       case 'error':
+        console.log('[SSE] Error event:', data);
         if (callbacks.onError) {
           try {
             const error = JSON.parse(data);
@@ -187,6 +194,9 @@ export class SSEClient {
           }
         }
         break;
+
+      default:
+        console.log('[SSE] Unknown event type:', eventType);
     }
   }
 

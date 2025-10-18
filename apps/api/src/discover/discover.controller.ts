@@ -192,4 +192,30 @@ export class DiscoverController {
     ) {
         return this.discoverService.updatePreferences(req.user.id, body);
     }
+
+    // Admin: Create article
+    @Post('articles')
+    async createArticle(@Body() data: any) {
+        return this.discoverService['prisma'].educationalArticle.create({
+            data,
+        });
+    }
+
+    // Admin: Update article
+    @Patch('articles/:id')
+    async updateArticle(@Param('id') id: string, @Body() data: any) {
+        return this.discoverService['prisma'].educationalArticle.update({
+            where: { id },
+            data,
+        });
+    }
+
+    // Admin: Delete article
+    @Post('articles/:id/delete')
+    @HttpCode(HttpStatus.OK)
+    async deleteArticle(@Param('id') id: string) {
+        return this.discoverService['prisma'].educationalArticle.delete({
+            where: { id },
+        });
+    }
 }

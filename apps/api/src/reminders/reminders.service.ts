@@ -26,7 +26,7 @@ export class RemindersService {
   constructor(
     private prisma: PrismaService,
     private scheduler: ReminderSchedulerService,
-  ) {}
+  ) { }
 
   async createReminder(userId: string, data: CreateReminderDto) {
     const payloadJson = {
@@ -96,11 +96,11 @@ export class RemindersService {
     const nextRunAt =
       data.time || data.days || data.customCron
         ? this.scheduler.calculateNextRun(
-            reminder.type,
-            (payloadJson as any).time,
-            (payloadJson as any).days,
-            (payloadJson as any).customCron,
-          )
+          reminder.type,
+          (payloadJson as any).time,
+          (payloadJson as any).days,
+          (payloadJson as any).customCron,
+        )
         : reminder.nextRunAt;
 
     const updated = await this.prisma.reminder.update({
@@ -145,5 +145,30 @@ export class RemindersService {
     }
 
     return updated;
+  }
+
+  // Admin: Get all reminders with pagination
+  async getAllReminders(page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.prisma.reminder.findMany({
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              username: true,
+            },
+          },
+        },
+        skip,
+        take: limit,
+        orderBy: { nextRunAt: 'asc' },
+      }),
+      this.prisma.reminder.count(),
+    ]);
+
+    return { data, total, page, limit };
   }
 }

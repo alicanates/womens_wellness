@@ -59,35 +59,168 @@ export const dataProvider: DataProvider = {
       params.sortOrder = sorter.order;
     }
 
-    const { data } = await axiosInstance.get(`/${resource}`, { params });
+    // Handle special resource paths
+    let endpoint = resource;
+    if (resource === 'subscriptions') {
+      endpoint = 'subscription/admin/all';
+    } else if (resource === 'qna/questions') {
+      endpoint = 'qna/questions';
+    } else if (resource === 'qna/answers') {
+      endpoint = 'qna/answers';
+    } else if (resource === 'qna/reports') {
+      endpoint = 'qna/moderation/reports';
+    } else if (resource === 'content/articles') {
+      endpoint = 'discover/articles';
+    } else if (resource === 'health/cycles') {
+      endpoint = 'cycles';
+    } else if (resource === 'health/pregnancy') {
+      endpoint = 'pregnancy/admin/all';
+    } else if (resource === 'health/wellness') {
+      endpoint = 'wellness/v1/admin/stats';
+    } else if (resource === 'reminders') {
+      endpoint = 'reminders/admin/all';
+    } else if (resource === 'ai/model-policies') {
+      endpoint = 'model-policies';
+    } else if (resource === 'ai/quotas') {
+      endpoint = 'quotas';
+    } else if (resource === 'system/feature-flags') {
+      endpoint = 'feature-flags';
+    } else if (resource === 'system/audit-logs') {
+      endpoint = 'audit-logs';
+    }
+
+    const { data } = await axiosInstance.get(`/${endpoint}`, { params });
+
+    // Handle different response formats
+    let responseData = data;
+    let total = 0;
+
+    // If response has articles property (Discover API response)
+    if (data.articles && Array.isArray(data.articles)) {
+      responseData = data.articles;
+      total = data.total || data.articles.length;
+    }
+    // If response has data property (paginated response)
+    else if (data.data && Array.isArray(data.data)) {
+      responseData = data.data;
+      total = data.total || data.data.length;
+    }
+    // If response has questions property (QnA response)
+    else if (data.questions && Array.isArray(data.questions)) {
+      responseData = data.questions;
+      total = data.total || data.questions.length;
+    }
+    // If response has answers property
+    else if (data.answers && Array.isArray(data.answers)) {
+      responseData = data.answers;
+      total = data.total || data.answers.length;
+    }
+    // If response has reports property (with pagination object)
+    else if (data.reports && Array.isArray(data.reports)) {
+      responseData = data.reports;
+      total = data.pagination?.total || data.total || data.reports.length;
+    }
+    // If response is directly an array
+    else if (Array.isArray(data)) {
+      responseData = data;
+      total = data.length;
+    }
+    // If response is an object with items property
+    else if (data.items && Array.isArray(data.items)) {
+      responseData = data.items;
+      total = data.total || data.items.length;
+    }
+    // If response is an object with results property
+    else if (data.results && Array.isArray(data.results)) {
+      responseData = data.results;
+      total = data.total || data.results.length;
+    }
+    // Fallback: wrap single object in array
+    else if (typeof data === 'object' && !Array.isArray(data)) {
+      responseData = [data];
+      total = 1;
+    }
 
     return {
-      data: data.data || data,
-      total: data.total || data.length || 0,
+      data: responseData,
+      total: total,
     };
   },
 
   // GET one
   getOne: async ({ resource, id }) => {
-    const { data } = await axiosInstance.get(`/${resource}/${id}`);
+    // Handle special resource paths
+    let endpoint = resource;
+    if (resource === 'subscriptions') {
+      endpoint = 'subscription/admin';
+    } else if (resource === 'qna/questions') {
+      endpoint = 'qna/questions';
+    } else if (resource === 'qna/reports') {
+      endpoint = 'qna/moderation/reports';
+    } else if (resource === 'content/articles') {
+      endpoint = 'discover/articles';
+    } else if (resource === 'health/cycles') {
+      endpoint = 'cycles';
+    } else if (resource === 'health/pregnancy') {
+      endpoint = 'pregnancy/admin';
+    } else if (resource === 'ai/model-policies') {
+      endpoint = 'model-policies';
+    } else if (resource === 'system/feature-flags') {
+      endpoint = 'feature-flags';
+    }
+
+    const { data } = await axiosInstance.get(`/${endpoint}/${id}`);
     return { data };
   },
 
   // POST create
   create: async ({ resource, variables }) => {
-    const { data } = await axiosInstance.post(`/${resource}`, variables);
+    let endpoint = resource;
+    if (resource === 'content/articles') {
+      endpoint = 'discover/articles';
+    } else if (resource === 'ai/model-policies') {
+      endpoint = 'model-policies';
+    }
+
+    const { data } = await axiosInstance.post(`/${endpoint}`, variables);
     return { data };
   },
 
   // PATCH/PUT update
   update: async ({ resource, id, variables }) => {
-    const { data } = await axiosInstance.patch(`/${resource}/${id}`, variables);
+    let endpoint = resource;
+    if (resource === 'subscriptions') {
+      endpoint = 'subscription';
+    } else if (resource === 'qna/questions') {
+      endpoint = 'qna/questions';
+    } else if (resource === 'qna/reports') {
+      endpoint = 'qna/moderation/reports';
+    } else if (resource === 'content/articles') {
+      endpoint = 'discover/articles';
+    } else if (resource === 'ai/model-policies') {
+      endpoint = 'model-policies';
+    } else if (resource === 'system/feature-flags') {
+      endpoint = 'feature-flags';
+    } else if (resource === 'reminders') {
+      endpoint = 'reminders';
+    }
+
+    const { data } = await axiosInstance.patch(`/${endpoint}/${id}`, variables);
     return { data };
   },
 
   // DELETE
   deleteOne: async ({ resource, id }) => {
-    const { data } = await axiosInstance.delete(`/${resource}/${id}`);
+    let endpoint = resource;
+    if (resource === 'content/articles') {
+      // Use POST for delete to match API
+      const { data } = await axiosInstance.post(`/discover/articles/${id}/delete`);
+      return { data };
+    } else if (resource === 'ai/model-policies') {
+      endpoint = 'model-policies';
+    }
+
+    const { data } = await axiosInstance.delete(`/${endpoint}/${id}`);
     return { data };
   },
 

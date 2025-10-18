@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -19,7 +20,19 @@ export class RemindersController {
   constructor(
     private readonly remindersService: RemindersService,
     private readonly pushService: PushService,
-  ) {}
+  ) { }
+
+  // Admin: Get all reminders (must be before @Get(':id'))
+  @Get('admin/all')
+  async getAllReminders(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ) {
+    return this.remindersService.getAllReminders(
+      parseInt(page, 10),
+      parseInt(limit, 10),
+    );
+  }
 
   @Post()
   async createReminder(

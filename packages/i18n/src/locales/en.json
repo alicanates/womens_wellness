@@ -131,5 +131,233 @@
     "networkError": "Network error",
     "serverError": "Server error",
     "unauthorized": "Unauthorized access"
+  },
+  "qna": {
+    "community": "Community",
+    "askQuestion": "Ask Question",
+    "title": "Title",
+    "titlePlaceholder": "Briefly summarize your question",
+    "content": "Description",
+    "contentPlaceholder": "Describe your question in detail...",
+    "category": "Category",
+    "selectCategory": "Select Category",
+    "tags": "Tags",
+    "tagsPlaceholder": "Add tags (comma separated)",
+    "anonymousMode": "Ask Anonymously",
+    "anonymousModeDesc": "Your identity will remain hidden",
+    "anonymousUser": "Anonymous User",
+    "publish": "Publish",
+    "saveDraft": "Save Draft",
+    "cancel": "Cancel",
+    "search": "Search questions...",
+    "filter": "Filter",
+    "sort": {
+      "recent": "Recent",
+      "popular": "Popular",
+      "unanswered": "Unanswered"
+    },
+    "status": {
+      "all": "All",
+      "open": "Open",
+      "answered": "Answered",
+      "closed": "Closed"
+    },
+    "categoryFilter": {
+      "all": "All",
+      "menstrualHealth": "Menstrual",
+      "pregnancy": "Pregnancy",
+      "fertility": "Fertility",
+      "nutrition": "Nutrition",
+      "exercise": "Exercise",
+      "mentalHealth": "Mental Health",
+      "general": "General"
+    },
+    "questionDetail": {
+      "title": "Question Detail",
+      "loading": "Loading...",
+      "error": "Error",
+      "notFound": "Question not found",
+      "goBack": "Go Back",
+      "views": "views",
+      "answers": "answers",
+      "answer": "answer",
+      "comments": "Comments",
+      "favorite": "Favorite",
+      "follow": "Follow",
+      "share": "Share",
+      "report": "Report",
+      "answerQuestion": "Answer",
+      "submitAnswer": "Submit Answer",
+      "noAnswers": "No answers yet",
+      "beFirst": "Be the first to answer!",
+      "bestAnswer": "Best Answer",
+      "markAsBest": "Mark as Best",
+      "changeBestAnswer": "A best answer is already selected. Do you want to change it?",
+      "change": "Change",
+      "bestAnswerMarked": "Answer marked as best",
+      "bestAnswerUpdated": "Best answer updated",
+      "cannotVoteOwn": "You cannot vote on your own answer",
+      "onlyAuthorCanMarkBest": "Only the question author can select the best answer",
+      "addComment": "Add comment to question...",
+      "now": "Now",
+      "minutesAgo": "{count} min ago",
+      "hoursAgo": "{count} hours ago",
+      "daysAgo": "{count} days ago",
+      "reputation": "points"
+    },
+    "list": {
+      "questions": "questions",
+      "noQuestions": "No questions yet",
+      "beFirstToAsk": "Be the first to ask a question",
+      "errorLoading": "An error occurred",
+      "errorLoadingQuestions": "There was a problem loading questions",
+      "retry": "Try Again"
+    },
+    "myQuestions": {
+      "title": "My Questions",
+      "empty": "You haven't asked any questions yet",
+      "startAsking": "Start asking questions to get answers from the community"
+    },
+    "myAnswers": {
+      "title": "My Answers",
+      "empty": "You haven't answered any questions yet",
+      "startAnswering": "Start answering questions to help the community"
+    },
+    "favorites": {
+      "title": "Favorites",
+      "empty": "No favorite questions",
+      "startFavoriting": "Favorite questions to easily access them later"
+    },
+    "following": {
+      "title": "Following",
+      "questions": "Questions",
+      "users": "Users",
+      "emptyQuestions": "Not following any questions",
+      "emptyUsers": "Not following any users",
+      "startFollowing": "Follow questions and users to get updates"
+    },
+    "badges": {
+      "title": "Badges",
+      "earned": "Earned",
+      "notEarned": "Not Earned Yet",
+      "progress": "Progress"
+    },
+    "notifications": {
+      "title": "Notification Preferences",
+      "description": "Choose which community activities you want to be notified about",
+      "newAnswers": "New Answers",
+      "newAnswersDesc": "Get notified when someone answers your questions",
+      "answerVotes": "Answer Votes",
+      "answerVotesDesc": "Get notified when your answers receive votes",
+      "bestAnswerSelected": "Best Answer",
+      "bestAnswerSelectedDesc": "Get notified when your answer is selected as best",
+      "comments": "Comments",
+      "commentsDesc": "Get notified when someone comments on your questions or answers",
+      "followedContent": "Followed Content",
+      "followedContentDesc": "Updates from questions and users you follow",
+      "badgesEarned": "Badges",
+      "badgesEarnedDesc": "Get notified when you earn new badges",
+      "footer": "💡 To completely disable notifications, you can turn off app notifications in your device settings."
+    },
+    "quota": {
+      "title": "Question Quota",
+      "remaining": "Remaining: {count}/{limit}",
+      "exceeded": "You've reached your monthly question limit",
+      "upgradeToPremium": "Upgrade to Premium",
+      "premiumBenefit": "Premium members can ask {limit} questions per month"
+    },
+    "validation": {
+      "titleRequired": "Title is required",
+      "titleMinLength": "Title must be at least 10 characters",
+      "titleMaxLength": "Title can be at most 200 characters",
+      "contentRequired": "Description is required",
+      "contentMinLength": "Description must be at least 20 characters",
+      "contentMaxLength": "Description can be at most 5000 characters",
+      "categoryRequired": "You must select a category",
+      "tagsMaxCount": "You can add up to 5 tags",
+      "commentMaxLength": "Comment can be at most 300 characters"
+    },
+    "categories": {
+      "MENSTRUAL_HEALTH": "Menstrual Health",
+      "PREGNANCY": "Pregnancy",
+      "FERTILITY": "Fertility",
+      "NUTRITION": "Nutrition",
+      "EXERCISE": "Exercise",
+      "MENTAL_HEALTH": "Mental Health",
+      "SLEEP": "Sleep",
+      "CONTRACEPTION": "Contraception",
+      "PMS": "PMS",
+      "MENOPAUSE": "Menopause",
+      "SEXUAL_HEALTH": "Sexual Health",
+      "GENERAL": "General"
+    },
+    "draft": {
+      "saved": "Draft saved",
+      "restored": "Draft restored",
+      "discardTitle": "Discard Draft",
+      "discardMessage": "You have a saved draft. Do you want to discard it?",
+      "discard": "Discard",
+      "keep": "Keep"
+    },
+    "success": {
+      "questionCreated": "Your question has been published successfully",
+      "answerSubmitted": "Your answer has been submitted",
+      "commentAdded": "Your comment has been added",
+      "draftSaved": "Draft saved",
+      "favorited": "Added to favorites",
+      "unfavorited": "Removed from favorites",
+      "following": "Now following",
+      "unfollowing": "Stopped following"
+    },
+    "errors": {
+      "createFailed": "Failed to create question",
+      "submitFailed": "Submission failed",
+      "quotaExceeded": "You've reached your monthly question limit",
+      "networkError": "Network error. Please try again.",
+      "notFound": "Not found",
+      "unauthorized": "You don't have permission for this action"
+    },
+    "share": {
+      "title": "Share",
+      "copyLink": "Copy Link",
+      "linkCopied": "Link copied",
+      "share": "Share",
+      "whatsapp": "WhatsApp",
+      "twitter": "Twitter",
+      "facebook": "Facebook",
+      "failed": "Failed to share"
+    },
+    "report": {
+      "title": "Report Content",
+      "question": "Why do you want to report this question?",
+      "answer": "Why do you want to report this answer?",
+      "reasons": {
+        "spam": "Spam or Advertisement",
+        "inappropriate": "Inappropriate Content",
+        "misleading": "Misleading Information",
+        "harassment": "Harassment or Bullying",
+        "violence": "Violence or Threats",
+        "hate": "Hate Speech",
+        "privacy": "Privacy Violation",
+        "other": "Other"
+      },
+      "additionalDetails": "Additional Details (Optional)",
+      "detailsPlaceholder": "Add more details...",
+      "info": "Your report will be kept confidential and reviewed by our moderation team.",
+      "submit": "Submit",
+      "cancel": "Cancel",
+      "success": "Your report has been received. It will be reviewed.",
+      "failed": "Failed to submit report"
+    },
+    "search": {
+      "title": "Search",
+      "placeholder": "Search questions...",
+      "noResults": "No results found",
+      "tryDifferent": "Try different keywords",
+      "suggestions": "Suggestions",
+      "relatedQuestions": "Related Questions",
+      "popularQuestions": "Popular Questions",
+      "seeAll": "See All"
+    }
   }
 }

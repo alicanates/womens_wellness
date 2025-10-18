@@ -94,6 +94,45 @@ enum AIProvider {
   google
 }
 
+enum QuestionCategory {
+  MENSTRUAL_HEALTH
+  PREGNANCY
+  FERTILITY
+  NUTRITION
+  EXERCISE
+  MENTAL_HEALTH
+  SLEEP
+  CONTRACEPTION
+  PMS
+  MENOPAUSE
+  SEXUAL_HEALTH
+  GENERAL
+}
+
+enum QuestionStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
+}
+
+enum ContentType {
+  QUESTION
+  ANSWER
+  COMMENT
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // User & Auth
 // ────────────────────────────────────────────────────────────────────────────
@@ -131,6 +170,21 @@ model User {
   articleInteractions  ArticleInteraction[]
   contentPreferences   UserContentPreferences?
   premiumFeatureUsage  PremiumFeatureUsage[]
+  
+  // Q&A Relations
+  questions            Question[]
+  answers              Answer[]
+  answerVotes          AnswerVote[]
+  questionComments     QuestionComment[]
+  answerComments       AnswerComment[]
+  questionFavorites    QuestionFavorite[]
+  questionFollowers    QuestionFollower[]
+  followers            UserFollower[]       @relation("UserFollowers")
+  following            UserFollower[]       @relation("UserFollowing")
+  reputation           UserReputation?
+  qnaQuota             QnaQuota?
+  contentReports       ContentReport[]      @relation("ContentReports")
+  reviewedReports      ContentReport[]      @relation("ReviewedReports")
 
   @@index([email])
   @@index([username])
@@ -800,4 +854,254 @@ model WellnessPreferences {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Q&A Community
+// ────────────────────────────────────────────────────────────────────────────
+
+// Question Model
+model Question {
+  id              String            @id @default(cuid())
+  userId          String
+  title           String
+  content         String            @db.Text
+  category        QuestionCategory
+  tags            String[]          @default([])
+  isAnonymous     Boolean           @default(false)
+  status          QuestionStatus    @default(OPEN)
+  viewCount       Int               @default(0)
+  isPremium       Boolean           @default(false) // Premium user badge
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers         Answer[]
+  comments        QuestionComment[]
+  favorites       QuestionFavorite[]
+  followers       QuestionFollower[]
+  
+  @@index([userId, createdAt])
+  @@index([category, status, createdAt])
+  @@index([status, isPremium, createdAt])
+}
+
+// Answer Model
+model Answer {
+  id              String          @id @default(cuid())
+  questionId      String
+  userId          String
+  content         String          @db.Text
+  isBestAnswer    Boolean         @default(false)
+  voteCount       Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  question        Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes           AnswerVote[]
+  comments        AnswerComment[]
+  
+  @@index([questionId, isBestAnswer, voteCount])
+  @@index([userId, createdAt])
+}
+
+// Vote Model
+model AnswerVote {
+  id        String    @id @default(cuid())
+  answerId  String
+  userId    String
+  voteType  VoteType  // UPVOTE, DOWNVOTE
+  createdAt DateTime  @default(now())
+  
+  answer    Answer    @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([answerId, userId])
+  @@index([answerId])
+  @@index([userId])
+}
+
+// Comment Models
+model QuestionComment {
+  id         String   @id @default(cuid())
+  questionId String
+  userId     String
+  content    String   @db.VarChar(300)
+  createdAt  DateTime @default(now())
+  
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([questionId, createdAt])
+}
+
+model AnswerComment {
+  id        String   @id @default(cuid())
+  answerId  String
+  userId    String
+  content   String   @db.VarChar(300)
+  createdAt DateTime @default(now())
+  
+  answer    Answer   @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([answerId, createdAt])
+}
+
+// Favorite & Follow Models
+model QuestionFavorite {
+  id         String   @id @default(cuid())
+  questionId String
+  userId     String
+  createdAt  DateTime @default(now())
+  
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([questionId, userId])
+  @@index([userId, createdAt])
+}
+
+model QuestionFollower {
+  id         String   @id @default(cuid())
+  questionId String
+  userId     String
+  createdAt  DateTime @default(now())
+  
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([questionId, userId])
+  @@index([userId])
+}
+
+model UserFollower {
+  id           String   @id @default(cuid())
+  followerId   String   // Takip eden kullanıcı
+  followingId  String   // Takip edilen kullanıcı
+  createdAt    DateTime @default(now())
+  
+  follower     User     @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+  following    User     @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+  
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+// Reputation Models
+model UserReputation {
+  id              String                @id @default(cuid())
+  userId          String                @unique
+  totalPoints     Int                   @default(0)
+  questionsAsked  Int                   @default(0)
+  answersGiven    Int                   @default(0)
+  bestAnswers     Int                   @default(0)
+  upvotesReceived Int                   @default(0)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  history         ReputationHistory[]
+  badges          UserBadge[]
+  
+  @@index([totalPoints])
+}
+
+model ReputationHistory {
+  id           String          @id @default(cuid())
+  reputationId String
+  points       Int
+  reason       String
+  metadata     Json?
+  createdAt    DateTime        @default(now())
+  
+  reputation   UserReputation  @relation(fields: [reputationId], references: [id], onDelete: Cascade)
+  
+  @@index([reputationId, createdAt])
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  key         String      @unique
+  nameTr      String
+  nameEn      String
+  description String
+  iconUrl     String?
+  requirement Json        // { type: 'best_answers', count: 10 }
+  createdAt   DateTime    @default(now())
+  
+  userBadges  UserBadge[]
+}
+
+model UserBadge {
+  id           String          @id @default(cuid())
+  reputationId String
+  badgeId      String
+  earnedAt     DateTime        @default(now())
+  
+  reputation   UserReputation  @relation(fields: [reputationId], references: [id], onDelete: Cascade)
+  badge        Badge           @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  
+  @@unique([reputationId, badgeId])
+  @@index([reputationId])
+}
+
+// Moderation Models
+model ContentReport {
+  id          String           @id @default(cuid())
+  contentId   String
+  contentType ContentType      // QUESTION, ANSWER, COMMENT
+  reporterId  String
+  reason      String
+  description String?          @db.Text
+  status      ReportStatus     @default(PENDING)
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  
+  reporter    User             @relation("ContentReports", fields: [reporterId], references: [id], onDelete: Cascade)
+  reviewer    User?            @relation("ReviewedReports", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  
+  @@index([status, createdAt])
+  @@index([contentId, contentType])
+}
+
+// Quota Model
+model QnaQuota {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  monthKey          String   // Format: YYYY-MM
+  questionsAsked    Int      @default(0)
+  freeUserLimit     Int      @default(5)
+  premiumUserLimit  Int      @default(20)
+  resetsAt          DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, monthKey])
+  @@index([userId, monthKey])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Content Pages (Privacy Policy, Terms of Use, etc.)
+// ────────────────────────────────────────────────────────────────────────────
+
+model Page {
+  id          String   @id @default(cuid())
+  slug        String   @unique // privacy-policy, terms-of-use, etc.
+  titleTr     String
+  titleEn     String?
+  contentTr   String   @db.Text
+  contentEn   String?  @db.Text
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([slug, isActive])
+  @@index([isActive, sortOrder])
 }

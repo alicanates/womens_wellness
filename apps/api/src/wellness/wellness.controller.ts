@@ -15,7 +15,7 @@ import { WellnessService, StepsData, MeditationData, SleepData } from './wellnes
 @Controller('wellness/v1')
 @UseGuards(AuthGuard('jwt'))
 export class WellnessController {
-  constructor(private readonly wellnessService: WellnessService) {}
+  constructor(private readonly wellnessService: WellnessService) { }
 
   // ────────────────────────────────────────────────────────────────────────
   // Steps Endpoints
@@ -131,5 +131,34 @@ export class WellnessController {
   @Get('summary')
   async getWellnessSummary(@Request() req) {
     return this.wellnessService.getWellnessSummary(req.user.id);
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Admin Endpoints
+  // ────────────────────────────────────────────────────────────────────────
+
+  @Get('admin/stats')
+  async getAdminStats() {
+    const [stepsStats, meditationStats, sleepStats, waterStats] = await Promise.all([
+      this.wellnessService['prisma'].dailySteps.aggregate({
+        _sum: { count: true },
+      }),
+      this.wellnessService['prisma'].meditationSession.aggregate({
+        _sum: { durationMin: true },
+      }),
+      this.wellnessService['prisma'].sleepLog.aggregate({
+        _sum: { durationMin: true },
+      }),
+      this.wellnessService['prisma'].waterLog.aggregate({
+        _sum: { amountMl: true },
+      }),
+    ]);
+
+    return {
+      totalSteps: stepsStats._sum.count || 0,
+      totalMeditation: meditationStats._sum.durationMin || 0,
+      totalSleep: Math.round((sleepStats._sum.durationMin || 0) / 60),
+      totalWater: waterStats._sum.amountMl || 0,
+    };
   }
 }

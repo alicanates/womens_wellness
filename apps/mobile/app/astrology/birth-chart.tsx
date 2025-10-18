@@ -4,7 +4,14 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/store/authStore';
-import { getZodiacSign, ZODIAC_SIGNS } from '@/utils/astrology';
+import {
+    getZodiacSign,
+    ZODIAC_SIGNS,
+    calculateRisingSign,
+    calculateMoonSign,
+    calculateElementDistribution,
+    getSignDescription
+} from '@/utils/astrology';
 
 export default function BirthChartScreen() {
     const theme = useTheme();
@@ -40,12 +47,14 @@ export default function BirthChartScreen() {
 
     const styles = createStyles(theme);
 
+    // Calculate all signs based on user input
     const zodiacSign = getZodiacSign(birthDate);
     const zodiacInfo = ZODIAC_SIGNS[zodiacSign];
+    const risingSign = calculateRisingSign(birthDate, birthTime);
+    const moonSign = calculateMoonSign(birthDate);
 
-    // Mock rising and moon signs (in real app, calculate based on time and place)
-    const risingSign = 'leo';
-    const moonSign = 'cancer';
+    // Calculate element distribution
+    const elementDist = calculateElementDistribution(zodiacSign, risingSign, moonSign);
 
     const handleCalculate = () => {
         if (birthPlace.trim()) {
@@ -130,7 +139,7 @@ export default function BirthChartScreen() {
                                 </View>
                             </View>
                             <Text style={styles.chartCardDescription}>
-                                Kişiliğinizin temeli. Kim olduğunuzu ve nasıl davrandığınızı gösterir.
+                                {getSignDescription('sun', zodiacSign)}
                             </Text>
                         </View>
 
@@ -144,7 +153,7 @@ export default function BirthChartScreen() {
                                 </View>
                             </View>
                             <Text style={styles.chartCardDescription}>
-                                Dış görünüşünüz ve ilk izleniminiz. Dünyaya nasıl göründüğünüzü belirler.
+                                {getSignDescription('rising', risingSign)}
                             </Text>
                         </View>
 
@@ -158,7 +167,7 @@ export default function BirthChartScreen() {
                                 </View>
                             </View>
                             <Text style={styles.chartCardDescription}>
-                                Duygusal dünyanız. İç duygu ve ihtiyaçlarınızı yansıtır.
+                                {getSignDescription('moon', moonSign)}
                             </Text>
                         </View>
 
@@ -169,22 +178,22 @@ export default function BirthChartScreen() {
                                 <View style={styles.elementItem}>
                                     <Text style={styles.elementEmoji}>🔥</Text>
                                     <Text style={styles.elementLabel}>Ateş</Text>
-                                    <Text style={styles.elementValue}>33%</Text>
+                                    <Text style={styles.elementValue}>{elementDist.fire}%</Text>
                                 </View>
                                 <View style={styles.elementItem}>
                                     <Text style={styles.elementEmoji}>🌊</Text>
                                     <Text style={styles.elementLabel}>Su</Text>
-                                    <Text style={styles.elementValue}>33%</Text>
+                                    <Text style={styles.elementValue}>{elementDist.water}%</Text>
                                 </View>
                                 <View style={styles.elementItem}>
                                     <Text style={styles.elementEmoji}>🌍</Text>
                                     <Text style={styles.elementLabel}>Toprak</Text>
-                                    <Text style={styles.elementValue}>17%</Text>
+                                    <Text style={styles.elementValue}>{elementDist.earth}%</Text>
                                 </View>
                                 <View style={styles.elementItem}>
                                     <Text style={styles.elementEmoji}>💨</Text>
                                     <Text style={styles.elementLabel}>Hava</Text>
-                                    <Text style={styles.elementValue}>17%</Text>
+                                    <Text style={styles.elementValue}>{elementDist.air}%</Text>
                                 </View>
                             </View>
                         </View>

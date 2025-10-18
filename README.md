@@ -15,6 +15,19 @@ A modern, privacy-respecting women's wellness tracking app with an empathetic AI
 - ✅ **Pregnancy Timeline**: Due date calculator, week-by-week milestones (40 weeks)
 - ✅ **Health Metrics History**: Track and visualize progress over time
 
+### Q&A Community 💬
+- ✅ **Question & Answer Platform**: Ask and answer women's health questions
+- ✅ **Anonymous Mode**: Ask sensitive questions privately
+- ✅ **Voting System**: Upvote/downvote answers for quality content
+- ✅ **Best Answer Selection**: Question authors can mark the most helpful answer
+- ✅ **Reputation & Badges**: Earn points and badges for helpful contributions
+- ✅ **Categories & Tags**: Filter by topics (pregnancy, menstrual health, etc.)
+- ✅ **Content Moderation**: Report inappropriate content, spam detection
+- ✅ **Favorites & Following**: Save questions and follow users
+- ✅ **Notifications**: Get notified of new answers, votes, and comments
+- ✅ **Sharing**: Share questions on social media
+- ✅ **Premium Features**: Higher question limits for premium users (5 vs 20/month)
+
 ### AI Companion (NOVA) 🤖
 - ✅ **Empathetic Chat**: Turkish-language AI friend for wellness support
 - ✅ **Streaming Responses**: Real-time SSE streaming with typing indicators
@@ -361,6 +374,66 @@ PATCH  /reminders/:id, /reminders/:id/toggle
 DELETE /reminders/:id
 POST   /reminders/push/register, /reminders/push/test
 
+# Q&A Community
+GET    /qna/questions                    # List questions
+POST   /qna/questions                    # Create question
+GET    /qna/questions/:id                # Question detail
+PATCH  /qna/questions/:id                # Update question
+DELETE /qna/questions/:id                # Delete question
+GET    /qna/questions/my                 # My questions
+GET    /qna/questions/favorites          # Favorite questions
+GET    /qna/questions/following          # Following questions
+GET    /qna/questions/quota/status       # Quota status
+POST   /qna/questions/:id/favorite       # Favorite question
+DELETE /qna/questions/:id/favorite       # Unfavorite question
+POST   /qna/questions/:id/follow         # Follow question
+DELETE /qna/questions/:id/follow         # Unfollow question
+
+POST   /qna/questions/:id/answers        # Create answer
+GET    /qna/questions/:id/answers        # List answers
+PATCH  /qna/answers/:id                  # Update answer
+DELETE /qna/answers/:id                  # Delete answer
+POST   /qna/questions/:qid/answers/:aid/mark-best  # Mark best answer
+
+POST   /qna/answers/:id/vote             # Vote on answer
+DELETE /qna/answers/:id/vote             # Remove vote
+GET    /qna/answers/:id/vote             # Get user vote
+GET    /qna/answers/:id/vote-count       # Get vote count
+
+POST   /qna/questions/:id/comments       # Comment on question
+GET    /qna/questions/:id/comments       # Get question comments
+POST   /qna/answers/:id/comments         # Comment on answer
+GET    /qna/answers/:id/comments         # Get answer comments
+DELETE /qna/comments/question/:id        # Delete question comment
+DELETE /qna/comments/answer/:id          # Delete answer comment
+
+POST   /qna/users/:id/follow             # Follow user
+DELETE /qna/users/:id/follow             # Unfollow user
+GET    /qna/users/:id/followers          # Get followers
+GET    /qna/users/:id/following          # Get following
+
+GET    /qna/reputation/me                # My reputation
+GET    /qna/reputation/:userId           # User reputation
+GET    /qna/reputation/leaderboard       # Leaderboard
+GET    /qna/reputation/badges            # All badges
+GET    /qna/reputation/my-badges         # My badges
+
+POST   /qna/moderation/report            # Report content
+GET    /qna/moderation/reports           # List reports (admin)
+PATCH  /qna/moderation/reports/:id       # Review report (admin)
+POST   /qna/moderation/hide/:id          # Hide content (admin)
+DELETE /qna/moderation/content/:id       # Delete content (admin)
+
+GET    /qna/notifications/preferences    # Get notification preferences
+PATCH  /qna/notifications/preferences    # Update preferences
+
+GET    /qna/analytics/overview           # Analytics overview
+GET    /qna/analytics/categories         # Category distribution
+GET    /qna/analytics/top-users          # Top contributors
+
+GET    /qna/questions/:id/share-link     # Get share link
+GET    /qna/questions/:id/share-metadata # Get share metadata
+
 # Quotas
 GET    /quota                            # Current user
 GET    /quotas                           # Admin: all quotas
@@ -534,12 +607,20 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 | Feature Flags | ✅ Complete | 8 |
 | Audit Logging | ✅ Complete | 8 |
 
+### Recently Added Features ✨
+
+| Feature | Status | Date |
+|---------|--------|------|
+| Q&A Community Platform | ✅ Complete | Oct 2025 |
+| Reputation & Badge System | ✅ Complete | Oct 2025 |
+| Content Moderation | ✅ Complete | Oct 2025 |
+| Analytics & Sharing | ✅ Complete | Oct 2025 |
+
 ### Optional Enhancements 🔮
 
 - [ ] Pregnancy Module (full implementation)
 - [ ] English Localization
 - [ ] Wearable Integration
-- [ ] Community Features
 - [ ] Advanced Analytics Dashboard
 - [ ] Export to PDF/CSV
 

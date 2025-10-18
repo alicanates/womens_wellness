@@ -39,10 +39,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="reminders"
+        name="community"
         options={{
-          title: 'Hatırlatıcılar',
-          tabBarIcon: ({ color }) => <TabBarIcon name="bell" color={color} />,
+          title: 'Topluluk',
+          tabBarIcon: ({ color }) => <TabBarIcon name="help" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="qna"
+        options={{
+          href: null, // Hide old QnA tab
         }}
       />
       <Tabs.Screen
@@ -50,6 +56,12 @@ export default function TabLayout() {
         options={{
           title: 'NOVA',
           tabBarIcon: ({ color }) => <TabBarIcon name="chatbubble" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="reminders"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
@@ -62,7 +74,7 @@ function TabBarIcon(props: { name: string; color: string }) {
   const icons: Record<string, string> = {
     home: '🏠',
     calendar: '📅',
-    bell: '🔔',
+    help: '❓',
     chatbubble: '💬',
   };
 

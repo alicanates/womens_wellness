@@ -137,6 +137,18 @@ export class UsersService {
         include: {
           profile: true,
           subscription: true,
+          _count: {
+            select: {
+              periodCycles: true,
+              dailyLogs: true,
+              waterLogs: true,
+              reminders: true,
+              conversations: true,
+              questions: true,
+              answers: true,
+              articleInteractions: true,
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc',
@@ -162,6 +174,7 @@ export class UsersService {
 
   async updateUser(userId: string, data: any) {
     const updateData: any = {};
+    const profileData: any = {};
 
     // Check for email uniqueness if email is being updated
     if (data.email) {
@@ -176,15 +189,56 @@ export class UsersService {
       updateData.email = data.email;
     }
 
+    // User fields
     if (data.status) updateData.status = data.status;
+    if (data.username !== undefined) updateData.username = data.username;
+    if (data.isAdmin !== undefined) updateData.isAdmin = data.isAdmin;
+    if (data.pinEnabled !== undefined) {
+      updateData.pinEnabled = data.pinEnabled;
+      // If disabling PIN, also clear the PIN hash
+      if (data.pinEnabled === false) {
+        updateData.pinHash = null;
+      }
+    }
+
     if (data.password) {
       const bcrypt = require('bcrypt');
       updateData.password = await bcrypt.hash(data.password, 10);
     }
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: updateData,
+    // Profile fields
+    if (data.profile) {
+      if (data.profile.firstName !== undefined) profileData.firstName = data.profile.firstName;
+      if (data.profile.lastName !== undefined) profileData.lastName = data.profile.lastName;
+      if (data.profile.displayName !== undefined) profileData.displayName = data.profile.displayName;
+      if (data.profile.dateOfBirth !== undefined) profileData.dateOfBirth = data.profile.dateOfBirth ? new Date(data.profile.dateOfBirth) : null;
+      if (data.profile.heightCm !== undefined) profileData.heightCm = data.profile.heightCm;
+      if (data.profile.weightKg !== undefined) profileData.weightKg = data.profile.weightKg;
+      if (data.profile.country !== undefined) profileData.country = data.profile.country;
+      if (data.profile.timezone !== undefined) profileData.timezone = data.profile.timezone;
+    }
+
+    // Update user and profile in a transaction
+    await this.prisma.$transaction(async (tx) => {
+      // Update user fields
+      if (Object.keys(updateData).length > 0) {
+        await tx.user.update({
+          where: { id: userId },
+          data: updateData,
+        });
+      }
+
+      // Update or create profile
+      if (Object.keys(profileData).length > 0) {
+        await tx.profile.upsert({
+          where: { userId },
+          update: profileData,
+          create: {
+            userId,
+            ...profileData,
+          },
+        });
+      }
     });
 
     return this.getUserWithProfile(userId);

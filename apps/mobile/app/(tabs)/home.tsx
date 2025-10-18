@@ -17,6 +17,7 @@ import { FEATURES } from '@/types/subscription';
 import { PremiumBadge } from '@/components/premium/PremiumBadge';
 
 export default function HomeScreen() {
+  // CRITICAL: ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   const theme = useTheme();
   const { user } = useAuthStore();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -87,8 +88,12 @@ export default function HomeScreen() {
 
   const styles = createStyles(theme);
 
+  // Determine what to render (after all hooks are called)
+  const showLoading = isLoading && !snapshot;
+  const showError = isError && !snapshot;
+
   // Loading state (only show if no cached data)
-  if (isLoading && !snapshot) {
+  if (showLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.loadingContainer}>
@@ -99,7 +104,7 @@ export default function HomeScreen() {
   }
 
   // Error state (only show if no cached data)
-  if (isError && !snapshot) {
+  if (showError) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.errorContainer}>
@@ -409,7 +414,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickActionButton}
-              onPress={() => router.push('/bmi-calculator')}
+              onPress={() => router.push('/metrics')}
             >
               <Text style={styles.quickActionIcon}>⚖️</Text>
               <Text style={styles.quickActionText}>Metrikler</Text>

@@ -16,7 +16,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 @Controller('pregnancy')
 @UseGuards(AuthGuard('jwt'))
 export class PregnancyController {
-  constructor(private readonly pregnancyService: PregnancyService) {}
+  constructor(private readonly pregnancyService: PregnancyService) { }
 
   // ─────────────────────────────────────────────────────────────
   // Pregnancy Profile
@@ -335,5 +335,59 @@ export class PregnancyController {
   @Get('weekly-content')
   async getWeeklyContent(@CurrentUser() user: any) {
     return this.pregnancyService.getWeeklyContent(user.id);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Admin Endpoints
+  // ─────────────────────────────────────────────────────────────
+
+  @Get('admin/all')
+  async getAllPregnancies(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ) {
+    const parsedPage = parseInt(page, 10);
+    const parsedLimit = parseInt(limit, 10);
+    const skip = (parsedPage - 1) * parsedLimit;
+
+    const [data, total] = await Promise.all([
+      this.pregnancyService['prisma'].pregnancy.findMany({
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              username: true,
+            },
+          },
+        },
+        skip,
+        take: parsedLimit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.pregnancyService['prisma'].pregnancy.count(),
+    ]);
+
+    return { data, total, page: parsedPage, limit: parsedLimit };
+  }
+
+  @Get('admin/:id')
+  async getPregnancyById(@Param('id') id: string) {
+    return this.pregnancyService['prisma'].pregnancy.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            username: true,
+          },
+        },
+        kickCounts: { orderBy: { sessionDate: 'desc' }, take: 10 },
+        contractions: { orderBy: { startTime: 'desc' }, take: 10 },
+        appointments: { orderBy: { appointmentAt: 'desc' } },
+        medications: true,
+      },
+    });
   }
 }

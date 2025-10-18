@@ -7,7 +7,7 @@ export const authProvider: AuthProvider = {
   login: async ({ email, password }) => {
     try {
       const { data } = await axios.post(`${API_URL}/auth/login`, {
-        email,
+        identifier: email,
         password,
       });
 

@@ -6,12 +6,22 @@ export default function LoginPage() {
   return (
     <AuthPage
       type="login"
-      title="Wellness Admin"
+      title="Wellness Yönetim Paneli"
       formProps={{
         initialValues: {
-          email: 'test123@test.com',
-          password: 'testpass123',
+          email: 'admin@wellness.local',
+          password: 'admin123',
         },
+      }}
+      renderContent={(content) => {
+        return (
+          <div style={{ maxWidth: 400, margin: '0 auto' }}>
+            {content}
+            <div style={{ marginTop: 16, textAlign: 'center', color: '#666' }}>
+              <p>Wellness uygulamanızı yönetin</p>
+            </div>
+          </div>
+        );
       }}
     />
   );

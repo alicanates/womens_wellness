@@ -4,6 +4,7 @@ import {
     Post,
     Body,
     Query,
+    Param,
     UseGuards,
     Request,
     HttpCode,
@@ -421,5 +422,75 @@ export class SubscriptionController {
     @UseGuards(AuthGuard('jwt'))
     async getLTV() {
         return this.analyticsService.calculateLTV();
+    }
+
+    /**
+     * Admin: Get all subscriptions with pagination
+     */
+    @Get('admin/all')
+    @UseGuards(AuthGuard('jwt'))
+    async getAllSubscriptions(
+        @Query('page') page: string = '1',
+        @Query('limit') limit: string = '20',
+        @Query('status') status?: string,
+    ) {
+        const parsedPage = parseInt(page, 10);
+        const parsedLimit = parseInt(limit, 10);
+
+        const skip = (parsedPage - 1) * parsedLimit;
+
+        const where: any = {};
+        if (status) {
+            where.status = status;
+        }
+
+        const [data, total] = await Promise.all([
+            this.subscriptionService['prisma'].subscription.findMany({
+                where,
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            email: true,
+                            username: true,
+                        },
+                    },
+                },
+                skip,
+                take: parsedLimit,
+                orderBy: { createdAt: 'desc' },
+            }),
+            this.subscriptionService['prisma'].subscription.count({ where }),
+        ]);
+
+        return {
+            data,
+            total,
+            page: parsedPage,
+            limit: parsedLimit,
+        };
+    }
+
+    /**
+     * Admin: Get single subscription with details
+     */
+    @Get('admin/:id')
+    @UseGuards(AuthGuard('jwt'))
+    async getSubscriptionById(@Param('id') id: string) {
+        return this.subscriptionService['prisma'].subscription.findUnique({
+            where: { id },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        username: true,
+                    },
+                },
+                transactions: {
+                    orderBy: { createdAt: 'desc' },
+                },
+            },
+        });
     }
 }

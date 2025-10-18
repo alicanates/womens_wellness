@@ -27,12 +27,13 @@ const { cacheDirectory, writeAsStringAsync } = FileSystem as any;
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
-import { userService } from '@/services/api';
+import { userService, qnaService } from '@/services/api';
 import { useTheme } from '@/hooks/useTheme';
 import { PinInputModal } from '@/components/PinInputModal';
 import { PremiumBadge } from '@/components/premium/PremiumBadge';
 import { GracePeriodBanner } from '@/components/premium/GracePeriodBanner';
 import { usePremium } from '@/hooks/usePremium';
+import type { QnaQuota } from '@/types/qna';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -55,6 +56,13 @@ export default function SettingsScreen() {
 
   // Premium subscription hook
   const { subscription, isPremium, isLoading: isPremiumLoading } = usePremium();
+
+  // QnA quota query
+  const { data: qnaQuota } = useQuery<QnaQuota>({
+    queryKey: ['qna-quota'],
+    queryFn: () => qnaService.getQuota(),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
 
   const { data: userData, isLoading, refetch } = useQuery({
     queryKey: ['me'],
@@ -438,19 +446,13 @@ export default function SettingsScreen() {
   };
 
   const handlePrivacyPolicy = () => {
-    // TODO: Replace with actual privacy policy URL when available
-    const url = 'https://example.com/privacy-policy';
-    Linking.openURL(url).catch(() => {
-      Alert.alert('Hata', 'Gizlilik politikası açılamadı');
-    });
+    console.log('Navigating to privacy policy page');
+    router.push('/privacy-policy');
   };
 
   const handleTermsOfUse = () => {
-    // TODO: Replace with actual terms of use URL when available
-    const url = 'https://example.com/terms-of-use';
-    Linking.openURL(url).catch(() => {
-      Alert.alert('Hata', 'Kullanım koşulları açılamadı');
-    });
+    console.log('Navigating to terms of use page');
+    router.push('/terms-of-use');
   };
 
   const [isExporting, setIsExporting] = useState(false);
@@ -614,161 +616,51 @@ export default function SettingsScreen() {
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         {/* Profile Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Profil</Text>
-
-          {/* Profile Picture */}
-          <View style={styles.profilePictureSection}>
+          <View style={styles.profileHeader}>
             <TouchableOpacity onPress={handleProfilePicturePress}>
               <View style={styles.profileImageContainer}>
                 {profilePictureUri ? (
-                  <Image source={{ uri: profilePictureUri }} style={styles.profileImageLarge} />
+                  <Image source={{ uri: profilePictureUri }} style={styles.profileImage} />
                 ) : (
-                  <View style={styles.profilePlaceholderLarge}>
-                    <Text style={styles.profilePlaceholderTextLarge}>
+                  <View style={styles.profilePlaceholder}>
+                    <Text style={styles.profilePlaceholderText}>
                       {currentDisplayName.charAt(0).toUpperCase()}
                     </Text>
                   </View>
                 )}
                 {isPremium && (
                   <View style={styles.premiumBadgeOverlay}>
-                    <PremiumBadge size="medium" variant="icon" />
+                    <PremiumBadge size="small" variant="icon" />
                   </View>
                 )}
               </View>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleProfilePicturePress} style={styles.changePhotoButton}>
-              <Text style={styles.changePhotoText}>Fotoğrafı Değiştir</Text>
-            </TouchableOpacity>
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>
+                {firstName && lastName ? `${firstName} ${lastName}` : currentDisplayName}
+              </Text>
+              <Text style={styles.profileUsername}>@{username || 'kullaniciadi'}</Text>
+              <Text style={styles.profileEmail}>{email}</Text>
+            </View>
           </View>
 
-          {/* Profile Form */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Ad</Text>
-            <TextInput
-              style={[styles.input, !isEditingProfile && styles.inputDisabled]}
-              value={firstName}
-              onChangeText={setFirstName}
-              placeholder="Adınız"
-              placeholderTextColor={theme.colors.textLight}
-              editable={isEditingProfile}
-            />
-          </View>
+          <TouchableOpacity
+            style={styles.editProfileButton}
+            onPress={() => setIsEditingProfile(true)}
+          >
+            <Text style={styles.editProfileButtonText}>Profili Düzenle</Text>
+            <Text style={styles.settingButtonIcon}>›</Text>
+          </TouchableOpacity>
+        </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Soyad</Text>
-            <TextInput
-              style={[styles.input, !isEditingProfile && styles.inputDisabled]}
-              value={lastName}
-              onChangeText={setLastName}
-              placeholder="Soyadınız"
-              placeholderTextColor={theme.colors.textLight}
-              editable={isEditingProfile}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Kullanıcı Adı</Text>
-            <TextInput
-              style={[styles.input, !isEditingProfile && styles.inputDisabled]}
-              value={username}
-              onChangeText={setUsername}
-              placeholder="kullaniciadi"
-              placeholderTextColor={theme.colors.textLight}
-              editable={isEditingProfile}
-              autoCapitalize="none"
-            />
-            {isEditingProfile && username && username.toLowerCase() !== (userData as any)?.username?.toLowerCase() && (
-              <>
-                {checkingUsername && (
-                  <Text style={styles.helperText}>Kontrol ediliyor...</Text>
-                )}
-                {!checkingUsername && usernameAvailable === true && (
-                  <Text style={styles.successText}>✓ Kullanılabilir</Text>
-                )}
-                {!checkingUsername && usernameAvailable === false && (
-                  <Text style={styles.errorTextSmall}>✗ Bu kullanıcı adı alınmış</Text>
-                )}
-              </>
-            )}
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>E-posta</Text>
-            <TextInput
-              style={[styles.input, !isEditingProfile && styles.inputDisabled]}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="E-posta adresiniz"
-              placeholderTextColor={theme.colors.textLight}
-              editable={isEditingProfile}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Doğum Tarihi</Text>
-            {isEditingProfile ? (
-              <DatePickerButton value={birthDate} onChange={setBirthDate} theme={theme} />
-            ) : (
-              <TextInput
-                style={[styles.input, styles.inputDisabled]}
-                value={birthDate ? birthDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Belirtilmemiş'}
-                placeholderTextColor={theme.colors.textLight}
-                editable={false}
-              />
-            )}
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Boy (cm)</Text>
-            {isEditingProfile ? (
-              <NumberPickerButton
-                value={heightCm}
-                onChange={setHeightCm}
-                min={100}
-                max={250}
-                label="Boy Seçin"
-                theme={theme}
-              />
-            ) : (
-              <TextInput
-                style={[styles.input, styles.inputDisabled]}
-                value={`${heightCm} cm`}
-                placeholderTextColor={theme.colors.textLight}
-                editable={false}
-              />
-            )}
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Kilo (kg)</Text>
-            {isEditingProfile ? (
-              <NumberPickerButton
-                value={weightKg}
-                onChange={setWeightKg}
-                min={30}
-                max={200}
-                label="Kilo Seçin"
-                theme={theme}
-              />
-            ) : (
-              <TextInput
-                style={[styles.input, styles.inputDisabled]}
-                value={`${weightKg} kg`}
-                placeholderTextColor={theme.colors.textLight}
-                editable={false}
-              />
-            )}
-          </View>
-
-          {isEditingProfile ? (
-            <View style={styles.buttonGroup}>
+        {/* Profile Edit Modal */}
+        <Modal visible={isEditingProfile} animationType="slide" presentationStyle="pageSheet">
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
               <TouchableOpacity
-                style={[styles.button, styles.secondaryButton]}
                 onPress={() => {
                   setIsEditingProfile(false);
-                  // Reset values to original userData
+                  // Reset values
                   setFirstName((userData as any)?.profile?.firstName || '');
                   setLastName((userData as any)?.profile?.lastName || '');
                   setUsername((userData as any)?.username || '');
@@ -780,32 +672,136 @@ export default function SettingsScreen() {
                   }
                   setHeightCm((userData as any)?.profile?.heightCm || 165);
                   setWeightKg((userData as any)?.profile?.weightKg || 60);
-                  // Reset username check state
                   setUsernameAvailable(null);
                   setCheckingUsername(false);
                 }}
               >
-                <Text style={styles.secondaryButtonText}>İptal</Text>
+                <Text style={styles.modalCancelText}>İptal</Text>
               </TouchableOpacity>
+              <Text style={styles.modalTitle}>Profili Düzenle</Text>
               <TouchableOpacity
-                style={[styles.button, styles.primaryButton]}
                 onPress={handleSaveProfile}
                 disabled={updateProfileMutation.isPending || usernameAvailable === false || checkingUsername}
               >
-                <Text style={styles.primaryButtonText}>
+                <Text style={[styles.modalSaveText, (updateProfileMutation.isPending || usernameAvailable === false || checkingUsername) && styles.modalSaveTextDisabled]}>
                   {updateProfileMutation.isPending ? 'Kaydediliyor...' : 'Kaydet'}
                 </Text>
               </TouchableOpacity>
             </View>
-          ) : (
-            <TouchableOpacity
-              style={[styles.button, styles.primaryButton]}
-              onPress={() => setIsEditingProfile(true)}
-            >
-              <Text style={styles.primaryButtonText}>Profili Düzenle</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+
+            <ScrollView style={styles.modalContent}>
+              {/* Profile Picture */}
+              <View style={styles.modalProfilePictureSection}>
+                <TouchableOpacity onPress={handleProfilePicturePress}>
+                  <View style={styles.profileImageContainer}>
+                    {profilePictureUri ? (
+                      <Image source={{ uri: profilePictureUri }} style={styles.profileImageLarge} />
+                    ) : (
+                      <View style={styles.profilePlaceholderLarge}>
+                        <Text style={styles.profilePlaceholderTextLarge}>
+                          {currentDisplayName.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleProfilePicturePress} style={styles.changePhotoButton}>
+                  <Text style={styles.changePhotoText}>Fotoğrafı Değiştir</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Profile Form */}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Ad</Text>
+                <TextInput
+                  style={styles.input}
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  placeholder="Adınız"
+                  placeholderTextColor={theme.colors.textLight}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Soyad</Text>
+                <TextInput
+                  style={styles.input}
+                  value={lastName}
+                  onChangeText={setLastName}
+                  placeholder="Soyadınız"
+                  placeholderTextColor={theme.colors.textLight}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Kullanıcı Adı</Text>
+                <TextInput
+                  style={styles.input}
+                  value={username}
+                  onChangeText={setUsername}
+                  placeholder="kullaniciadi"
+                  placeholderTextColor={theme.colors.textLight}
+                  autoCapitalize="none"
+                />
+                {username && username.toLowerCase() !== (userData as any)?.username?.toLowerCase() && (
+                  <>
+                    {checkingUsername && (
+                      <Text style={styles.helperText}>Kontrol ediliyor...</Text>
+                    )}
+                    {!checkingUsername && usernameAvailable === true && (
+                      <Text style={styles.successText}>✓ Kullanılabilir</Text>
+                    )}
+                    {!checkingUsername && usernameAvailable === false && (
+                      <Text style={styles.errorTextSmall}>✗ Bu kullanıcı adı alınmış</Text>
+                    )}
+                  </>
+                )}
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>E-posta</Text>
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="E-posta adresiniz"
+                  placeholderTextColor={theme.colors.textLight}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Doğum Tarihi</Text>
+                <DatePickerButton value={birthDate} onChange={setBirthDate} theme={theme} />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Boy (cm)</Text>
+                <NumberPickerButton
+                  value={heightCm}
+                  onChange={setHeightCm}
+                  min={100}
+                  max={250}
+                  label="Boy Seçin"
+                  theme={theme}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Kilo (kg)</Text>
+                <NumberPickerButton
+                  value={weightKg}
+                  onChange={setWeightKg}
+                  min={30}
+                  max={200}
+                  label="Kilo Seçin"
+                  theme={theme}
+                />
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
 
         {/* Subscription Section */}
         <View style={styles.section}>
@@ -860,35 +856,48 @@ export default function SettingsScreen() {
                   </View>
                 </View>
 
-                {/* AI Quota */}
+                {/* AI Chat Quota - Premium */}
                 <View style={styles.quotaCard}>
-                  <Text style={styles.quotaLabel}>AI Mesaj Kotası</Text>
-                  <View style={styles.quotaBar}>
-                    <View
-                      style={[
-                        styles.quotaFill,
-                        {
-                          width: `${((subscription?.aiMessagesUsed || 0) /
-                            (subscription?.aiMessagesLimit || 1)) *
-                            100
-                            }%`,
-                        },
-                      ]}
-                    />
+                  <View style={styles.quotaHeader}>
+                    <Text style={styles.quotaLabel}>💬 AI Sohbet Kotası</Text>
+                    <Text style={styles.quotaBadge}>Sınırsız ✨</Text>
                   </View>
-                  <Text style={styles.quotaText}>
-                    {subscription?.aiMessagesUsed || 0} / {subscription?.aiMessagesLimit || 0}{' '}
-                    kullanıldı
+                  <Text style={styles.quotaUnlimitedText}>
+                    Premium üye olarak sınırsız AI mesajı gönderebilirsiniz
                   </Text>
-                  <Text style={styles.quotaReset}>
-                    {subscription?.quotaResetDate
-                      ? new Date(subscription.quotaResetDate).toLocaleDateString('tr-TR', {
-                        day: 'numeric',
-                        month: 'long',
-                      })
-                      : '-'}{' '}
-                    tarihinde sıfırlanır
+                  <View style={styles.quotaStatsRow}>
+                    <View style={styles.quotaStat}>
+                      <Text style={styles.quotaStatValue}>{subscription?.aiMessagesUsed || 0}</Text>
+                      <Text style={styles.quotaStatLabel}>Bu ay kullanılan</Text>
+                    </View>
+                    <View style={styles.quotaDivider} />
+                    <View style={styles.quotaStat}>
+                      <Text style={styles.quotaStatValue}>∞</Text>
+                      <Text style={styles.quotaStatLabel}>Kalan hak</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* QnA Quota - Premium */}
+                <View style={styles.quotaCard}>
+                  <View style={styles.quotaHeader}>
+                    <Text style={styles.quotaLabel}>❓ Soru Sorma Kotası</Text>
+                    <Text style={styles.quotaBadge}>Sınırsız ✨</Text>
+                  </View>
+                  <Text style={styles.quotaUnlimitedText}>
+                    Premium üye olarak sınırsız soru sorabilirsiniz
                   </Text>
+                  <View style={styles.quotaStatsRow}>
+                    <View style={styles.quotaStat}>
+                      <Text style={styles.quotaStatValue}>{qnaQuota?.questionsAsked || 0}</Text>
+                      <Text style={styles.quotaStatLabel}>Bu ay sorduğunuz</Text>
+                    </View>
+                    <View style={styles.quotaDivider} />
+                    <View style={styles.quotaStat}>
+                      <Text style={styles.quotaStatValue}>∞</Text>
+                      <Text style={styles.quotaStatLabel}>Kalan hak</Text>
+                    </View>
+                  </View>
                 </View>
               </View>
 
@@ -924,33 +933,115 @@ export default function SettingsScreen() {
               <View style={styles.freePlanCard}>
                 <Text style={styles.freePlanTitle}>Ücretsiz Plan</Text>
                 <Text style={styles.freePlanText}>Temel özelliklere erişiminiz var</Text>
+              </View>
 
-                {/* AI Quota for Free */}
-                <View style={styles.quotaCard}>
-                  <Text style={styles.quotaLabel}>AI Mesaj Kotası</Text>
-                  <View style={styles.quotaBar}>
-                    <View
-                      style={[
-                        styles.quotaFill,
-                        {
-                          width: `${((subscription?.aiMessagesUsed || 0) / 100) * 100}%`,
-                        },
-                      ]}
-                    />
+              {/* AI Chat Quota for Free */}
+              <View style={styles.quotaCard}>
+                <View style={styles.quotaHeader}>
+                  <Text style={styles.quotaLabel}>💬 AI Sohbet Kotası</Text>
+                  {((subscription?.aiMessagesUsed || 0) / (subscription?.aiMessagesLimit || 100)) >= 0.8 && (
+                    <Text style={styles.quotaWarningBadge}>
+                      {((subscription?.aiMessagesUsed || 0) / (subscription?.aiMessagesLimit || 100)) >= 1 ? 'Doldu ⚠️' : 'Azalıyor ⚡'}
+                    </Text>
+                  )}
+                </View>
+                <View style={styles.quotaBar}>
+                  <View
+                    style={[
+                      styles.quotaFill,
+                      {
+                        width: `${Math.min(((subscription?.aiMessagesUsed || 0) / (subscription?.aiMessagesLimit || 100)) * 100, 100)}%`,
+                        backgroundColor: ((subscription?.aiMessagesUsed || 0) / (subscription?.aiMessagesLimit || 100)) >= 1
+                          ? theme.colors.error
+                          : ((subscription?.aiMessagesUsed || 0) / (subscription?.aiMessagesLimit || 100)) >= 0.8
+                            ? '#F59E0B'
+                            : theme.colors.primary,
+                      },
+                    ]}
+                  />
+                </View>
+                <View style={styles.quotaStatsRow}>
+                  <View style={styles.quotaStat}>
+                    <Text style={styles.quotaStatValue}>{subscription?.aiMessagesUsed || 0}</Text>
+                    <Text style={styles.quotaStatLabel}>Kullanılan</Text>
                   </View>
-                  <Text style={styles.quotaText}>
-                    {subscription?.aiMessagesUsed || 0} / 100 kullanıldı
-                  </Text>
-                  <Text style={styles.quotaReset}>
-                    {subscription?.quotaResetDate
+                  <View style={styles.quotaDivider} />
+                  <View style={styles.quotaStat}>
+                    <Text style={[
+                      styles.quotaStatValue,
+                      ((subscription?.aiMessagesUsed || 0) >= (subscription?.aiMessagesLimit || 100)) && styles.quotaStatValueDepleted
+                    ]}>
+                      {Math.max((subscription?.aiMessagesLimit || 100) - (subscription?.aiMessagesUsed || 0), 0)}
+                    </Text>
+                    <Text style={styles.quotaStatLabel}>Kalan hak</Text>
+                  </View>
+                </View>
+                <Text style={styles.quotaReset}>
+                  {subscription?.quotaResetDate
+                    ? new Date(subscription.quotaResetDate).toLocaleDateString('tr-TR', {
+                      day: 'numeric',
+                      month: 'long',
+                    })
+                    : '-'}{' '}
+                  tarihinde sıfırlanır
+                </Text>
+              </View>
+
+              {/* QnA Quota for Free */}
+              <View style={styles.quotaCard}>
+                <View style={styles.quotaHeader}>
+                  <Text style={styles.quotaLabel}>❓ Soru Sorma Kotası</Text>
+                  {qnaQuota && (qnaQuota.questionsAsked / qnaQuota.limit) >= 0.8 && (
+                    <Text style={styles.quotaWarningBadge}>
+                      {(qnaQuota.remaining ?? (qnaQuota.limit - qnaQuota.questionsAsked)) <= 0 ? 'Doldu ⚠️' : 'Azalıyor ⚡'}
+                    </Text>
+                  )}
+                </View>
+                <View style={styles.quotaBar}>
+                  <View
+                    style={[
+                      styles.quotaFill,
+                      {
+                        width: `${Math.min(((qnaQuota?.questionsAsked || 0) / (qnaQuota?.limit || 5)) * 100, 100)}%`,
+                        backgroundColor: qnaQuota && (qnaQuota.remaining ?? (qnaQuota.limit - qnaQuota.questionsAsked)) <= 0
+                          ? theme.colors.error
+                          : qnaQuota && (qnaQuota.questionsAsked / qnaQuota.limit) >= 0.8
+                            ? '#F59E0B'
+                            : theme.colors.primary,
+                      },
+                    ]}
+                  />
+                </View>
+                <View style={styles.quotaStatsRow}>
+                  <View style={styles.quotaStat}>
+                    <Text style={styles.quotaStatValue}>{qnaQuota?.questionsAsked || 0}</Text>
+                    <Text style={styles.quotaStatLabel}>Sorduğunuz</Text>
+                  </View>
+                  <View style={styles.quotaDivider} />
+                  <View style={styles.quotaStat}>
+                    <Text style={[
+                      styles.quotaStatValue,
+                      qnaQuota && (qnaQuota.remaining ?? (qnaQuota.limit - qnaQuota.questionsAsked)) <= 0 && styles.quotaStatValueDepleted
+                    ]}>
+                      {qnaQuota?.remaining ?? (qnaQuota ? qnaQuota.limit - qnaQuota.questionsAsked : 5)}
+                    </Text>
+                    <Text style={styles.quotaStatLabel}>Kalan hak</Text>
+                  </View>
+                </View>
+                <Text style={styles.quotaReset}>
+                  {qnaQuota?.resetsAt
+                    ? new Date(qnaQuota.resetsAt).toLocaleDateString('tr-TR', {
+                      day: 'numeric',
+                      month: 'long',
+                    })
+                    : subscription?.quotaResetDate
                       ? new Date(subscription.quotaResetDate).toLocaleDateString('tr-TR', {
                         day: 'numeric',
                         month: 'long',
                       })
                       : '-'}{' '}
-                    tarihinde sıfırlanır
-                  </Text>
-                </View>
+                  tarihinde sıfırlanır
+                </Text>
               </View>
 
               {/* Upgrade CTA */}
@@ -1005,18 +1096,21 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        {/* Privacy & Data Section */}
+        {/* Data & Privacy Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Gizlilik ve Veri</Text>
+          <Text style={styles.sectionTitle}>Veri ve Gizlilik</Text>
 
-          <TouchableOpacity style={styles.settingButton} onPress={handlePrivacyPolicy}>
-            <Text style={styles.settingButtonText}>Gizlilik Politikası</Text>
-            <Text style={styles.settingButtonIcon}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.settingButton} onPress={handleTermsOfUse}>
-            <Text style={styles.settingButtonText}>Kullanım Koşulları</Text>
-            <Text style={styles.settingButtonIcon}>›</Text>
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={handleSyncData}
+            disabled={isSyncing}
+          >
+            <Text style={styles.settingButtonText}>Verileri Senkronize Et</Text>
+            {isSyncing ? (
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+            ) : (
+              <Text style={styles.settingButtonIcon}>🔄</Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -1028,36 +1122,18 @@ export default function SettingsScreen() {
             {isExporting ? (
               <ActivityIndicator size="small" color={theme.colors.primary} />
             ) : (
-              <Text style={styles.settingButtonIcon}>›</Text>
+              <Text style={styles.settingButtonIcon}>📥</Text>
             )}
           </TouchableOpacity>
-        </View>
 
-        {/* Data Backup & Sync Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Yedekleme ve Senkronizasyon</Text>
+          <TouchableOpacity style={styles.settingButton} onPress={handlePrivacyPolicy}>
+            <Text style={styles.settingButtonText}>Gizlilik Politikası</Text>
+            <Text style={styles.settingButtonIcon}>›</Text>
+          </TouchableOpacity>
 
-          <View style={styles.infoCard}>
-            <Text style={styles.infoCardIcon}>☁️</Text>
-            <View style={styles.infoCardContent}>
-              <Text style={styles.infoCardTitle}>Otomatik Yedekleme Aktif</Text>
-              <Text style={styles.infoCardText}>
-                Tüm verileriniz güvenli bir şekilde bulutta saklanıyor. Yeni bir cihazda oturum açtığınızda verileriniz otomatik olarak yüklenir.
-              </Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.settingButton}
-            onPress={handleSyncData}
-            disabled={isSyncing}
-          >
-            <Text style={styles.settingButtonText}>Şimdi Senkronize Et</Text>
-            {isSyncing ? (
-              <ActivityIndicator size="small" color={theme.colors.primary} />
-            ) : (
-              <Text style={styles.settingButtonIcon}>🔄</Text>
-            )}
+          <TouchableOpacity style={styles.settingButton} onPress={handleTermsOfUse}>
+            <Text style={styles.settingButtonText}>Kullanım Koşulları</Text>
+            <Text style={styles.settingButtonIcon}>›</Text>
           </TouchableOpacity>
         </View>
 
@@ -1421,25 +1497,121 @@ const createStyles = (theme: any) =>
       color: theme.colors.text,
       marginBottom: theme.spacing.md,
     },
-    profilePictureSection: {
+    profileHeader: {
+      flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
+      gap: theme.spacing.md,
     },
     profileImageContainer: {
       position: 'relative',
     },
+    profileImage: {
+      width: 70,
+      height: 70,
+      borderRadius: 35,
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+    },
+    profilePlaceholder: {
+      width: 70,
+      height: 70,
+      borderRadius: 35,
+      backgroundColor: theme.colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+    },
+    profilePlaceholderText: {
+      color: theme.colors.textOnPrimary,
+      fontSize: 28,
+      fontWeight: '700',
+    },
     premiumBadgeOverlay: {
       position: 'absolute',
-      bottom: 0,
-      right: 0,
+      bottom: -2,
+      right: -2,
       backgroundColor: theme.colors.background,
-      borderRadius: 16,
-      padding: 4,
+      borderRadius: 12,
+      padding: 2,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.2,
       shadowRadius: 4,
       elevation: 4,
+    },
+    profileInfo: {
+      flex: 1,
+    },
+    profileName: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.colors.text,
+      marginBottom: 2,
+    },
+    profileUsername: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      marginBottom: 2,
+    },
+    profileEmail: {
+      fontSize: 13,
+      color: theme.colors.textSecondary,
+    },
+    editProfileButton: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: theme.colors.backgroundCard,
+      borderRadius: 12,
+      padding: theme.spacing.md,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    editProfileButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
+    modalContainer: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: theme.colors.text,
+    },
+    modalCancelText: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+    },
+    modalSaveText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.colors.primary,
+    },
+    modalSaveTextDisabled: {
+      opacity: 0.5,
+    },
+    modalContent: {
+      flex: 1,
+      paddingHorizontal: theme.spacing.lg,
+      paddingTop: theme.spacing.lg,
+    },
+    modalProfilePictureSection: {
+      alignItems: 'center',
+      marginBottom: theme.spacing.xl,
     },
     profileImageLarge: {
       width: 120,
@@ -1687,35 +1859,90 @@ const createStyles = (theme: any) =>
     quotaCard: {
       backgroundColor: theme.colors.overlay,
       borderRadius: 12,
-      padding: theme.spacing.md,
+      padding: theme.spacing.sm,
+      marginBottom: theme.spacing.sm,
+    },
+    quotaHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.xs,
     },
     quotaLabel: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '600',
       color: theme.colors.text,
+    },
+    quotaBadge: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: theme.colors.primary,
+      backgroundColor: theme.colors.primary + '20',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    quotaWarningBadge: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#F59E0B',
+      backgroundColor: '#FEF3C7',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    quotaUnlimitedText: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
       marginBottom: theme.spacing.sm,
     },
     quotaBar: {
-      height: 8,
+      height: 6,
       backgroundColor: theme.colors.border,
-      borderRadius: 4,
+      borderRadius: 3,
       overflow: 'hidden',
-      marginBottom: theme.spacing.xs,
+      marginBottom: theme.spacing.sm,
     },
     quotaFill: {
       height: '100%',
       backgroundColor: theme.colors.primary,
-      borderRadius: 4,
+      borderRadius: 3,
     },
-    quotaText: {
-      fontSize: 13,
+    quotaStatsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-around',
+      marginBottom: theme.spacing.xs,
+    },
+    quotaStat: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    quotaStatValue: {
+      fontSize: 20,
+      fontWeight: '700',
       color: theme.colors.text,
-      fontWeight: '600',
-      marginBottom: 4,
+      marginBottom: 2,
+    },
+    quotaStatValueDepleted: {
+      color: theme.colors.error,
+    },
+    quotaStatLabel: {
+      fontSize: 11,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
+    quotaDivider: {
+      width: 1,
+      height: 32,
+      backgroundColor: theme.colors.border,
+      marginHorizontal: theme.spacing.sm,
     },
     quotaReset: {
-      fontSize: 12,
+      fontSize: 11,
       color: theme.colors.textSecondary,
+      textAlign: 'center',
+      marginTop: 2,
     },
     freePlanCard: {
       backgroundColor: theme.colors.backgroundCard,

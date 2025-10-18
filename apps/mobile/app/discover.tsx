@@ -146,34 +146,37 @@ export default function DiscoverScreen() {
                     </View>
                 </View>
 
-                {/* Category Pills - Instagram style */}
+                {/* Category Pills */}
                 {activeTab === 'all' && (
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.categoriesContainer}
-                    >
-                        {CATEGORIES.map((category) => (
-                            <TouchableOpacity
-                                key={category.id}
-                                style={[
-                                    styles.categoryPill,
-                                    selectedCategory === category.id && styles.categoryPillActive,
-                                ]}
-                                onPress={() => handleCategoryChange(category.id)}
-                            >
-                                <Text style={styles.categoryEmoji}>{category.emoji}</Text>
-                                <Text
+                    <View style={styles.categoriesWrapper}>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.categoriesContainer}
+                        >
+                            {CATEGORIES.map((category) => (
+                                <TouchableOpacity
+                                    key={category.id}
                                     style={[
-                                        styles.categoryPillText,
-                                        selectedCategory === category.id && styles.categoryPillTextActive,
+                                        styles.categoryPill,
+                                        selectedCategory === category.id && styles.categoryPillActive,
                                     ]}
+                                    onPress={() => handleCategoryChange(category.id)}
+                                    activeOpacity={0.7}
                                 >
-                                    {category.label.split(' ')[1]}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
+                                    <Text style={styles.categoryEmoji}>{category.emoji}</Text>
+                                    <Text
+                                        style={[
+                                            styles.categoryPillText,
+                                            selectedCategory === category.id && styles.categoryPillTextActive,
+                                        ]}
+                                    >
+                                        {category.label.replace(/^[^\s]+\s/, '')}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
                 )}
 
                 {/* Articles List */}
@@ -345,21 +348,24 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
         tabTextActive: {
             color: theme.colors.textOnPrimary,
         },
+        categoriesWrapper: {
+            paddingVertical: theme.spacing.md,
+        },
         categoriesContainer: {
-            paddingHorizontal: theme.spacing.md,
-            paddingVertical: theme.spacing.sm,
-            gap: theme.spacing.xs,
+            paddingHorizontal: theme.spacing.lg,
+            gap: theme.spacing.sm,
         },
         categoryPill: {
             flexDirection: 'row',
             alignItems: 'center',
-            paddingHorizontal: theme.spacing.md,
-            paddingVertical: theme.spacing.xs,
-            borderRadius: 20,
-            backgroundColor: theme.colors.backgroundCard,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            gap: theme.spacing.xs,
+            justifyContent: 'center',
+            paddingHorizontal: 20,
+            paddingVertical: 12,
+            borderRadius: 25,
+            backgroundColor: '#F5F5F5',
+            borderWidth: 2,
+            borderColor: '#E0E0E0',
+            minWidth: 100,
         },
         categoryPillActive: {
             backgroundColor: theme.colors.primary,
@@ -367,14 +373,15 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
         },
         categoryEmoji: {
             fontSize: 16,
+            marginRight: 6,
         },
         categoryPillText: {
-            fontSize: 13,
-            fontWeight: '600',
-            color: theme.colors.text,
+            fontSize: 15,
+            fontWeight: '700',
+            color: '#333333',
         },
         categoryPillTextActive: {
-            color: theme.colors.textOnPrimary,
+            color: '#FFFFFF',
         },
         gridRow: {
             gap: theme.spacing.xs,
