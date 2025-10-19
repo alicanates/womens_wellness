@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import type { AuthTokens, AuthUser } from '@/types/auth';
 import { queryClient } from '@/lib/queryClient';
 import { subscriptionSyncService } from '@/services/subscriptionSync';
+import { authEvents } from '@/services/authEvents';
 
 interface AuthState {
   user: AuthUser | null;
@@ -129,5 +130,31 @@ export const useAuthStore = create<AuthState>((set) => ({
       console.error('Failed to initialize auth:', error);
       set({ isLoading: false });
     }
+
+    // Subscribe to auth events from api.ts
+    authEvents.subscribe(async () => {
+      const accessToken = await SecureStore.getItemAsync('accessToken');
+      const refreshToken = await SecureStore.getItemAsync('refreshToken');
+      const userStr = await SecureStore.getItemAsync('user');
+
+      if (accessToken && refreshToken && userStr) {
+        // Tokens were refreshed
+        const user = JSON.parse(userStr);
+        set({
+          user,
+          accessToken,
+          refreshToken,
+          isAuthenticated: true,
+        });
+      } else {
+        // Auth was cleared
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false,
+        });
+      }
+    });
   },
 }));

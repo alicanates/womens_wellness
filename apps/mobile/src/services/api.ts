@@ -1,6 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
 import type { AuthResponse, AuthTokens } from '@/types/auth';
-import { useAuthStore } from '@/store/authStore';
 import type {
   Subscription,
   Product,
@@ -10,6 +9,7 @@ import type {
   PurchaseRequest,
   RestoreRequest,
 } from '@/types/subscription';
+import { authEvents } from './authEvents';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:4000';
 
@@ -81,13 +81,8 @@ class ApiClient {
         await SecureStore.deleteItemAsync('accessToken');
         await SecureStore.deleteItemAsync('refreshToken');
         await SecureStore.deleteItemAsync('user');
-        // Clear auth state in store
-        useAuthStore.setState({
-          user: null,
-          accessToken: null,
-          refreshToken: null,
-          isAuthenticated: false,
-        });
+        // Emit auth cleared event so authStore can update
+        authEvents.emit();
         throw new Error('Oturum süresi doldu. Lütfen tekrar giriş yapın.');
       }
     }
@@ -143,11 +138,8 @@ class ApiClient {
 
       await SecureStore.setItemAsync('accessToken', response.accessToken);
       await SecureStore.setItemAsync('refreshToken', response.refreshToken);
-      useAuthStore.setState((state) => ({
-        ...state,
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-      }));
+      // Emit token refreshed event so authStore can update
+      authEvents.emit();
 
       return true;
     } catch (error) {

@@ -5,6 +5,7 @@ import { Answer, VoteType, AnswerComment } from '@/types/qna';
 import { VoteButton } from './VoteButton';
 import { CommentList } from './CommentList';
 import { CommentInput } from './CommentInput';
+import { OptimizedAvatar } from './OptimizedAvatar';
 import { memo, useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { haptics } from '@/utils/haptics';
@@ -112,13 +113,14 @@ export function AnswerCard({
                 {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.authorInfo}>
-                        <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>
-                                {answer.user?.displayName?.charAt(0).toUpperCase() || '?'}
-                            </Text>
-                        </View>
+                        <OptimizedAvatar
+                            imageUrl={answer.user?.profilePictureUrl}
+                            displayName={answer.user?.displayName}
+                            size={36}
+                            isAnonymous={false}
+                        />
                         <View>
-                            <Text style={styles.authorName}>{answer.user?.displayName}</Text>
+                            <Text style={styles.authorName}>{answer.user?.displayName || 'Anonim Kullanıcı'}</Text>
                             {answer.user?.reputation !== undefined && (
                                 <Text style={styles.reputation}>
                                     {answer.user.reputation} puan

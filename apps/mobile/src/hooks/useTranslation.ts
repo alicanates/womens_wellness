@@ -5,7 +5,7 @@
  */
 
 import { useMemo } from 'react';
-import { translations, interpolate } from '@repo/i18n';
+import { translations, interpolate } from '@wellness/i18n';
 
 type Language = 'tr' | 'en';
 

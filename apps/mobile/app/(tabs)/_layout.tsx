@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Platform, Text } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 
 export default function TabLayout() {
@@ -9,12 +9,20 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.textSecondary,
+        tabBarInactiveTintColor: theme.colors.textLight,
         headerShown: false,
         tabBarStyle: {
           backgroundColor: theme.colors.backgroundCard,
           borderTopColor: theme.colors.border,
-          borderTopWidth: 1,
+          borderTopWidth: 0.5,
+          height: Platform.OS === 'ios' ? 88 : 65,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 8,
+          paddingTop: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 8,
           ...Platform.select({
             ios: {
               position: 'absolute',
@@ -22,27 +30,65 @@ export default function TabLayout() {
             default: {},
           }),
         },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+          marginTop: 2,
+        },
       }}
     >
       <Tabs.Screen
         name="home"
         options={{
           title: 'Ana Sayfa',
-          tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+          tabBarIcon: ({ focused }) => (
+            <View style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: focused ? theme.colors.primary + '20' : 'transparent',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Text style={{ fontSize: 20 }}>🏠</Text>
+            </View>
+          ),
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
           title: 'Takvim',
-          tabBarIcon: ({ color }) => <TabBarIcon name="calendar" color={color} />,
+          tabBarIcon: ({ focused }) => (
+            <View style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: focused ? theme.colors.primary + '20' : 'transparent',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Text style={{ fontSize: 20 }}>📅</Text>
+            </View>
+          ),
         }}
       />
       <Tabs.Screen
         name="community"
         options={{
           title: 'Topluluk',
-          tabBarIcon: ({ color }) => <TabBarIcon name="help" color={color} />,
+          tabBarIcon: ({ focused }) => (
+            <View style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: focused ? theme.colors.primary + '20' : 'transparent',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Text style={{ fontSize: 20 }}>👥</Text>
+            </View>
+          ),
         }}
       />
       <Tabs.Screen
@@ -55,7 +101,18 @@ export default function TabLayout() {
         name="chat"
         options={{
           title: 'NOVA',
-          tabBarIcon: ({ color }) => <TabBarIcon name="chatbubble" color={color} />,
+          tabBarIcon: ({ focused }) => (
+            <View style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: focused ? theme.colors.primary + '20' : 'transparent',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Text style={{ fontSize: 20 }}>✨</Text>
+            </View>
+          ),
         }}
       />
       <Tabs.Screen
@@ -68,17 +125,4 @@ export default function TabLayout() {
   );
 }
 
-// Simple icon component (you can replace with actual icons later)
-function TabBarIcon(props: { name: string; color: string }) {
-  // For now, just render emoji icons
-  const icons: Record<string, string> = {
-    home: '🏠',
-    calendar: '📅',
-    help: '❓',
-    chatbubble: '💬',
-  };
 
-  return (
-    <Text style={{ fontSize: 24 }}>{icons[props.name] || '•'}</Text>
-  );
-}

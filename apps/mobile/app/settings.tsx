@@ -59,9 +59,11 @@ export default function SettingsScreen() {
 
   // QnA quota query
   const { data: qnaQuota } = useQuery<QnaQuota>({
-    queryKey: ['qna-quota'],
+    queryKey: ['qna', 'quota'],
     queryFn: () => qnaService.getQuota(),
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: 'always', // Always refetch on component mount
+    refetchOnWindowFocus: true, // Refetch when window gains focus
   });
 
   const { data: userData, isLoading, refetch } = useQuery({
@@ -1096,6 +1098,33 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        {/* Gamification Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🎮 Eğlenceli & Motivasyon</Text>
+
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={() => router.push('/gamification' as any)}
+          >
+            <View style={styles.settingButtonContent}>
+              <Text style={styles.settingButtonText}>Başarılarım & Rozetler</Text>
+              <Text style={styles.settingButtonSubtext}>Seviye, streak ve rozetlerinizi görün</Text>
+            </View>
+            <Text style={styles.settingButtonIcon}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={() => router.push('/fun-notifications' as any)}
+          >
+            <View style={styles.settingButtonContent}>
+              <Text style={styles.settingButtonText}>😊 Mizahi Bildirimler</Text>
+              <Text style={styles.settingButtonSubtext}>Eğlenceli mesajlar ve motivasyon</Text>
+            </View>
+            <Text style={styles.settingButtonIcon}>›</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Data & Privacy Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Veri ve Gizlilik</Text>
@@ -1729,10 +1758,18 @@ const createStyles = (theme: any) =>
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
     },
+    settingButtonContent: {
+      flex: 1,
+    },
     settingButtonText: {
       fontSize: 16,
       fontWeight: '600',
       color: theme.colors.text,
+    },
+    settingButtonSubtext: {
+      fontSize: 13,
+      color: theme.colors.textSecondary,
+      marginTop: 2,
     },
     settingButtonValue: {
       fontSize: 16,

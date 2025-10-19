@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useCallback } from 'react';
@@ -15,6 +16,8 @@ import { usePremium } from '@/hooks/usePremium';
 import { PremiumFeatureGate } from '@/components/premium/PremiumFeatureGate';
 import { FEATURES } from '@/types/subscription';
 import { PremiumBadge } from '@/components/premium/PremiumBadge';
+import { GamificationCard } from '@/components/home/GamificationCard';
+import { FunNotificationExample } from '@/components/notifications';
 
 export default function HomeScreen() {
   // CRITICAL: ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
@@ -180,22 +183,42 @@ export default function HomeScreen() {
         </View>
 
         {/* Greeting Card */}
-        <View style={styles.greetingCard}>
-          <View style={styles.greetingOverlay} />
-          <View style={styles.greetingContent}>
-            <Text style={styles.userName}>{snapshot?.user.displayName || 'Misafir'}</Text>
-            <Text style={styles.greetingTitle}>{getGreeting()}</Text>
-            <Text style={styles.greetingQuestion}>Bugün Nasılsın?</Text>
-          </View>
-          <Image
-            source={
+        <View style={styles.greetingCardContainer}>
+          <LinearGradient
+            colors={
               new Date().getHours() >= 20 || new Date().getHours() < 6
-                ? require('../../assets/images/mascots/GoodNight.png')
-                : require('../../assets/images/mascots/Morning.png')
+                ? ['#4C1D95', '#6D28D9', '#7C3AED'] as const
+                : ['#0EA5E9', '#38BDF8', '#7DD3FC'] as const
             }
-            style={styles.mascotImage}
-            resizeMode="contain"
-          />
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.greetingCard}
+          >
+            {/* Decorative pattern */}
+            <View style={styles.greetingPattern}>
+              <Text style={styles.greetingPatternEmoji}>
+                {new Date().getHours() >= 20 || new Date().getHours() < 6 ? '🌙' : '☀️'}
+              </Text>
+              <Text style={styles.greetingPatternEmoji}>
+                {new Date().getHours() >= 20 || new Date().getHours() < 6 ? '⭐' : '☁️'}
+              </Text>
+            </View>
+
+            <View style={styles.greetingContent}>
+              <Text style={styles.userName}>{snapshot?.user.displayName || 'Misafir'}</Text>
+              <Text style={styles.greetingTitle}>{getGreeting()}</Text>
+              <Text style={styles.greetingQuestion}>Bugün Nasılsın?</Text>
+            </View>
+            <Image
+              source={
+                new Date().getHours() >= 20 || new Date().getHours() < 6
+                  ? require('../../assets/images/mascots/GoodNight.png')
+                  : require('../../assets/images/mascots/Morning.png')
+              }
+              style={styles.mascotImage}
+              resizeMode="contain"
+            />
+          </LinearGradient>
         </View>
 
         {/* Streak Chip */}
@@ -204,11 +227,22 @@ export default function HomeScreen() {
             <StreakChip
               current={snapshot.streak.current}
               longest={snapshot.streak.longest}
+              cycleDay={snapshot.todaySnapshot?.cycleDay}
               onPress={() => {
                 // Show streak details modal
               }}
             />
           </View>
+        )}
+
+        {/* Fun Notifications - Streak'in hemen altında */}
+        {snapshot?.streak && (
+          <FunNotificationExample
+            streakDay={snapshot.streak.current}
+            dataEntryCount={snapshot.todaySnapshot.dataEntriesCount || 0}
+            isPeriodWeek={snapshot.todaySnapshot.cycleDay ? snapshot.todaySnapshot.cycleDay >= 1 && snapshot.todaySnapshot.cycleDay <= 7 : false}
+            autoShow={true}
+          />
         )}
 
         {/* Zone B: Today at a Glance (Status Pills) */}
@@ -225,7 +259,9 @@ export default function HomeScreen() {
 
           return (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Bugün Bir Bakışta</Text>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Bugünkü Durumun 🌸</Text>
+              </View>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -272,86 +308,60 @@ export default function HomeScreen() {
           );
         })()}
 
-        {/* Wellness Tiles - 2x2 Grid - Premium Feature (Advanced Analytics) */}
+        {/* Wellness Tiles - 2x2 Grid */}
         {snapshot?.wellnessTiles && (
           <View style={styles.section}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>İyilik Hali</Text>
-              {!isPremium && (
-                <TouchableOpacity
-                  onPress={() => router.push('/premium')}
-                  style={styles.premiumBadgeButton}
-                >
-                  <PremiumBadge size="small" variant="text" />
-                </TouchableOpacity>
-              )}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Bugünkü Aktiviteler 💫</Text>
             </View>
-            <PremiumFeatureGate
-              feature={FEATURES.ADVANCED_ANALYTICS}
-              featureDescription="Detaylı iyilik hali analizleri premium kullanıcılara özeldir. Premium'a geçerek gelişmiş sağlık takibinden yararlanın."
-            >
-              <View style={styles.tilesGrid}>
-                {/* Top Row: Water + Steps */}
-                <View style={styles.tilesRow}>
-                  <View style={styles.tileWrapper}>
-                    <WaterTile data={snapshot.todaySnapshot.waterProgress} />
-                  </View>
-                  <View style={styles.tileWrapper}>
-                    <StepsTile data={snapshot.wellnessTiles.steps} />
-                  </View>
+            <View style={styles.tilesGrid}>
+              {/* Top Row: Water + Steps */}
+              <View style={styles.tilesRow}>
+                <View style={styles.tileWrapper}>
+                  <WaterTile data={snapshot.todaySnapshot.waterProgress} />
                 </View>
-
-                {/* Bottom Row: Meditation + Sleep */}
-                <View style={styles.tilesRow}>
-                  <View style={styles.tileWrapper}>
-                    <MeditationTile data={snapshot.wellnessTiles.meditation} />
-                  </View>
-                  <View style={styles.tileWrapper}>
-                    <SleepTile data={snapshot.wellnessTiles.sleep} />
-                  </View>
+                <View style={styles.tileWrapper}>
+                  <StepsTile data={snapshot.wellnessTiles.steps} />
                 </View>
               </View>
-            </PremiumFeatureGate>
+
+              {/* Bottom Row: Meditation + Sleep */}
+              <View style={styles.tilesRow}>
+                <View style={styles.tileWrapper}>
+                  <MeditationTile data={snapshot.wellnessTiles.meditation} />
+                </View>
+                <View style={styles.tileWrapper}>
+                  <SleepTile data={snapshot.wellnessTiles.sleep} />
+                </View>
+              </View>
+            </View>
           </View>
         )}
 
-        {/* Zone C: Priority Cards - Premium Feature (Insights) */}
+        {/* Zone C: Priority Cards */}
         <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Öncelikler</Text>
-            {!isPremium && (
-              <TouchableOpacity
-                onPress={() => router.push('/premium')}
-                style={styles.premiumBadgeButton}
-              >
-                <PremiumBadge size="small" variant="text" />
-              </TouchableOpacity>
-            )}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Senin İçin Öneriler 💝</Text>
           </View>
-          <PremiumFeatureGate
-            feature={FEATURES.INSIGHTS}
-            featureDescription="Kişiselleştirilmiş öncelikler ve içgörüler premium kullanıcılara özeldir. Premium'a geçerek size özel önerilerden yararlanın."
-          >
-            {(() => {
-              const visibleCards = snapshot?.priorityCards
-                ?.filter((card) => !sessionDismissedCards.has(card.id))
-                .slice(0, 4) || [];
+          {(() => {
+            const visibleCards = snapshot?.priorityCards
+              ?.filter((card) => !sessionDismissedCards.has(card.id))
+              .slice(0, 4) || [];
 
-              return visibleCards.length > 0 ? (
-                visibleCards.map((card) => (
-                  <PriorityCard
-                    key={card.id}
-                    card={card}
-                    onDismiss={() => dismissCardMutation.mutate(card.id)}
-                  />
-                ))
-              ) : (
-                <View style={styles.emptyCard}>
-                  <Text style={styles.emptyText}>Harika! Şu an için öncelikli bir şey yok.</Text>
-                </View>
-              );
-            })()}
-          </PremiumFeatureGate>
+            return visibleCards.length > 0 ? (
+              visibleCards.map((card) => (
+                <PriorityCard
+                  key={card.id}
+                  card={card}
+                  onDismiss={() => dismissCardMutation.mutate(card.id)}
+                />
+              ))
+            ) : (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyText}>Harika! Şu an için öncelikli bir şey yok.</Text>
+              </View>
+            );
+          })()}
         </View>
 
         {/* Zone D: Keşfet Section */}
@@ -363,12 +373,18 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.discoverSquareCard}
               onPress={() => router.push('/discover')}
+              activeOpacity={0.85}
             >
-              <View style={styles.discoverSquareCardGradient}>
+              <LinearGradient
+                colors={['#FFE66D', '#FFB84D']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.discoverSquareCardGradient}
+              >
                 <Text style={styles.discoverSquareCardIcon}>📖</Text>
                 <Text style={styles.discoverSquareCardTitle}>Bilgiler</Text>
                 <Text style={styles.discoverSquareCardSubtitle}>Sağlık rehberleri</Text>
-              </View>
+              </LinearGradient>
             </TouchableOpacity>
 
             {/* Astroloji Card */}
@@ -378,19 +394,27 @@ export default function HomeScreen() {
                 // Navigate to astrology section
                 router.push('/astrology');
               }}
+              activeOpacity={0.85}
             >
-              <View style={[styles.discoverSquareCardGradient, styles.astrologyCardGradient]}>
+              <LinearGradient
+                colors={['#C4B5FD', '#A78BFA']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.discoverSquareCardGradient}
+              >
                 <Text style={styles.discoverSquareCardIcon}>✨</Text>
                 <Text style={styles.discoverSquareCardTitle}>Astroloji</Text>
                 <Text style={styles.discoverSquareCardSubtitle}>Burç yorumları</Text>
-              </View>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Zone E: Quick Actions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Hızlı İşlemler</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Hızlı Erişim ⚡</Text>
+          </View>
           <View style={styles.quickActions}>
             <TouchableOpacity
               style={[styles.quickActionButton, styles.quickActionButtonFirst]}
@@ -540,35 +564,39 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     notificationIcon: {
       fontSize: 24,
     },
-    greetingCard: {
+    greetingCardContainer: {
       marginHorizontal: theme.spacing.lg,
       marginTop: theme.spacing.md,
-      marginBottom: theme.spacing.lg,
-      backgroundColor: '#E0F2FE',
+      marginBottom: theme.spacing.md,
+      borderRadius: 24,
+      overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.2,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+    greetingCard: {
       borderRadius: 24,
       padding: 0,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      overflow: 'hidden',
-      borderWidth: 2,
-      borderColor: '#BAE6FD',
-      shadowColor: '#0EA5E9',
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.2,
-      shadowRadius: 16,
-      elevation: 8,
-      height: 200,
+      height: 180,
       position: 'relative',
     },
-    greetingOverlay: {
+    greetingPattern: {
       position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: '#F0F9FF',
-      opacity: 0.6,
+      top: -20,
+      right: 100,
+      flexDirection: 'row',
+      opacity: 0.15,
+      transform: [{ rotate: '15deg' }],
+      zIndex: 1,
+    },
+    greetingPatternEmoji: {
+      fontSize: 60,
+      marginLeft: -10,
     },
     greetingContent: {
       width: '55%',
@@ -578,32 +606,35 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       zIndex: 2,
     },
     userName: {
-      fontSize: 24,
-      fontWeight: '700',
-      color: '#0C4A6E',
+      fontSize: 22,
+      fontWeight: '800',
+      color: '#FFFFFF',
       marginBottom: 4,
+      textShadowColor: 'rgba(0, 0, 0, 0.15)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
     },
     greetingTitle: {
-      fontSize: 20,
-      fontWeight: '600',
-      color: '#0369A1',
+      fontSize: 18,
+      fontWeight: '700',
+      color: 'rgba(255, 255, 255, 0.95)',
       marginBottom: 6,
     },
     greetingQuestion: {
-      fontSize: 18,
+      fontSize: 16,
       fontWeight: '600',
-      color: '#075985',
+      color: 'rgba(255, 255, 255, 0.9)',
     },
     mascotImage: {
-      width: 190,
-      height: 190,
+      width: 180,
+      height: 180,
       position: 'absolute',
-      right: 0,
+      right: -10,
       bottom: 0,
       zIndex: 2,
     },
     streakContainer: {
-      paddingHorizontal: theme.spacing.lg,
+      marginHorizontal: theme.spacing.lg,
       marginBottom: theme.spacing.md,
     },
     section: {
@@ -634,50 +665,52 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
     discoverSquareCard: {
       flex: 1,
       aspectRatio: 1,
-      borderRadius: 20,
+      borderRadius: 24,
       overflow: 'hidden',
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.2,
       shadowRadius: 12,
-      elevation: 5,
+      elevation: 6,
     },
     discoverSquareCardGradient: {
       flex: 1,
-      backgroundColor: '#FEF3C7',
       justifyContent: 'center',
       alignItems: 'center',
       padding: theme.spacing.lg,
-      borderWidth: 2,
-      borderColor: '#FDE68A',
-    },
-    astrologyCardGradient: {
-      backgroundColor: '#DDD6FE',
-      borderColor: '#C4B5FD',
+      borderRadius: 24,
     },
     discoverSquareCardIcon: {
-      fontSize: 48,
+      fontSize: 56,
       marginBottom: theme.spacing.md,
+      textShadowColor: 'rgba(0, 0, 0, 0.1)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 4,
     },
     discoverSquareCardTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: '#1F2937',
-      marginBottom: 4,
+      fontSize: 20,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      marginBottom: 6,
       textAlign: 'center',
+      textShadowColor: 'rgba(0, 0, 0, 0.15)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
     },
     discoverSquareCardSubtitle: {
-      fontSize: 13,
-      fontWeight: '500',
-      color: '#4B5563',
+      fontSize: 14,
+      fontWeight: '600',
+      color: 'rgba(255, 255, 255, 0.9)',
       textAlign: 'center',
+    },
+    sectionHeader: {
+      paddingHorizontal: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
     },
     sectionTitle: {
       fontSize: 20,
       fontWeight: '700',
       color: theme.colors.text,
-      paddingHorizontal: theme.spacing.lg,
-      marginBottom: theme.spacing.md,
       letterSpacing: 0.3,
     },
     sectionHeaderRow: {

@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Comment } from '@/types/qna';
+import { OptimizedAvatar } from './OptimizedAvatar';
 import { memo } from 'react';
 
 interface CommentListProps {
@@ -55,13 +56,14 @@ const CommentItem = memo(function CommentItem({ comment }: CommentItemProps) {
     return (
         <View style={styles.commentContainer}>
             <View style={styles.commentHeader}>
-                <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                        {comment.user?.displayName?.charAt(0).toUpperCase() || '?'}
-                    </Text>
-                </View>
+                <OptimizedAvatar
+                    imageUrl={comment.user?.profilePictureUrl}
+                    displayName={comment.user?.displayName}
+                    size={28}
+                    isAnonymous={false}
+                />
                 <View style={styles.commentInfo}>
-                    <Text style={styles.authorName}>{comment.user?.displayName}</Text>
+                    <Text style={styles.authorName}>{comment.user?.displayName || 'Anonim Kullanıcı'}</Text>
                     <Text style={styles.timestamp}>{formatTimestamp(comment.createdAt)}</Text>
                 </View>
             </View>

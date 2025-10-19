@@ -7,8 +7,16 @@
 
 import { queryClient } from '@/lib/queryClient';
 import { subscriptionService } from './api';
-import { subscriptionKeys } from '@/hooks/usePremium';
 import type { Subscription } from '@/types/subscription';
+
+// Define subscription keys locally to avoid circular dependency
+export const subscriptionKeys = {
+    all: ['subscription'] as const,
+    status: () => ['subscription', 'status'] as const,
+    quota: () => ['subscription', 'quota'] as const,
+    transactions: () => ['subscription', 'transactions'] as const,
+    usageStats: () => ['subscription', 'usage-stats'] as const,
+};
 
 class SubscriptionSyncService {
     private syncInProgress = false;

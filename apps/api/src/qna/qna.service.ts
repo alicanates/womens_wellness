@@ -121,7 +121,7 @@ export class QnaService {
         }
     }
 
-    async getQuestions(filters: QuestionFiltersDto, userId?: string): Promise<PaginatedQuestions> {
+    async getQuestions(filters: QuestionFiltersDto, userId?: string): Promise<any> {
         try {
             const { category, tags, status, sort, search, page = 1, limit = 20 } = filters;
             const skip = (page - 1) * limit;
@@ -202,8 +202,10 @@ export class QnaService {
                 },
             });
 
-            // Get user interactions if userId provided
-            let questionsWithInteractions = questions;
+            // Transform user data and get user interactions
+            let favoriteMap = new Map();
+            let followMap = new Map();
+
             if (userId) {
                 const favorites = await this.prisma.questionFavorite.findMany({
                     where: {
@@ -219,15 +221,27 @@ export class QnaService {
                     },
                 });
 
-                const favoriteMap = new Map(favorites.map(f => [f.questionId, true]));
-                const followMap = new Map(follows.map(f => [f.questionId, true]));
+                favoriteMap = new Map(favorites.map(f => [f.questionId, true]));
+                followMap = new Map(follows.map(f => [f.questionId, true]));
+            }
 
-                questionsWithInteractions = questions.map(q => ({
+            const questionsWithInteractions = questions.map(q => {
+                const displayName = q.user?.profile?.firstName && q.user?.profile?.lastName
+                    ? `${q.user.profile.firstName} ${q.user.profile.lastName}`
+                    : q.user?.username || 'Anonim Kullanıcı';
+
+                return {
                     ...q,
+                    user: q.user ? {
+                        id: q.user.id,
+                        username: q.user.username,
+                        displayName,
+                        profilePictureUrl: q.user.profile?.profilePictureUrl,
+                    } : undefined,
                     isFavorited: favoriteMap.get(q.id) || false,
                     isFollowing: followMap.get(q.id) || false,
-                }));
-            }
+                };
+            });
 
             return {
                 questions: questionsWithInteractions,
@@ -242,7 +256,7 @@ export class QnaService {
         }
     }
 
-    async getQuestionById(id: string, userId?: string): Promise<QuestionDetail> {
+    async getQuestionById(id: string, userId?: string): Promise<any> {
         try {
             const question = await this.prisma.question.findUnique({
                 where: { id },
@@ -281,6 +295,21 @@ export class QnaService {
                 data: { viewCount: { increment: 1 } },
             });
 
+            // Transform user data
+            const displayName = question.user?.profile?.firstName && question.user?.profile?.lastName
+                ? `${question.user.profile.firstName} ${question.user.profile.lastName}`
+                : question.user?.username || 'Anonim Kullanıcı';
+
+            const transformedQuestion = {
+                ...question,
+                user: question.user ? {
+                    id: question.user.id,
+                    username: question.user.username,
+                    displayName,
+                    profilePictureUrl: question.user.profile?.profilePictureUrl,
+                } : undefined,
+            };
+
             // Get user interactions if userId provided
             if (userId) {
                 const favorite = await this.prisma.questionFavorite.findUnique({
@@ -302,13 +331,13 @@ export class QnaService {
                 });
 
                 return {
-                    ...question,
+                    ...transformedQuestion,
                     isFavorited: !!favorite,
                     isFollowing: !!follow,
-                } as QuestionDetail;
+                };
             }
 
-            return question as QuestionDetail;
+            return transformedQuestion;
         } catch (error) {
             if (error instanceof NotFoundException) {
                 throw error;
@@ -383,7 +412,7 @@ export class QnaService {
 
     // ==================== ANSWERS ====================
 
-    async createAnswer(questionId: string, userId: string, dto: CreateAnswerDto): Promise<Answer> {
+    async createAnswer(questionId: string, userId: string, dto: CreateAnswerDto): Promise<any> {
         try {
             // Spam kontrolü
             const isSpam = this.moderationService.checkSpam(dto.content);
@@ -406,6 +435,26 @@ export class QnaService {
                     userId,
                     content: dto.content,
                 },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            profile: {
+                                select: {
+                                    firstName: true,
+                                    lastName: true,
+                                    profilePictureUrl: true,
+                                },
+                            },
+                        },
+                    },
+                    _count: {
+                        select: {
+                            comments: true,
+                        },
+                    },
+                },
             });
 
             // Update question status to ANSWERED if it was OPEN
@@ -425,7 +474,22 @@ export class QnaService {
             });
 
             this.logger.log(`Answer created: ${answer.id} for question ${questionId} by user ${userId}`);
-            return answer;
+
+            // Transform user data
+            const displayName = answer.user?.profile?.firstName && answer.user?.profile?.lastName
+                ? `${answer.user.profile.firstName} ${answer.user.profile.lastName}`
+                : answer.user?.username || 'Anonim Kullanıcı';
+
+            return {
+                ...answer,
+                user: answer.user ? {
+                    id: answer.user.id,
+                    username: answer.user.username,
+                    displayName,
+                    profilePictureUrl: answer.user.profile?.profilePictureUrl,
+                } : undefined,
+                userVote: null,
+            };
         } catch (error) {
             if (error instanceof NotFoundException) {
                 throw error;
@@ -435,7 +499,7 @@ export class QnaService {
         }
     }
 
-    async getAnswers(questionId: string, userId?: string): Promise<AnswerDetail[]> {
+    async getAnswers(questionId: string, userId?: string): Promise<any[]> {
         try {
             const answers = await this.prisma.answer.findMany({
                 where: { questionId },
@@ -467,6 +531,7 @@ export class QnaService {
             });
 
             // Get user votes if userId provided
+            let voteMap = new Map();
             if (userId) {
                 const votes = await this.prisma.answerVote.findMany({
                     where: {
@@ -475,15 +540,26 @@ export class QnaService {
                     },
                 });
 
-                const voteMap = new Map(votes.map(v => [v.answerId, v.voteType]));
-
-                return answers.map(a => ({
-                    ...a,
-                    userVote: voteMap.get(a.id) || null,
-                }));
+                voteMap = new Map(votes.map(v => [v.answerId, v.voteType]));
             }
 
-            return answers.map(a => ({ ...a, userVote: null }));
+            // Transform answers to include proper user data
+            return answers.map(a => {
+                const displayName = a.user?.profile?.firstName && a.user?.profile?.lastName
+                    ? `${a.user.profile.firstName} ${a.user.profile.lastName}`
+                    : a.user?.username || 'Anonim Kullanıcı';
+
+                return {
+                    ...a,
+                    user: a.user ? {
+                        id: a.user.id,
+                        username: a.user.username,
+                        displayName,
+                        profilePictureUrl: a.user.profile?.profilePictureUrl,
+                    } : undefined,
+                    userVote: voteMap.get(a.id) || null,
+                };
+            });
         } catch (error) {
             this.logger.error(`Error fetching answers for question ${questionId}:`, error);
             throw error;
@@ -611,7 +687,7 @@ export class QnaService {
 
     // ==================== COMMENTS ====================
 
-    async createQuestionComment(questionId: string, userId: string, dto: CreateCommentDto): Promise<QuestionComment> {
+    async createQuestionComment(questionId: string, userId: string, dto: CreateCommentDto): Promise<any> {
         try {
             // Spam kontrolü
             const isSpam = this.moderationService.checkSpam(dto.content);
@@ -633,6 +709,21 @@ export class QnaService {
                     userId,
                     content: dto.content,
                 },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            profile: {
+                                select: {
+                                    firstName: true,
+                                    lastName: true,
+                                    profilePictureUrl: true,
+                                },
+                            },
+                        },
+                    },
+                },
             });
 
             // Send notification (async, don't wait)
@@ -641,7 +732,21 @@ export class QnaService {
             });
 
             this.logger.log(`Question comment created: ${comment.id} for question ${questionId}`);
-            return comment;
+
+            // Transform user data
+            const displayName = comment.user?.profile?.firstName && comment.user?.profile?.lastName
+                ? `${comment.user.profile.firstName} ${comment.user.profile.lastName}`
+                : comment.user?.username || 'Anonim Kullanıcı';
+
+            return {
+                ...comment,
+                user: comment.user ? {
+                    id: comment.user.id,
+                    username: comment.user.username,
+                    displayName,
+                    profilePictureUrl: comment.user.profile?.profilePictureUrl,
+                } : undefined,
+            };
         } catch (error) {
             if (error instanceof NotFoundException) {
                 throw error;
@@ -651,7 +756,7 @@ export class QnaService {
         }
     }
 
-    async createAnswerComment(answerId: string, userId: string, dto: CreateCommentDto): Promise<AnswerComment> {
+    async createAnswerComment(answerId: string, userId: string, dto: CreateCommentDto): Promise<any> {
         try {
             // Spam kontrolü
             const isSpam = this.moderationService.checkSpam(dto.content);
@@ -673,6 +778,21 @@ export class QnaService {
                     userId,
                     content: dto.content,
                 },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            profile: {
+                                select: {
+                                    firstName: true,
+                                    lastName: true,
+                                    profilePictureUrl: true,
+                                },
+                            },
+                        },
+                    },
+                },
             });
 
             // Send notification (async, don't wait)
@@ -681,7 +801,21 @@ export class QnaService {
             });
 
             this.logger.log(`Answer comment created: ${comment.id} for answer ${answerId}`);
-            return comment;
+
+            // Transform user data
+            const displayName = comment.user?.profile?.firstName && comment.user?.profile?.lastName
+                ? `${comment.user.profile.firstName} ${comment.user.profile.lastName}`
+                : comment.user?.username || 'Anonim Kullanıcı';
+
+            return {
+                ...comment,
+                user: comment.user ? {
+                    id: comment.user.id,
+                    username: comment.user.username,
+                    displayName,
+                    profilePictureUrl: comment.user.profile?.profilePictureUrl,
+                } : undefined,
+            };
         } catch (error) {
             if (error instanceof NotFoundException) {
                 throw error;
@@ -691,9 +825,9 @@ export class QnaService {
         }
     }
 
-    async getQuestionComments(questionId: string): Promise<QuestionComment[]> {
+    async getQuestionComments(questionId: string): Promise<any[]> {
         try {
-            return await this.prisma.questionComment.findMany({
+            const comments = await this.prisma.questionComment.findMany({
                 where: { questionId },
                 orderBy: { createdAt: 'asc' },
                 include: {
@@ -712,15 +846,32 @@ export class QnaService {
                     },
                 },
             });
+
+            // Transform user data
+            return comments.map(c => {
+                const displayName = c.user?.profile?.firstName && c.user?.profile?.lastName
+                    ? `${c.user.profile.firstName} ${c.user.profile.lastName}`
+                    : c.user?.username || 'Anonim Kullanıcı';
+
+                return {
+                    ...c,
+                    user: c.user ? {
+                        id: c.user.id,
+                        username: c.user.username,
+                        displayName,
+                        profilePictureUrl: c.user.profile?.profilePictureUrl,
+                    } : undefined,
+                };
+            });
         } catch (error) {
             this.logger.error(`Error fetching question comments:`, error);
             throw error;
         }
     }
 
-    async getAnswerComments(answerId: string): Promise<AnswerComment[]> {
+    async getAnswerComments(answerId: string): Promise<any[]> {
         try {
-            return await this.prisma.answerComment.findMany({
+            const comments = await this.prisma.answerComment.findMany({
                 where: { answerId },
                 orderBy: { createdAt: 'asc' },
                 include: {
@@ -738,6 +889,23 @@ export class QnaService {
                         },
                     },
                 },
+            });
+
+            // Transform user data
+            return comments.map(c => {
+                const displayName = c.user?.profile?.firstName && c.user?.profile?.lastName
+                    ? `${c.user.profile.firstName} ${c.user.profile.lastName}`
+                    : c.user?.username || 'Anonim Kullanıcı';
+
+                return {
+                    ...c,
+                    user: c.user ? {
+                        id: c.user.id,
+                        username: c.user.username,
+                        displayName,
+                        profilePictureUrl: c.user.profile?.profilePictureUrl,
+                    } : undefined,
+                };
             });
         } catch (error) {
             this.logger.error(`Error fetching answer comments:`, error);

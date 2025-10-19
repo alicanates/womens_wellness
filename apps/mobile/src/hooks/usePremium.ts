@@ -1,20 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { subscriptionService } from '@/services/api';
-import { subscriptionSyncService } from '@/services/subscriptionSync';
+import { subscriptionSyncService, subscriptionKeys } from '@/services/subscriptionSync';
 import type { Subscription, Feature } from '@/types/subscription';
 import { isPremiumFeature, canAccessFeature } from '@/types/subscription';
-
-/**
- * Query keys for subscription-related queries
- */
-export const subscriptionKeys = {
-    all: ['subscription'] as const,
-    status: () => [...subscriptionKeys.all, 'status'] as const,
-    quota: () => [...subscriptionKeys.all, 'quota'] as const,
-    transactions: () => [...subscriptionKeys.all, 'transactions'] as const,
-    usageStats: () => [...subscriptionKeys.all, 'usage-stats'] as const,
-};
 
 /**
  * Hook to manage premium subscription features

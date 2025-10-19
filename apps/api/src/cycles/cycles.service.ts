@@ -1,6 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PredictionService } from './prediction.service';
+import { GamificationService } from '../gamification/gamification.service';
+import { AchievementService } from '../gamification/achievement.service';
+import { InsightService } from '../gamification/insight.service';
 
 interface PeriodSymptoms {
   flow: 'light' | 'moderate' | 'heavy';
@@ -29,7 +32,13 @@ export class CyclesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly predictionService: PredictionService,
-  ) {}
+    @Inject(forwardRef(() => GamificationService))
+    private readonly gamificationService: GamificationService,
+    @Inject(forwardRef(() => AchievementService))
+    private readonly achievementService: AchievementService,
+    @Inject(forwardRef(() => InsightService))
+    private readonly insightService: InsightService,
+  ) { }
 
   /**
    * Create a new period cycle
@@ -271,7 +280,7 @@ export class CyclesService {
           isPeriod = true;
           markers.push('period');
           cycleDay = this.predictionService.getCycleDay(dateNormalized, start);
-          console.log(`  🩸 Day ${day}: PERIOD (cycle ${cycle.id.slice(0,8)}, days ${start.toISOString().split('T')[0]} to ${end.toISOString().split('T')[0]})`);
+          console.log(`  🩸 Day ${day}: PERIOD (cycle ${cycle.id.slice(0, 8)}, days ${start.toISOString().split('T')[0]} to ${end.toISOString().split('T')[0]})`);
           break;
         }
       }
@@ -376,8 +385,8 @@ export class CyclesService {
     const avgCycleLength =
       cycleLengths.length > 0
         ? Math.round(
-            cycleLengths.reduce((a, b) => a + b, 0) / cycleLengths.length
-          )
+          cycleLengths.reduce((a, b) => a + b, 0) / cycleLengths.length
+        )
         : null;
 
     // Calculate cycle variance (standard deviation)
@@ -402,8 +411,8 @@ export class CyclesService {
     const avgPeriodLength =
       periodLengths.length > 0
         ? Math.round(
-            periodLengths.reduce((a, b) => a + b, 0) / periodLengths.length
-          )
+          periodLengths.reduce((a, b) => a + b, 0) / periodLengths.length
+        )
         : null;
 
     return {
@@ -438,7 +447,7 @@ export class CyclesService {
       },
     });
 
-    return this.prisma.dailyLog.upsert({
+    const dailyLog = await this.prisma.dailyLog.upsert({
       where: {
         userId_date: {
           userId,
@@ -473,6 +482,34 @@ export class CyclesService {
         attachments: data.attachments || [],
       },
     });
+
+    // Update gamification stats
+    try {
+      await this.gamificationService.incrementDataEntry(userId);
+
+      // Update symptom count if symptoms were logged
+      if (data.symptoms && data.symptoms.length > 0) {
+        await this.prisma.userGamification.update({
+          where: { userId },
+          data: {
+            totalSymptoms: { increment: data.symptoms.length },
+          },
+        });
+      }
+
+      // Check for new achievements
+      await this.achievementService.checkAchievements(userId);
+
+      // Generate insights (async, don't wait)
+      this.insightService.generateInsights(userId).catch(err => {
+        console.error('Error generating insights:', err);
+      });
+    } catch (error) {
+      console.error('Error updating gamification:', error);
+      // Don't fail the daily log creation if gamification fails
+    }
+
+    return dailyLog;
   }
 
   /**

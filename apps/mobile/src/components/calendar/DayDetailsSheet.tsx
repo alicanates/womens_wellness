@@ -108,6 +108,7 @@ export function DayDetailsSheet({
     mutationFn: (data: any) => cyclesService.upsertDailyLog(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['calendar'] });
+      queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] }); // Streak güncellemesi için
       Alert.alert('Başarılı', 'Günlük kayıt güncellendi');
       onClose();
     },

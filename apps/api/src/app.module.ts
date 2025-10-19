@@ -26,6 +26,7 @@ import { DiscoverModule } from './discover/discover.module';
 import { SubscriptionModule } from './subscription/subscription.module';
 import { QnaModule } from './qna/qna.module';
 import { PagesModule } from './pages/pages.module';
+import { GamificationModule } from './gamification/gamification.module';
 import aiConfig from './config/ai.config';
 
 @Module({
@@ -72,6 +73,7 @@ import aiConfig from './config/ai.config';
     SubscriptionModule,
     QnaModule,
     PagesModule,
+    GamificationModule,
   ],
   controllers: [AppController],
   providers: [

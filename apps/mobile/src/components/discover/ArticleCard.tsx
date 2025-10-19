@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@/hooks/useTheme';
 import { Ionicons } from '@expo/vector-icons';
 import { CategoryBadge } from './CategoryBadge';
@@ -33,6 +34,29 @@ export const ArticleCard = memo(function ArticleCard({
 
     // Prefer thumbnail for list views, full image for detail
     const imageSource = article.thumbnailUrl || article.imageUrl;
+
+    // Kategori bazlı gradient renkleri
+    const getCategoryGradient = () => {
+        const category = article.category.toLowerCase();
+        if (category.includes('regl') || category.includes('adet')) {
+            return ['#FF6B9D', '#C44569'] as const;
+        }
+        if (category.includes('hamile') || category.includes('gebelik')) {
+            return ['#A8E6CF', '#56AB91'] as const;
+        }
+        if (category.includes('beslenme') || category.includes('diyet')) {
+            return ['#FFB84D', '#FF8C42'] as const;
+        }
+        if (category.includes('egzersiz') || category.includes('spor')) {
+            return ['#FF6B35', '#FF8C42'] as const;
+        }
+        if (category.includes('ruh') || category.includes('mental')) {
+            return ['#A78BFA', '#7C3AED'] as const;
+        }
+        return ['#6C63FF', '#8B7FFF'] as const; // default
+    };
+
+    const gradientColors = getCategoryGradient();
 
     if (variant === 'horizontal') {
         return (
@@ -143,53 +167,67 @@ export const ArticleCard = memo(function ArticleCard({
         <TouchableOpacity
             style={styles.verticalContainer}
             onPress={onPress}
-            activeOpacity={0.7}
+            activeOpacity={0.85}
         >
-            {imageSource && !imageError && (
-                <View style={styles.imageContainer}>
-                    {!imageLoaded && (
-                        <View style={[styles.verticalImage, styles.imagePlaceholder]} />
-                    )}
-                    <Image
-                        source={{ uri: imageSource }}
-                        style={[styles.verticalImage, !imageLoaded && styles.imageHidden]}
-                        resizeMode="cover"
-                        onLoad={() => setImageLoaded(true)}
-                        onError={() => setImageError(true)}
-                        // Performance optimizations
-                        fadeDuration={200}
-                        progressiveRenderingEnabled={true}
-                        defaultSource={undefined}
-                    />
-                </View>
-            )}
-            <View style={styles.verticalContent}>
-                <View style={styles.verticalHeader}>
-                    <CategoryBadge category={article.category} />
-                    <View style={styles.metaRow}>
-                        <Text style={styles.readTime}>{article.readTimeMin} dk</Text>
-                        <TouchableOpacity
-                            onPress={(e) => {
-                                e.stopPropagation();
-                                onSave();
-                            }}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                            <Ionicons
-                                name={article.isSaved ? 'heart' : 'heart-outline'}
-                                size={20}
-                                color={article.isSaved ? theme.colors.error : theme.colors.textSecondary}
-                            />
-                        </TouchableOpacity>
+            <LinearGradient
+                colors={gradientColors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.verticalGradient}
+            >
+                {imageSource && !imageError && (
+                    <View style={styles.imageContainer}>
+                        {!imageLoaded && (
+                            <View style={[styles.verticalImage, styles.imagePlaceholder]} />
+                        )}
+                        <Image
+                            source={{ uri: imageSource }}
+                            style={[styles.verticalImage, !imageLoaded && styles.imageHidden]}
+                            resizeMode="cover"
+                            onLoad={() => setImageLoaded(true)}
+                            onError={() => setImageError(true)}
+                            fadeDuration={200}
+                            progressiveRenderingEnabled={true}
+                            defaultSource={undefined}
+                        />
+                        {/* Gradient overlay on image */}
+                        <LinearGradient
+                            colors={['transparent', 'rgba(0,0,0,0.3)']}
+                            style={styles.imageOverlay}
+                        />
                     </View>
+                )}
+                <View style={styles.verticalContent}>
+                    <View style={styles.verticalHeader}>
+                        <View style={styles.categoryBadgeContainer}>
+                            <CategoryBadge category={article.category} />
+                        </View>
+                        <View style={styles.metaRow}>
+                            <Text style={styles.readTimeWhite}>{article.readTimeMin} dk</Text>
+                            <TouchableOpacity
+                                onPress={(e) => {
+                                    e.stopPropagation();
+                                    onSave();
+                                }}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                style={styles.saveButtonWhite}
+                            >
+                                <Ionicons
+                                    name={article.isSaved ? 'heart' : 'heart-outline'}
+                                    size={20}
+                                    color="#FFFFFF"
+                                />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                    <Text style={styles.verticalTitleWhite} numberOfLines={2}>
+                        {article.title}
+                    </Text>
+                    <Text style={styles.verticalExcerptWhite} numberOfLines={2}>
+                        {article.excerpt}
+                    </Text>
                 </View>
-                <Text style={styles.verticalTitle} numberOfLines={2}>
-                    {article.title}
-                </Text>
-                <Text style={styles.verticalExcerpt} numberOfLines={2}>
-                    {article.excerpt}
-                </Text>
-            </View>
+            </LinearGradient>
         </TouchableOpacity>
     );
 });
@@ -249,21 +287,30 @@ const createStyles = (theme: ReturnType<typeof useTheme>, variant: 'horizontal' 
 
         // Vertical variant styles
         verticalContainer: {
-            backgroundColor: theme.colors.backgroundCard,
             borderRadius: 24,
             overflow: 'hidden',
             width: 300,
             marginRight: theme.spacing.md,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.12,
+            shadowOpacity: 0.15,
             shadowRadius: 16,
             elevation: 8,
         },
+        verticalGradient: {
+            borderRadius: 24,
+        },
         verticalImage: {
             width: '100%',
-            height: 200,
+            height: 180,
             backgroundColor: theme.colors.border,
+        },
+        imageOverlay: {
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 80,
         },
         verticalContent: {
             padding: theme.spacing.lg,
@@ -274,10 +321,29 @@ const createStyles = (theme: ReturnType<typeof useTheme>, variant: 'horizontal' 
             alignItems: 'center',
             marginBottom: theme.spacing.md,
         },
+        categoryBadgeContainer: {
+            backgroundColor: 'rgba(255, 255, 255, 0.25)',
+            borderRadius: 12,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+        },
         metaRow: {
             flexDirection: 'row',
             alignItems: 'center',
             gap: theme.spacing.sm,
+        },
+        readTimeWhite: {
+            fontSize: 12,
+            color: 'rgba(255, 255, 255, 0.9)',
+            fontWeight: '600',
+        },
+        saveButtonWhite: {
+            width: 32,
+            height: 32,
+            borderRadius: 16,
+            backgroundColor: 'rgba(255, 255, 255, 0.25)',
+            justifyContent: 'center',
+            alignItems: 'center',
         },
         verticalTitle: {
             fontSize: 18,
@@ -286,10 +352,26 @@ const createStyles = (theme: ReturnType<typeof useTheme>, variant: 'horizontal' 
             marginBottom: theme.spacing.sm,
             lineHeight: 26,
         },
+        verticalTitleWhite: {
+            fontSize: 18,
+            fontWeight: '800',
+            color: '#FFFFFF',
+            marginBottom: theme.spacing.sm,
+            lineHeight: 26,
+            textShadowColor: 'rgba(0, 0, 0, 0.15)',
+            textShadowOffset: { width: 0, height: 1 },
+            textShadowRadius: 3,
+        },
         verticalExcerpt: {
             fontSize: 14,
             color: theme.colors.textSecondary,
             lineHeight: 21,
+        },
+        verticalExcerptWhite: {
+            fontSize: 14,
+            color: 'rgba(255, 255, 255, 0.95)',
+            lineHeight: 21,
+            fontWeight: '500',
         },
 
         // Horizontal variant styles

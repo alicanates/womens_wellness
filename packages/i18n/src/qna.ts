@@ -5,7 +5,10 @@
  * çevirilerini sağlar.
  */
 
-import { translations } from './index';
+import tr from './locales/tr.json';
+import en from './locales/en.json';
+
+const translations = { tr, en };
 
 export type Language = 'tr' | 'en';
 

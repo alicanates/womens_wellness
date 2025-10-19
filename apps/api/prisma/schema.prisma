@@ -185,6 +185,11 @@ model User {
   qnaQuota             QnaQuota?
   contentReports       ContentReport[]      @relation("ContentReports")
   reviewedReports      ContentReport[]      @relation("ReviewedReports")
+  
+  // Gamification Relations
+  userAchievements     UserAchievement[]
+  gamification         UserGamification?
+  insights             UserInsight[]
 
   @@index([email])
   @@index([username])
@@ -1104,4 +1109,153 @@ model Page {
   
   @@index([slug, isActive])
   @@index([isActive, sortOrder])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Gamification & Achievement System
+// ────────────────────────────────────────────────────────────────────────────
+
+enum AchievementCategory {
+  STREAK
+  DATA_ENTRY
+  WELLNESS
+  COMMUNITY
+  MILESTONE
+  SPECIAL
+}
+
+enum AchievementRarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
+// Achievement definitions (rozet tanımları)
+model Achievement {
+  id              String                @id @default(cuid())
+  key             String                @unique // first_week, loyal_tracker, legend_100, etc.
+  
+  // Multi-language support
+  nameTr          String
+  nameEn          String
+  descriptionTr   String                @db.Text
+  descriptionEn   String                @db.Text
+  
+  // Visual
+  iconUrl         String?
+  iconEmoji       String?               // 🔥, ⭐, 💎, etc.
+  color           String?               // Hex color for badge
+  
+  // Categorization
+  category        AchievementCategory
+  rarity          AchievementRarity     @default(COMMON)
+  
+  // Requirements (JSON format for flexibility)
+  requirementJson Json                  // { type: 'streak', days: 7 } or { type: 'data_entry', count: 30 }
+  points          Int                   @default(10) // XP points earned
+  
+  // Lifecycle
+  isActive        Boolean               @default(true)
+  sortOrder       Int                   @default(0)
+  
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  
+  // Relations
+  userAchievements UserAchievement[]
+  
+  @@index([category, isActive])
+  @@index([rarity, isActive])
+}
+
+// User's earned achievements
+model UserAchievement {
+  id              String       @id @default(cuid())
+  userId          String
+  achievementId   String
+  
+  // Progress tracking
+  progress        Int          @default(0) // Current progress towards achievement
+  isCompleted     Boolean      @default(false)
+  completedAt     DateTime?
+  
+  // Notification
+  notificationSent Boolean     @default(false)
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement     Achievement  @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, achievementId])
+  @@index([userId, isCompleted])
+  @@index([userId, completedAt])
+}
+
+// User gamification profile
+model UserGamification {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  
+  // Level & XP
+  level               Int      @default(1)
+  currentXp           Int      @default(0)
+  totalXp             Int      @default(0)
+  
+  // Streaks
+  currentStreak       Int      @default(0)
+  longestStreak       Int      @default(0)
+  lastActivityDate    DateTime?
+  streakFreezeUsed    Int      @default(0) // Monthly freeze count
+  streakFreezeLimit   Int      @default(1) // Premium users get more
+  
+  // Statistics
+  totalDataEntries    Int      @default(0)
+  totalSymptoms       Int      @default(0)
+  totalWellnessLogs   Int      @default(0)
+  
+  // Daily challenges
+  dailyChallengeDate  DateTime?
+  dailyChallengeJson  Json?    // Current daily challenge data
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([level, totalXp])
+}
+
+// Personalized insights for users
+model UserInsight {
+  id          String   @id @default(cuid())
+  userId      String
+  
+  // Insight content
+  titleTr     String
+  titleEn     String?
+  messageTr   String   @db.Text
+  messageEn   String?  @db.Text
+  
+  // Type & Category
+  type        String   // positive, neutral, achievement, tip
+  category    String   // cycle, mood, symptoms, wellness
+  
+  // Data
+  dataJson    Json?    // Supporting data for the insight
+  
+  // Lifecycle
+  isRead      Boolean  @default(false)
+  readAt      DateTime?
+  expiresAt   DateTime?
+  
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, isRead, createdAt])
+  @@index([userId, expiresAt])
 }

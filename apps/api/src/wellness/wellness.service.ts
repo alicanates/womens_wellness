@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { GamificationService } from '../gamification/gamification.service';
 
 export interface StepsData {
   date: string; // ISO date string
@@ -48,7 +49,11 @@ export interface WellnessSummary {
 
 @Injectable()
 export class WellnessService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => GamificationService))
+    private gamificationService: GamificationService,
+  ) { }
 
   /**
    * Normalize a date to midnight in UTC
@@ -103,8 +108,18 @@ export class WellnessService {
   async logSteps(userId: string, data: StepsData) {
     const date = this.normalizeToMidnight(data.date);
 
+    // Check if this is a new entry
+    const existing = await this.prisma.dailySteps.findUnique({
+      where: {
+        userId_date: {
+          userId,
+          date,
+        },
+      },
+    });
+
     // Upsert to handle duplicates
-    return this.prisma.dailySteps.upsert({
+    const result = await this.prisma.dailySteps.upsert({
       where: {
         userId_date: {
           userId,
@@ -125,6 +140,22 @@ export class WellnessService {
         isManual: data.isManual ?? true,
       },
     });
+
+    // Update wellness log count if new entry
+    if (!existing) {
+      try {
+        await this.prisma.userGamification.update({
+          where: { userId },
+          data: {
+            totalWellnessLogs: { increment: 1 },
+          },
+        });
+      } catch (error) {
+        console.error('Error updating wellness log count:', error);
+      }
+    }
+
+    return result;
   }
 
   async deleteSteps(userId: string, date: string) {
@@ -194,7 +225,7 @@ export class WellnessService {
   async logMeditation(userId: string, data: MeditationData) {
     const date = this.normalizeToMidnight(data.date);
 
-    return this.prisma.meditationSession.create({
+    const result = await this.prisma.meditationSession.create({
       data: {
         userId,
         date,
@@ -204,6 +235,20 @@ export class WellnessService {
         isManual: data.isManual ?? true,
       },
     });
+
+    // Update wellness log count
+    try {
+      await this.prisma.userGamification.update({
+        where: { userId },
+        data: {
+          totalWellnessLogs: { increment: 1 },
+        },
+      });
+    } catch (error) {
+      console.error('Error updating wellness log count:', error);
+    }
+
+    return result;
   }
 
   async deleteMeditation(userId: string, sessionId: string) {
@@ -266,7 +311,17 @@ export class WellnessService {
       throw new BadRequestException('Invalid quality value. Must be: good, medium, or poor');
     }
 
-    return this.prisma.sleepLog.upsert({
+    // Check if this is a new entry
+    const existing = await this.prisma.sleepLog.findUnique({
+      where: {
+        userId_sleepDate: {
+          userId,
+          sleepDate,
+        },
+      },
+    });
+
+    const result = await this.prisma.sleepLog.upsert({
       where: {
         userId_sleepDate: {
           userId,
@@ -290,6 +345,22 @@ export class WellnessService {
         notes: data.notes,
       },
     });
+
+    // Update wellness log count if new entry
+    if (!existing) {
+      try {
+        await this.prisma.userGamification.update({
+          where: { userId },
+          data: {
+            totalWellnessLogs: { increment: 1 },
+          },
+        });
+      } catch (error) {
+        console.error('Error updating wellness log count:', error);
+      }
+    }
+
+    return result;
   }
 
   async deleteSleep(userId: string, date: string) {

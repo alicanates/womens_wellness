@@ -250,6 +250,7 @@ export function useCreateAnswer() {
             queryClient.invalidateQueries({ queryKey: qnaKeys.question(variables.questionId) });
             queryClient.invalidateQueries({ queryKey: qnaKeys.myAnswers() });
             queryClient.invalidateQueries({ queryKey: qnaKeys.reputation() });
+            queryClient.invalidateQueries({ queryKey: qnaKeys.quota() });
         },
     });
 }

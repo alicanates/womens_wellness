@@ -40,10 +40,18 @@ export function useNotifications() {
       setPermissionStatus(finalStatus as any);
 
       if (finalStatus !== 'granted') {
-        console.warn('Push notification permissions not granted');
+        // Not a critical error - user can still use the app
+        // This is only for push notifications (reminders, etc.)
+        // In-app notifications (like fun notifications) work without this permission
+        if (__DEV__) {
+          console.log('[Notifications] Push notification permission not granted - push notifications disabled');
+        }
         return false;
       }
 
+      if (__DEV__) {
+        console.log('[Notifications] Push notification permission granted');
+      }
       return true;
     } catch (error) {
       console.error('Error requesting notification permissions:', error);
@@ -60,7 +68,9 @@ export function useNotifications() {
 
       // Get Expo push token - only if EAS project ID is configured
       if (!process.env.EXPO_PUBLIC_EAS_PROJECT_ID) {
-        console.warn('EAS Project ID not configured. Skipping push notification registration.');
+        if (__DEV__) {
+          console.log('[Notifications] EAS Project ID not configured - push notifications disabled');
+        }
         return null;
       }
 
@@ -73,9 +83,11 @@ export function useNotifications() {
       // Register token with backend
       try {
         await remindersService.registerPushToken(token.data);
-        console.log('Push token registered with backend:', token.data);
+        if (__DEV__) {
+          console.log('[Notifications] Push token registered with backend');
+        }
       } catch (error) {
-        console.error('Failed to register push token with backend:', error);
+        console.error('[Notifications] Failed to register push token with backend:', error);
       }
 
       // Configure Android channel (required for Android 8+)
@@ -98,14 +110,18 @@ export function useNotifications() {
 
   // Handle notification received while app is in foreground
   function handleNotificationReceived(notification: Notifications.Notification) {
-    console.log('Notification received:', notification);
+    if (__DEV__) {
+      console.log('[Notifications] Notification received:', notification);
+    }
     // You can show custom UI here or let the default notification show
   }
 
   // Handle notification tap (deep linking)
   function handleNotificationResponse(response: Notifications.NotificationResponse) {
     const data = response.notification.request.content.data as NotificationData;
-    console.log('Notification tapped:', data);
+    if (__DEV__) {
+      console.log('[Notifications] Notification tapped:', data);
+    }
 
     // Route to appropriate screen based on notification data
     if (data.screen) {
@@ -129,7 +145,9 @@ export function useNotifications() {
     // If specific reminder ID is provided, you can navigate to detail view
     if (data.reminderId) {
       // TODO: Navigate to reminder detail if we add that screen
-      console.log('Reminder ID:', data.reminderId);
+      if (__DEV__) {
+        console.log('[Notifications] Reminder ID:', data.reminderId);
+      }
     }
   }
 
