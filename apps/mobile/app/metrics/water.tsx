@@ -18,7 +18,22 @@ export default function WaterCalculatorScreen() {
     mutationFn: (data: { weightKg: number; activity?: string; climate?: string }) =>
       metricsService.calculateWater(data),
     onSuccess: (data) => {
-      setResult(data);
+      console.log('Water API Response:', JSON.stringify(data, null, 2));
+
+      // If backend returns null, calculate on frontend as fallback
+      let dailyWaterMl = data.dailyWaterMl || data.dailyNeedMl;
+
+      if (!dailyWaterMl) {
+        console.log('Backend returned null, calculating on frontend');
+        const w = parseFloat(weight);
+        const base = w * 33;
+        const activityMultiplier = activity === 'low' ? 1.0 : activity === 'high' ? 1.3 : 1.15;
+        const climateBonus = climate === 'cold' ? 0 : climate === 'hot' ? 500 : 250;
+        dailyWaterMl = Math.round(base * activityMultiplier + climateBonus);
+        console.log('Frontend calculated:', dailyWaterMl);
+      }
+
+      setResult({ dailyWaterMl });
     },
     onError: (error: any) => {
       Alert.alert('Hata', error.message || 'Su ihtiyacı hesaplanırken bir hata oluştu');

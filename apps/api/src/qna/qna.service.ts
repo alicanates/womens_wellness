@@ -146,6 +146,7 @@ export class QnaService {
                 where.OR = [
                     { title: { contains: search, mode: 'insensitive' } },
                     { content: { contains: search, mode: 'insensitive' } },
+                    { tags: { has: search.toLowerCase() } }, // Search in tags array
                 ];
             }
 
@@ -499,6 +500,125 @@ export class QnaService {
         }
     }
 
+    async getAllAnswers(userId?: string): Promise<any[]> {
+        try {
+            const answers = await this.prisma.answer.findMany({
+                orderBy: [
+                    { createdAt: 'desc' },
+                ],
+                include: {
+                    question: {
+                        select: {
+                            id: true,
+                            title: true,
+                        },
+                    },
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            email: true,
+                            profile: {
+                                select: {
+                                    firstName: true,
+                                    lastName: true,
+                                    profilePictureUrl: true,
+                                },
+                            },
+                        },
+                    },
+                    _count: {
+                        select: {
+                            comments: true,
+                        },
+                    },
+                },
+            });
+
+            // Transform answers to include proper user data
+            return answers.map(a => {
+                const displayName = a.user?.profile?.firstName && a.user?.profile?.lastName
+                    ? `${a.user.profile.firstName} ${a.user.profile.lastName}`
+                    : a.user?.username || 'Anonim Kullanıcı';
+
+                return {
+                    ...a,
+                    user: a.user ? {
+                        id: a.user.id,
+                        username: a.user.username,
+                        email: a.user.email,
+                        displayName,
+                        profilePictureUrl: a.user.profile?.profilePictureUrl,
+                    } : undefined,
+                };
+            });
+        } catch (error) {
+            this.logger.error('Error fetching all answers:', error);
+            throw error;
+        }
+    }
+
+    async getAnswerById(id: string, userId?: string): Promise<any> {
+        try {
+            const answer = await this.prisma.answer.findUnique({
+                where: { id },
+                include: {
+                    question: {
+                        select: {
+                            id: true,
+                            title: true,
+                        },
+                    },
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            email: true,
+                            profile: {
+                                select: {
+                                    firstName: true,
+                                    lastName: true,
+                                    profilePictureUrl: true,
+                                },
+                            },
+                        },
+                    },
+                    _count: {
+                        select: {
+                            comments: true,
+                        },
+                    },
+                },
+            });
+
+            if (!answer) {
+                throw new NotFoundException('Cevap bulunamadı');
+            }
+
+            // Transform user data
+            const displayName = answer.user?.profile?.firstName && answer.user?.profile?.lastName
+                ? `${answer.user.profile.firstName} ${answer.user.profile.lastName}`
+                : answer.user?.username || 'Anonim Kullanıcı';
+
+            return {
+                ...answer,
+                user: answer.user ? {
+                    id: answer.user.id,
+                    username: answer.user.username,
+                    email: answer.user.email,
+                    displayName,
+                    profilePictureUrl: answer.user.profile?.profilePictureUrl,
+                } : undefined,
+            };
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw error;
+            }
+            this.logger.error(`Error fetching answer ${id}:`, error);
+            throw error;
+        }
+    }
+
     async getAnswers(questionId: string, userId?: string): Promise<any[]> {
         try {
             const answers = await this.prisma.answer.findMany({
@@ -596,6 +716,32 @@ export class QnaService {
         }
     }
 
+    async adminUpdateAnswer(id: string, dto: UpdateAnswerDto): Promise<Answer> {
+        try {
+            const answer = await this.prisma.answer.findUnique({
+                where: { id },
+            });
+
+            if (!answer) {
+                throw new NotFoundException('Cevap bulunamadı');
+            }
+
+            const updated = await this.prisma.answer.update({
+                where: { id },
+                data: { content: dto.content },
+            });
+
+            this.logger.log(`Answer updated by admin: ${id}`);
+            return updated;
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw error;
+            }
+            this.logger.error(`Error updating answer ${id}:`, error);
+            throw error;
+        }
+    }
+
     async deleteAnswer(id: string, userId: string): Promise<void> {
         try {
             const answer = await this.prisma.answer.findUnique({
@@ -617,6 +763,30 @@ export class QnaService {
             this.logger.log(`Answer deleted: ${id} by user ${userId}`);
         } catch (error) {
             if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+                throw error;
+            }
+            this.logger.error(`Error deleting answer ${id}:`, error);
+            throw error;
+        }
+    }
+
+    async adminDeleteAnswer(id: string): Promise<void> {
+        try {
+            const answer = await this.prisma.answer.findUnique({
+                where: { id },
+            });
+
+            if (!answer) {
+                throw new NotFoundException('Cevap bulunamadı');
+            }
+
+            await this.prisma.answer.delete({
+                where: { id },
+            });
+
+            this.logger.log(`Answer deleted by admin: ${id}`);
+        } catch (error) {
+            if (error instanceof NotFoundException) {
                 throw error;
             }
             this.logger.error(`Error deleting answer ${id}:`, error);
@@ -996,6 +1166,7 @@ export class QnaService {
                 where.OR = [
                     { title: { contains: search, mode: 'insensitive' } },
                     { content: { contains: search, mode: 'insensitive' } },
+                    { tags: { has: search.toLowerCase() } }, // Search in tags array
                 ];
             }
 
@@ -1130,6 +1301,7 @@ export class QnaService {
                 where.OR = [
                     { title: { contains: search, mode: 'insensitive' } },
                     { content: { contains: search, mode: 'insensitive' } },
+                    { tags: { has: search.toLowerCase() } }, // Search in tags array
                 ];
             }
 
@@ -1260,6 +1432,7 @@ export class QnaService {
                 where.OR = [
                     { title: { contains: search, mode: 'insensitive' } },
                     { content: { contains: search, mode: 'insensitive' } },
+                    { tags: { has: search.toLowerCase() } }, // Search in tags array
                 ];
             }
 
@@ -1357,12 +1530,29 @@ export class QnaService {
                 throw new NotFoundException('Soru bulunamadı');
             }
 
+            // Create favorite
             await this.prisma.questionFavorite.create({
                 data: {
                     questionId,
                     userId,
                 },
             });
+
+            // Auto-follow when favoriting
+            try {
+                await this.prisma.questionFollower.create({
+                    data: {
+                        questionId,
+                        userId,
+                    },
+                });
+                this.logger.log(`Question auto-followed on favorite: ${questionId} by user ${userId}`);
+            } catch (followError) {
+                // Ignore if already following (duplicate error)
+                if (followError.code !== 'P2002') {
+                    this.logger.warn(`Could not auto-follow question ${questionId}:`, followError);
+                }
+            }
 
             this.logger.log(`Question favorited: ${questionId} by user ${userId}`);
         } catch (error) {
@@ -1388,6 +1578,24 @@ export class QnaService {
                     },
                 },
             });
+
+            // Auto-unfollow when unfavoriting
+            try {
+                await this.prisma.questionFollower.delete({
+                    where: {
+                        questionId_userId: {
+                            questionId,
+                            userId,
+                        },
+                    },
+                });
+                this.logger.log(`Question auto-unfollowed on unfavorite: ${questionId} by user ${userId}`);
+            } catch (unfollowError) {
+                // Ignore if not following (not found error)
+                if (unfollowError.code !== 'P2025') {
+                    this.logger.warn(`Could not auto-unfollow question ${questionId}:`, unfollowError);
+                }
+            }
 
             this.logger.log(`Question unfavorited: ${questionId} by user ${userId}`);
         } catch (error) {

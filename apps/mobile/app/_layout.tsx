@@ -5,12 +5,17 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
+import * as SplashScreen from 'expo-splash-screen';
 import { useNotifications } from '../src/hooks/useNotifications';
 import { useQnaNotificationHandler } from '../src/hooks/useQnaNotificationHandler';
 import { useAuthStore } from '../src/store/authStore';
 import { queryClient } from '../src/lib/queryClient';
 import { iapManager } from '../src/services/iap.wrapper';
 import { subscriptionSyncService } from '../src/services/subscriptionSync';
+import { AnimatedSplash } from '../src/components/AnimatedSplash';
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 function AppContent() {
   // CRITICAL: ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
@@ -23,6 +28,8 @@ function AppContent() {
   const isLoading = useAuthStore((state) => state.isLoading);
   const router = useRouter();
   const [pinCheckComplete, setPinCheckComplete] = useState(false);
+  const [showAnimatedSplash, setShowAnimatedSplash] = useState(true);
+  const [appIsReady, setAppIsReady] = useState(false);
 
   // Initialize QnA notification handler
   useQnaNotificationHandler();
@@ -31,7 +38,19 @@ function AppContent() {
 
   // Initialize app
   useEffect(() => {
-    initialize();
+    const prepareApp = async () => {
+      try {
+        await initialize();
+        // Hide the native splash screen
+        await SplashScreen.hideAsync();
+      } catch (error) {
+        console.error('App initialization error:', error);
+      } finally {
+        setAppIsReady(true);
+      }
+    };
+
+    prepareApp();
   }, [initialize]);
 
   // Initialize IAP on app start
@@ -134,6 +153,17 @@ function AppContent() {
 
   // 3. NOW we can do conditional rendering (after all hooks are called)
   const showLoading = isLoading || !pinCheckComplete;
+
+  // Show animated splash while app is not ready
+  if (!appIsReady || showAnimatedSplash) {
+    return (
+      <AnimatedSplash
+        onAnimationEnd={() => {
+          setShowAnimatedSplash(false);
+        }}
+      />
+    );
+  }
 
   return (
     <>

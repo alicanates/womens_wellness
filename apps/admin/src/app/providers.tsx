@@ -90,6 +90,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             {
               name: 'qna/answers',
               list: '/qna/answers',
+              show: '/qna/answers/show/:id',
+              edit: '/qna/answers/edit/:id',
               meta: {
                 label: 'Cevaplar',
                 parent: 'qna',
@@ -175,6 +177,16 @@ export default function Providers({ children }: { children: React.ReactNode }) {
               meta: {
                 label: 'AI Yapılandırması',
                 icon: <BulbOutlined />,
+              },
+            },
+            {
+              name: 'ai-providers',
+              list: '/settings/ai-providers',
+              create: '/settings/ai-providers/create',
+              edit: '/settings/ai-providers/edit/:id',
+              meta: {
+                label: 'AI Provider Yönetimi',
+                parent: 'ai',
               },
             },
             {

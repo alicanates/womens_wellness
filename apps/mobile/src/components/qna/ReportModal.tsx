@@ -25,49 +25,49 @@ interface ReportModalProps {
 interface ReportReason {
     id: string;
     label: string;
-    icon: keyof typeof Ionicons.glyphMap;
+    emoji: string;
 }
 
 const REPORT_REASONS: ReportReason[] = [
     {
         id: 'spam',
         label: 'Spam veya Reklam',
-        icon: 'megaphone-outline',
+        emoji: '📢',
     },
     {
         id: 'inappropriate',
         label: 'Uygunsuz İçerik',
-        icon: 'warning-outline',
+        emoji: '⚠️',
     },
     {
         id: 'misleading',
         label: 'Yanıltıcı Bilgi',
-        icon: 'alert-circle-outline',
+        emoji: '❗',
     },
     {
         id: 'harassment',
         label: 'Taciz veya Zorbalık',
-        icon: 'sad-outline',
+        emoji: '😢',
     },
     {
         id: 'violence',
         label: 'Şiddet veya Tehdit',
-        icon: 'skull-outline',
+        emoji: '💀',
     },
     {
         id: 'hate',
         label: 'Nefret Söylemi',
-        icon: 'heart-dislike-outline',
+        emoji: '💔',
     },
     {
         id: 'privacy',
         label: 'Gizlilik İhlali',
-        icon: 'eye-off-outline',
+        emoji: '🔒',
     },
     {
         id: 'other',
         label: 'Diğer',
-        icon: 'ellipsis-horizontal-outline',
+        emoji: '❓',
     },
 ];
 
@@ -131,7 +131,7 @@ export function ReportModal({
                             style={styles.closeButton}
                             disabled={isSubmitting}
                         >
-                            <Ionicons name="close" size={24} color={theme.colors.text} />
+                            <Text style={{ fontSize: 24 }}>✕</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -154,15 +154,7 @@ export function ReportModal({
                                     disabled={isSubmitting}
                                 >
                                     <View style={styles.reasonIconContainer}>
-                                        <Ionicons
-                                            name={reason.icon}
-                                            size={24}
-                                            color={
-                                                selectedReason === reason.id
-                                                    ? theme.colors.primary
-                                                    : theme.colors.textSecondary
-                                            }
-                                        />
+                                        <Text style={styles.reasonEmoji}>{reason.emoji}</Text>
                                     </View>
                                     <Text
                                         style={[
@@ -173,11 +165,7 @@ export function ReportModal({
                                         {reason.label}
                                     </Text>
                                     {selectedReason === reason.id && (
-                                        <Ionicons
-                                            name="checkmark-circle"
-                                            size={20}
-                                            color={theme.colors.primary}
-                                        />
+                                        <Text style={{ fontSize: 20 }}>✅</Text>
                                     )}
                                 </TouchableOpacity>
                             ))}
@@ -206,11 +194,7 @@ export function ReportModal({
 
                         {/* Info */}
                         <View style={styles.infoContainer}>
-                            <Ionicons
-                                name="information-circle-outline"
-                                size={20}
-                                color={theme.colors.primary}
-                            />
+                            <Text style={{ fontSize: 20 }}>ℹ️</Text>
                             <Text style={styles.infoText}>
                                 Raporunuz gizli tutulacak ve moderasyon ekibimiz tarafından incelenecektir.
                             </Text>
@@ -321,6 +305,9 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
         reasonLabelSelected: {
             color: theme.colors.primary,
             fontWeight: '600',
+        },
+        reasonEmoji: {
+            fontSize: 24,
         },
         detailsContainer: {
             marginBottom: theme.spacing.lg,

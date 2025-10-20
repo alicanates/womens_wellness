@@ -259,7 +259,10 @@ export const metricsService = {
     weightKg: number;
     activity?: string;
     climate?: string;
-  }) => api.post('/metrics/water/calculate', data),
+  }) => {
+    console.log('Sending water calculation request:', data);
+    return api.post('/metrics/water/calculate', data);
+  },
 };
 
 // Water endpoints

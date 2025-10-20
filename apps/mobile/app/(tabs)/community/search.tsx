@@ -9,8 +9,10 @@ import {
     ScrollView,
     FlatList,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@/hooks/useTheme';
 import { useInfiniteQuestions } from '@/hooks/useQna';
 import { QuestionCard } from '@/components/qna/QuestionCard';
 import { CategoryPill } from '@/components/qna/CategoryPill';
@@ -30,21 +32,22 @@ const POPULAR_TAGS = [
 ];
 
 const CATEGORIES = [
-    { key: QuestionCategory.MENSTRUAL_HEALTH, label: 'Adet Sağlığı', icon: 'water' },
-    { key: QuestionCategory.PREGNANCY, label: 'Hamilelik', icon: 'heart' },
-    { key: QuestionCategory.FERTILITY, label: 'Doğurganlık', icon: 'flower' },
-    { key: QuestionCategory.NUTRITION, label: 'Beslenme', icon: 'nutrition' },
-    { key: QuestionCategory.EXERCISE, label: 'Egzersiz', icon: 'fitness' },
-    { key: QuestionCategory.MENTAL_HEALTH, label: 'Ruh Sağlığı', icon: 'happy' },
-    { key: QuestionCategory.SLEEP, label: 'Uyku', icon: 'moon' },
-    { key: QuestionCategory.CONTRACEPTION, label: 'Doğum Kontrolü', icon: 'shield' },
-    { key: QuestionCategory.PMS, label: 'PMS', icon: 'sad' },
-    { key: QuestionCategory.MENOPAUSE, label: 'Menopoz', icon: 'thermometer' },
-    { key: QuestionCategory.SEXUAL_HEALTH, label: 'Cinsel Sağlık', icon: 'rose' },
-    { key: QuestionCategory.GENERAL, label: 'Genel', icon: 'help-circle' },
+    { key: QuestionCategory.MENSTRUAL_HEALTH, label: 'Adet Sağlığı', emoji: '🩸' },
+    { key: QuestionCategory.PREGNANCY, label: 'Hamilelik', emoji: '🤰' },
+    { key: QuestionCategory.FERTILITY, label: 'Doğurganlık', emoji: '🌸' },
+    { key: QuestionCategory.NUTRITION, label: 'Beslenme', emoji: '🥗' },
+    { key: QuestionCategory.EXERCISE, label: 'Egzersiz', emoji: '💪' },
+    { key: QuestionCategory.MENTAL_HEALTH, label: 'Ruh Sağlığı', emoji: '🧠' },
+    { key: QuestionCategory.SLEEP, label: 'Uyku', emoji: '😴' },
+    { key: QuestionCategory.CONTRACEPTION, label: 'Doğum Kontrolü', emoji: '💊' },
+    { key: QuestionCategory.PMS, label: 'PMS', emoji: '😣' },
+    { key: QuestionCategory.MENOPAUSE, label: 'Menopoz', emoji: '🌡️' },
+    { key: QuestionCategory.SEXUAL_HEALTH, label: 'Cinsel Sağlık', emoji: '💕' },
+    { key: QuestionCategory.GENERAL, label: 'Genel', emoji: '💬' },
 ];
 
 export default function SearchScreen() {
+    const theme = useTheme();
     const params = useLocalSearchParams<{ q?: string; category?: string }>();
     const [searchQuery, setSearchQuery] = useState(params.q || '');
     const [selectedCategory, setSelectedCategory] = useState<QuestionCategory | undefined>(
@@ -120,7 +123,7 @@ export default function SearchScreen() {
                             style={styles.tagChip}
                             onPress={() => handleTagPress(tag)}
                         >
-                            <Ionicons name="pricetag" size={14} color="#8B5CF6" />
+                            <Text style={{ fontSize: 14 }}>🏷️</Text>
                             <Text style={styles.tagText}>{tag}</Text>
                         </TouchableOpacity>
                     ))}
@@ -149,11 +152,7 @@ export default function SearchScreen() {
                             ]}
                             onPress={() => handleCategorySelect(cat.key)}
                         >
-                            <Ionicons
-                                name={cat.icon as any}
-                                size={24}
-                                color={selectedCategory === cat.key ? '#8B5CF6' : '#6B7280'}
-                            />
+                            <Text style={{ fontSize: 32 }}>{cat.emoji}</Text>
                             <Text
                                 style={[
                                     styles.categoryLabel,
@@ -220,7 +219,7 @@ export default function SearchScreen() {
 
         return (
             <View style={styles.emptyContainer}>
-                <Ionicons name="search-outline" size={64} color="#D1D5DB" />
+                <Text style={{ fontSize: 64 }}>🔍</Text>
                 <Text style={styles.emptyTitle}>Sonuç Bulunamadı</Text>
                 <Text style={styles.emptyText}>
                     {debouncedSearch
@@ -255,17 +254,18 @@ export default function SearchScreen() {
     const keyExtractor = useCallback((item: Question) => item.id, []);
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top']}>
             {/* Search Header */}
             <View style={styles.searchHeader}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color="#1F2937" />
+                    <Text style={{ fontSize: 24 }}>⬅️</Text>
                 </TouchableOpacity>
                 <View style={styles.searchInputContainer}>
-                    <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
+                    <Text style={{ fontSize: 18, marginRight: 8 }}>🔍</Text>
                     <TextInput
                         style={styles.searchInput}
                         placeholder="Soru ara..."
+                        placeholderTextColor={theme.colors.textSecondary}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         autoFocus
@@ -274,9 +274,9 @@ export default function SearchScreen() {
                     {(searchQuery.length > 0 || isDebouncing) && (
                         <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearIcon}>
                             {isDebouncing ? (
-                                <ActivityIndicator size="small" color="#9CA3AF" />
+                                <ActivityIndicator size="small" color={theme.colors.textSecondary} />
                             ) : (
-                                <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+                                <Text style={{ fontSize: 20 }}>❌</Text>
                             )}
                         </TouchableOpacity>
                     )}
@@ -303,7 +303,7 @@ export default function SearchScreen() {
                 onRefresh={refetch}
                 contentContainerStyle={styles.listContent}
             />
-        </View>
+        </SafeAreaView>
     );
 }
 
@@ -326,6 +326,7 @@ const styles = StyleSheet.create({
     },
     backButton: {
         marginRight: 12,
+        padding: 4,
     },
     searchInputContainer: {
         flex: 1,
@@ -336,16 +337,15 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         height: 44,
     },
-    searchIcon: {
-        marginRight: 8,
-    },
     searchInput: {
         flex: 1,
         fontSize: 16,
         color: '#1F2937',
+        paddingVertical: 8,
     },
     clearIcon: {
         marginLeft: 8,
+        padding: 4,
     },
     listContent: {
         flexGrow: 1,

@@ -26,6 +26,7 @@
     "@react-navigation/native": "^7.1.17",
     "@react-navigation/stack": "^6.3.20",
     "@tanstack/react-query": "^5.17.9",
+    "@wellness/i18n": "workspace:*",
     "dayjs": "^1.11.10",
     "expo": "~52.0.47",
     "expo-auth-session": "~6.0.0",
@@ -40,6 +41,7 @@
     "expo-router": "~4.0.21",
     "expo-secure-store": "~14.0.0",
     "expo-sharing": "^13.0.1",
+    "expo-splash-screen": "^31.0.10",
     "expo-sqlite": "~15.1.4",
     "expo-web-browser": "~14.0.0",
     "react": "18.3.1",
@@ -53,8 +55,7 @@
     "react-native-screens": "4.4.0",
     "react-native-web": "^0.19.13",
     "zod": "^3.22.4",
-    "zustand": "^4.4.7",
-    "@wellness/i18n": "workspace:*"
+    "zustand": "^4.4.7"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",

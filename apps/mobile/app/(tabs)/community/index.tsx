@@ -13,7 +13,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/useTheme';
-import { useInfiniteQuestions, useQuestions } from '@/hooks/useQna';
+import { useInfiniteQuestions, useQuestions, useFavoriteQuestions } from '@/hooks/useQna';
 import { useQnaStore } from '@/store/qnaStore';
 import { QuestionCard, QuestionListSkeleton, ErrorState, EmptyState, OfflineBanner } from '@/components/qna';
 import { QuestionCategory, QuestionStatus, Question } from '@/types/qna';
@@ -23,6 +23,7 @@ const SORT_OPTIONS = [
     { value: 'recent', label: 'En Yeni', icon: 'time-outline' },
     { value: 'popular', label: 'Popüler', icon: 'flame-outline' },
     { value: 'unanswered', label: 'Cevaplanmamış', icon: 'help-circle-outline' },
+    { value: 'favorites', label: 'Favorilerim', icon: 'heart-outline' },
 ] as const;
 
 const CATEGORIES = [
@@ -65,16 +66,19 @@ export default function CommunityIndexScreen() {
     const [showFilters, setShowFilters] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<QuestionStatus | undefined>(filters.status);
 
-    // Build query filters
+    // Check if showing favorites
+    const showingFavorites = sortBy === 'favorites';
+
+    // Build query filters (exclude 'favorites' from sort as it's a separate endpoint)
     const queryFilters = useMemo(() => ({
         category: selectedCategory,
         status: selectedStatus,
-        sort: sortBy,
+        sort: showingFavorites ? 'recent' : sortBy, // Use 'recent' as fallback for favorites
         search: searchQuery,
         limit: 10,
-    }), [selectedCategory, selectedStatus, sortBy, searchQuery]);
+    }), [selectedCategory, selectedStatus, sortBy, searchQuery, showingFavorites]);
 
-    // Fetch questions with infinite scroll
+    // Fetch questions with infinite scroll (skip if showing favorites)
     const {
         data,
         fetchNextPage,
@@ -84,12 +88,28 @@ export default function CommunityIndexScreen() {
         isError,
         refetch,
         isRefetching,
-    } = useInfiniteQuestions(queryFilters);
+    } = useInfiniteQuestions(queryFilters, {
+        enabled: !showingFavorites, // Disable when showing favorites
+    });
+
+    // Fetch favorite questions separately
+    const {
+        data: favoritesData,
+        isLoading: favoritesLoading,
+        isError: favoritesError,
+        refetch: refetchFavorites,
+        isRefetching: isRefetchingFavorites,
+    } = useFavoriteQuestions(1, 50, {
+        enabled: showingFavorites, // Only fetch when showing favorites
+    });
 
     // Flatten paginated data
     const questions = useMemo(() => {
+        if (showingFavorites) {
+            return favoritesData?.questions || [];
+        }
         return data?.pages.flatMap((page) => page.questions) || [];
-    }, [data]);
+    }, [data, favoritesData, showingFavorites]);
 
     // Popular questions widget - always fetch to maintain hooks order
     const shouldShowWidget = !searchQuery && !selectedCategory && !selectedStatus;
@@ -115,8 +135,16 @@ export default function CommunityIndexScreen() {
 
     // Handle refresh
     const handleRefresh = useCallback(() => {
-        refetch();
-    }, [refetch]);
+        if (showingFavorites) {
+            refetchFavorites();
+        } else {
+            refetch();
+        }
+        // Also refetch popular questions widget
+        if (shouldShowWidget) {
+            popularQuestionsQuery.refetch();
+        }
+    }, [refetch, refetchFavorites, showingFavorites, shouldShowWidget, popularQuestionsQuery]);
 
     // Handle question press
     const handleQuestionPress = useCallback((question: Question) => {
@@ -209,7 +237,9 @@ export default function CommunityIndexScreen() {
                         activeOpacity={0.7}
                     >
                         <Text style={{ fontSize: 16 }}>
-                            {option.value === 'recent' ? '🕐' : option.value === 'popular' ? '🔥' : '❓'}
+                            {option.value === 'recent' ? '🕐' :
+                                option.value === 'popular' ? '🔥' :
+                                    option.value === 'favorites' ? '❤️' : '❓'}
                         </Text>
                         <Text
                             style={[
@@ -307,6 +337,22 @@ export default function CommunityIndexScreen() {
                             ))}
                         </View>
                     </View>
+
+                    {/* Reset Button */}
+                    {getActiveFiltersCount() > 0 && (
+                        <TouchableOpacity
+                            style={styles.resetFiltersButton}
+                            onPress={() => {
+                                setSelectedCategory(undefined);
+                                setSelectedStatus(undefined);
+                                setFilters({ status: undefined });
+                            }}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={{ fontSize: 16 }}>🔄</Text>
+                            <Text style={styles.resetFiltersText}>Filtreleri Sıfırla</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             )}
 
@@ -361,7 +407,19 @@ export default function CommunityIndexScreen() {
 
     // Render empty state
     const renderEmpty = useCallback(() => {
-        if (isLoading) return <QuestionListSkeleton count={5} />;
+        if (currentIsLoading) return <QuestionListSkeleton count={5} />;
+
+        if (showingFavorites) {
+            return (
+                <View style={styles.emptyState}>
+                    <Text style={{ fontSize: 64 }}>❤️</Text>
+                    <Text style={styles.emptyTitle}>Henüz Favori Yok</Text>
+                    <Text style={styles.emptyText}>
+                        Beğendiğiniz soruları favorileyin, buradan kolayca erişin
+                    </Text>
+                </View>
+            );
+        }
 
         return (
             <EmptyState
@@ -370,7 +428,7 @@ export default function CommunityIndexScreen() {
                 onAction={handleAskQuestion}
             />
         );
-    }, [isLoading, handleAskQuestion]);
+    }, [currentIsLoading, showingFavorites, handleAskQuestion, styles]);
 
     // Render footer
     const renderFooter = useCallback(() => {
@@ -394,15 +452,20 @@ export default function CommunityIndexScreen() {
     // Memoized key extractor - MUST be before early return
     const keyExtractor = useCallback((item: Question) => item.id, []);
 
+    // Determine loading and error states based on current view
+    const currentIsLoading = showingFavorites ? favoritesLoading : isLoading;
+    const currentIsError = showingFavorites ? favoritesError : isError;
+    const currentIsRefreshing = showingFavorites ? isRefetchingFavorites : isRefetching;
+
     // Render error state - AFTER all hooks
-    if (isError) {
+    if (currentIsError) {
         const errorType = !isConnected ? 'network' : 'server';
         return (
             <SafeAreaView style={styles.safeArea} edges={['top']}>
                 <OfflineBanner />
                 <ErrorState
                     type={errorType}
-                    onRetry={() => refetch()}
+                    onRetry={() => showingFavorites ? refetchFavorites() : refetch()}
                 />
             </SafeAreaView>
         );
@@ -423,7 +486,7 @@ export default function CommunityIndexScreen() {
                 onEndReachedThreshold={0.5}
                 refreshControl={
                     <RefreshControl
-                        refreshing={isRefetching}
+                        refreshing={currentIsRefreshing}
                         onRefresh={handleRefresh}
                         tintColor={theme.colors.primary}
                     />
@@ -658,6 +721,23 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
         },
         statusChipTextActive: {
             color: '#fff',
+        },
+        resetFiltersButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            paddingVertical: theme.spacing.md,
+            borderRadius: 12,
+            backgroundColor: theme.colors.background,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            marginTop: theme.spacing.sm,
+        },
+        resetFiltersText: {
+            fontSize: 14,
+            fontWeight: '600',
+            color: theme.colors.text,
         },
         emptyState: {
             alignItems: 'center',

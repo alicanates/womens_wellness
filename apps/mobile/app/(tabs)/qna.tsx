@@ -166,8 +166,19 @@ export default function QnAScreen() {
                     <Text style={styles.helpIcon}>💬</Text>
                     <Text style={styles.helpTitle}>Sorunuzu bulamadınız mı?</Text>
                     <Text style={styles.helpText}>
-                        NOVA ile sohbet ederek daha fazla bilgi alabilirsiniz
+                        NOVA ile sohbet ederek veya toplulukta soru sorarak daha fazla bilgi alabilirsiniz
                     </Text>
+                    <TouchableOpacity
+                        style={styles.communityButton}
+                        onPress={() => {
+                            // Navigate to community tab
+                            const navigation = require('expo-router').router;
+                            navigation.push('/(tabs)/community');
+                        }}
+                    >
+                        <Text style={styles.communityButtonText}>Topluluğa Git</Text>
+                        <Text style={{ fontSize: 16 }}>→</Text>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.bottomSpacer} />
@@ -345,6 +356,22 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
             fontSize: 14,
             color: '#0369A1',
             textAlign: 'center',
+            marginBottom: theme.spacing.md,
+        },
+        communityButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#0C4A6E',
+            paddingHorizontal: theme.spacing.lg,
+            paddingVertical: theme.spacing.md,
+            borderRadius: 12,
+            gap: theme.spacing.sm,
+        },
+        communityButtonText: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: '#fff',
         },
         bottomSpacer: {
             height: 40,

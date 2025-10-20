@@ -58,16 +58,16 @@ export default function BodyFatCalculatorScreen() {
         let category = '';
         let categoryColor = '';
 
-        if (bodyFatPercentage < 14) {
+        if (bodyFatPercentage < 21) {
             category = 'Atletik';
             categoryColor = '#10B981';
-        } else if (bodyFatPercentage < 21) {
+        } else if (bodyFatPercentage < 25) {
             category = 'Fit';
             categoryColor = '#3B82F6';
-        } else if (bodyFatPercentage < 25) {
+        } else if (bodyFatPercentage < 32) {
             category = 'Ortalama';
             categoryColor = '#F59E0B';
-        } else if (bodyFatPercentage < 32) {
+        } else if (bodyFatPercentage < 39) {
             category = 'Ortalamanın Üstü';
             categoryColor = '#FF9800';
         } else {
@@ -251,7 +251,7 @@ export default function BodyFatCalculatorScreen() {
                             <View style={styles.rangeItem}>
                                 <View style={[styles.rangeIndicator, { backgroundColor: '#EF4444' }]} />
                                 <Text style={styles.rangeLabel}>Obez</Text>
-                                <Text style={styles.rangeValue}>38%+</Text>
+                                <Text style={styles.rangeValue}>39%+</Text>
                             </View>
                         </View>
 
@@ -265,7 +265,7 @@ export default function BodyFatCalculatorScreen() {
                     </View>
                 )}
             </ScrollView>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 }
 

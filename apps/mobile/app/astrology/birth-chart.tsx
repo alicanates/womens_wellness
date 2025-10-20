@@ -1,17 +1,16 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuthStore } from '@/store/authStore';
 import {
     getZodiacSign,
     ZODIAC_SIGNS,
-    calculateRisingSign,
-    calculateMoonSign,
     calculateElementDistribution,
     getSignDescription
 } from '@/utils/astrology';
+import { astrologyApi } from '@/services/astrologyApi';
 
 export default function BirthChartScreen() {
     const theme = useTheme();
@@ -27,6 +26,8 @@ export default function BirthChartScreen() {
     const [birthTime, setBirthTime] = useState('12:00');
     const [birthPlace, setBirthPlace] = useState('');
     const [showChart, setShowChart] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [apiChartData, setApiChartData] = useState<any>(null);
 
     const handleDateInputChange = (text: string) => {
         setBirthDateInput(text);
@@ -47,20 +48,74 @@ export default function BirthChartScreen() {
 
     const styles = createStyles(theme);
 
-    // Calculate all signs based on user input
-    const zodiacSign = getZodiacSign(birthDate);
-    const zodiacInfo = ZODIAC_SIGNS[zodiacSign];
-    const risingSign = calculateRisingSign(birthDate, birthTime);
-    const moonSign = calculateMoonSign(birthDate);
+    const handleCalculate = async () => {
+        console.log('[BirthChart] handleCalculate called');
+        console.log('[BirthChart] birthPlace:', birthPlace);
 
-    // Calculate element distribution
-    const elementDist = calculateElementDistribution(zodiacSign, risingSign, moonSign);
+        if (!birthPlace.trim()) {
+            console.log('[BirthChart] birthPlace is empty');
+            Alert.alert('Uyarı', 'Lütfen doğum yerinizi girin');
+            return;
+        }
 
-    const handleCalculate = () => {
-        if (birthPlace.trim()) {
+        console.log('[BirthChart] Starting calculation...');
+        setLoading(true);
+
+        try {
+            console.log('[BirthChart] City:', birthPlace);
+            console.log('[BirthChart] Birth date:', birthDate.toISOString());
+            console.log('[BirthChart] Birth time:', birthTime);
+
+            // Call API - Kerykeion will automatically find city coordinates
+            const result = await astrologyApi.calculateBirthChart({
+                birthDate: birthDate.toISOString(),
+                birthTime: birthTime,
+                city: birthPlace.trim(),
+            });
+
+            console.log('[BirthChart] API result:', result);
+
+            setApiChartData(result);
             setShowChart(true);
+        } catch (error) {
+            console.error('[BirthChart] Error:', error);
+            Alert.alert('Hata', 'Doğum haritası hesaplanırken bir hata oluştu. Lütfen tekrar deneyin.');
+        } finally {
+            setLoading(false);
         }
     };
+
+    // Calculate all signs based on API result
+    const chartData = useMemo(() => {
+        if (!showChart || !apiChartData) return null;
+
+        const zodiacSign = apiChartData.sunSign as keyof typeof ZODIAC_SIGNS;
+        const zodiacInfo = ZODIAC_SIGNS[zodiacSign];
+
+        if (!zodiacInfo) return null;
+
+        const risingSign = apiChartData.risingSign as keyof typeof ZODIAC_SIGNS;
+        const risingInfo = ZODIAC_SIGNS[risingSign];
+
+        if (!risingInfo) return null;
+
+        const moonSign = apiChartData.moonSign as keyof typeof ZODIAC_SIGNS;
+        const moonInfo = ZODIAC_SIGNS[moonSign];
+
+        if (!moonInfo) return null;
+
+        const elementDist = calculateElementDistribution(zodiacSign, risingSign, moonSign);
+
+        return {
+            zodiacSign,
+            zodiacInfo,
+            risingSign,
+            risingInfo,
+            moonSign,
+            moonInfo,
+            elementDist,
+        };
+    }, [showChart, apiChartData]);
 
     return (
         <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -77,7 +132,10 @@ export default function BirthChartScreen() {
                 {/* Description */}
                 <View style={styles.description}>
                     <Text style={styles.descriptionText}>
-                        Doğum tarihiniz, saatiniz ve yerinize göre detaylı astrolojik analizinizi görün.
+                        Doğum tarihiniz, saatiniz ve yerinize göre astronomik hesaplamalarla detaylı astrolojik analizinizi görün.
+                    </Text>
+                    <Text style={[styles.descriptionText, { fontSize: 12, marginTop: 8, fontStyle: 'italic' }]}>
+                        ✨ Gerçek astronomik hesaplamalar kullanılarak yükselen burç hesaplanır.
                     </Text>
                 </View>
 
@@ -112,62 +170,71 @@ export default function BirthChartScreen() {
                             style={styles.input}
                             value={birthPlace}
                             onChangeText={setBirthPlace}
-                            placeholder="Şehir adı girin"
+                            placeholder="Şehir adı (Örn: Istanbul, Adiyaman, Van)"
                             placeholderTextColor={theme.colors.textSecondary}
                         />
+                        <Text style={[styles.descriptionText, { fontSize: 11, marginTop: 4, textAlign: 'left' }]}>
+                            Türkiye'deki tüm şehirler desteklenir
+                        </Text>
                     </View>
 
                     <TouchableOpacity
-                        style={[styles.calculateButton, !birthPlace.trim() && styles.calculateButtonDisabled]}
+                        style={[styles.calculateButton, loading && styles.calculateButtonDisabled]}
                         onPress={handleCalculate}
-                        disabled={!birthPlace.trim()}
+                        disabled={loading}
                     >
-                        <Text style={styles.calculateButtonText}>Haritayı Oluştur</Text>
+                        {loading ? (
+                            <ActivityIndicator color={theme.colors.textOnPrimary} />
+                        ) : (
+                            <Text style={styles.calculateButtonText}>
+                                Haritayı Oluştur
+                            </Text>
+                        )}
                     </TouchableOpacity>
                 </View>
 
                 {/* Birth Chart Result */}
-                {showChart && (
+                {showChart && chartData && (
                     <View style={styles.chartContainer}>
                         {/* Sun Sign */}
-                        <View style={[styles.chartCard, { borderColor: zodiacInfo.color }]}>
+                        <View style={[styles.chartCard, { borderColor: chartData.zodiacInfo.color }]}>
                             <View style={styles.chartCardHeader}>
-                                <Text style={styles.chartCardEmoji}>{zodiacInfo.emoji}</Text>
+                                <Text style={styles.chartCardEmoji}>{chartData.zodiacInfo.emoji}</Text>
                                 <View style={styles.chartCardInfo}>
                                     <Text style={styles.chartCardLabel}>Güneş Burcunuz</Text>
-                                    <Text style={styles.chartCardValue}>{zodiacInfo.nameTr}</Text>
+                                    <Text style={styles.chartCardValue}>{chartData.zodiacInfo.nameTr}</Text>
                                 </View>
                             </View>
                             <Text style={styles.chartCardDescription}>
-                                {getSignDescription('sun', zodiacSign)}
+                                {getSignDescription('sun', chartData.zodiacSign)}
                             </Text>
                         </View>
 
                         {/* Rising Sign */}
-                        <View style={[styles.chartCard, { borderColor: ZODIAC_SIGNS[risingSign].color }]}>
+                        <View style={[styles.chartCard, { borderColor: chartData.risingInfo.color }]}>
                             <View style={styles.chartCardHeader}>
-                                <Text style={styles.chartCardEmoji}>{ZODIAC_SIGNS[risingSign].emoji}</Text>
+                                <Text style={styles.chartCardEmoji}>{chartData.risingInfo.emoji}</Text>
                                 <View style={styles.chartCardInfo}>
                                     <Text style={styles.chartCardLabel}>Yükselen Burcunuz</Text>
-                                    <Text style={styles.chartCardValue}>{ZODIAC_SIGNS[risingSign].nameTr}</Text>
+                                    <Text style={styles.chartCardValue}>{chartData.risingInfo.nameTr}</Text>
                                 </View>
                             </View>
                             <Text style={styles.chartCardDescription}>
-                                {getSignDescription('rising', risingSign)}
+                                {getSignDescription('rising', chartData.risingSign)}
                             </Text>
                         </View>
 
                         {/* Moon Sign */}
-                        <View style={[styles.chartCard, { borderColor: ZODIAC_SIGNS[moonSign].color }]}>
+                        <View style={[styles.chartCard, { borderColor: chartData.moonInfo.color }]}>
                             <View style={styles.chartCardHeader}>
-                                <Text style={styles.chartCardEmoji}>{ZODIAC_SIGNS[moonSign].emoji}</Text>
+                                <Text style={styles.chartCardEmoji}>{chartData.moonInfo.emoji}</Text>
                                 <View style={styles.chartCardInfo}>
                                     <Text style={styles.chartCardLabel}>Ay Burcunuz</Text>
-                                    <Text style={styles.chartCardValue}>{ZODIAC_SIGNS[moonSign].nameTr}</Text>
+                                    <Text style={styles.chartCardValue}>{chartData.moonInfo.nameTr}</Text>
                                 </View>
                             </View>
                             <Text style={styles.chartCardDescription}>
-                                {getSignDescription('moon', moonSign)}
+                                {getSignDescription('moon', chartData.moonSign)}
                             </Text>
                         </View>
 
@@ -178,22 +245,22 @@ export default function BirthChartScreen() {
                                 <View style={styles.elementItem}>
                                     <Text style={styles.elementEmoji}>🔥</Text>
                                     <Text style={styles.elementLabel}>Ateş</Text>
-                                    <Text style={styles.elementValue}>{elementDist.fire}%</Text>
+                                    <Text style={styles.elementValue}>{chartData.elementDist.fire}%</Text>
                                 </View>
                                 <View style={styles.elementItem}>
                                     <Text style={styles.elementEmoji}>🌊</Text>
                                     <Text style={styles.elementLabel}>Su</Text>
-                                    <Text style={styles.elementValue}>{elementDist.water}%</Text>
+                                    <Text style={styles.elementValue}>{chartData.elementDist.water}%</Text>
                                 </View>
                                 <View style={styles.elementItem}>
                                     <Text style={styles.elementEmoji}>🌍</Text>
                                     <Text style={styles.elementLabel}>Toprak</Text>
-                                    <Text style={styles.elementValue}>{elementDist.earth}%</Text>
+                                    <Text style={styles.elementValue}>{chartData.elementDist.earth}%</Text>
                                 </View>
                                 <View style={styles.elementItem}>
                                     <Text style={styles.elementEmoji}>💨</Text>
                                     <Text style={styles.elementLabel}>Hava</Text>
-                                    <Text style={styles.elementValue}>{elementDist.air}%</Text>
+                                    <Text style={styles.elementValue}>{chartData.elementDist.air}%</Text>
                                 </View>
                             </View>
                         </View>

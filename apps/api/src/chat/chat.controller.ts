@@ -235,9 +235,16 @@ export class ChatController {
           let tokenCount = 0;
 
           // Stream tokens using textStream async iterator
+          this.logger.debug(`[Stream] Starting to stream tokens for conversation ${conversationId}`);
+          let tokenCounter = 0;
           for await (const textPart of result.textStream) {
             fullResponse += textPart;
             tokenCount++;
+            tokenCounter++;
+
+            if (tokenCounter === 1) {
+              this.logger.debug(`[Stream] First token received: "${textPart.substring(0, 20)}..."`);
+            }
 
             subscriber.next({
               data: textPart,
@@ -246,9 +253,11 @@ export class ChatController {
 
             // Check if aborted
             if (abort.signal.aborted) {
+              this.logger.debug(`[Stream] Stream aborted by client`);
               break;
             }
           }
+          this.logger.debug(`[Stream] Streaming completed. Total tokens: ${tokenCount}, response length: ${fullResponse.length}`);
 
           // Save assistant response to database
           if (!abort.signal.aborted) {

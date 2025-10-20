@@ -92,6 +92,7 @@ enum AIProvider {
   openai
   anthropic
   google
+  deepseek
 }
 
 enum QuestionCategory {
@@ -655,6 +656,19 @@ model ModelPolicy {
   @@unique([plan, provider])
 }
 
+model AIProviderConfig {
+  id          String     @id @default(cuid())
+  provider    AIProvider @unique
+  apiKey      String     // Encrypted in production
+  isActive    Boolean    @default(true)
+  modelName   String     // Default model for this provider
+  displayName String     // e.g., "Google Gemini", "OpenAI GPT-4"
+  description String?
+  priority    Int        @default(0) // Higher priority = preferred provider
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
 model AuditLog {
   id           String   @id @default(cuid())
   userId       String?
@@ -1055,19 +1069,20 @@ model UserBadge {
 
 // Moderation Models
 model ContentReport {
-  id          String           @id @default(cuid())
-  contentId   String
-  contentType ContentType      // QUESTION, ANSWER, COMMENT
-  reporterId  String
-  reason      String
-  description String?          @db.Text
-  status      ReportStatus     @default(PENDING)
-  reviewedBy  String?
-  reviewedAt  DateTime?
-  createdAt   DateTime         @default(now())
+  id            String           @id @default(cuid())
+  contentId     String
+  contentType   ContentType      // QUESTION, ANSWER, COMMENT
+  reporterId    String
+  reason        String
+  description   String?          @db.Text
+  status        ReportStatus     @default(PENDING)
+  reviewedBy    String?
+  reviewedAt    DateTime?
+  moderatorNote String?          @db.Text
+  createdAt     DateTime         @default(now())
   
-  reporter    User             @relation("ContentReports", fields: [reporterId], references: [id], onDelete: Cascade)
-  reviewer    User?            @relation("ReviewedReports", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  reporter      User             @relation("ContentReports", fields: [reporterId], references: [id], onDelete: Cascade)
+  reviewer      User?            @relation("ReviewedReports", fields: [reviewedBy], references: [id], onDelete: SetNull)
   
   @@index([status, createdAt])
   @@index([contentId, contentType])

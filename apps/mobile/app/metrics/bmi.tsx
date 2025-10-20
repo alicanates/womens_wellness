@@ -18,6 +18,7 @@ export default function BMICalculatorScreen() {
         mutationFn: (data: { heightCm: number; weightKg: number }) =>
             metricsService.calculateBMI(data),
         onSuccess: (data) => {
+            console.log('BMI API Response:', JSON.stringify(data, null, 2));
             setResult(data);
             queryClient.invalidateQueries({ queryKey: ['metrics'] });
         },
@@ -135,7 +136,7 @@ export default function BMICalculatorScreen() {
                             <View style={styles.idealWeightContent}>
                                 <View style={styles.weightRangeBox}>
                                     <Text style={styles.weightValue}>
-                                        {((18.5 * Math.pow(result.heightCm || parseFloat(height), 2)) / 10000).toFixed(1)}
+                                        {(18.5 * Math.pow((result.heightCm || parseFloat(height)) / 100, 2)).toFixed(1)}
                                     </Text>
                                     <Text style={styles.weightUnit}>kg</Text>
                                 </View>
@@ -144,7 +145,7 @@ export default function BMICalculatorScreen() {
                                 </View>
                                 <View style={styles.weightRangeBox}>
                                     <Text style={styles.weightValue}>
-                                        {((24.9 * Math.pow(result.heightCm || parseFloat(height), 2)) / 10000).toFixed(1)}
+                                        {(24.9 * Math.pow((result.heightCm || parseFloat(height)) / 100, 2)).toFixed(1)}
                                     </Text>
                                     <Text style={styles.weightUnit}>kg</Text>
                                 </View>

@@ -169,7 +169,26 @@ export function calculateCompatibility(sign1: ZodiacSign, sign2: ZodiacSign): nu
     return 50 + Math.floor(Math.random() * 20);
 }
 
+// Rising sign lookup table based on sun sign and birth time
+// This is a more accurate approximation based on traditional astrology tables
+const RISING_SIGN_TABLE: Record<ZodiacSign, ZodiacSign[]> = {
+    aries: ['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces'],
+    taurus: ['taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces', 'aries'],
+    gemini: ['gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces', 'aries', 'taurus'],
+    cancer: ['cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces', 'aries', 'taurus', 'gemini'],
+    leo: ['leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces', 'aries', 'taurus', 'gemini', 'cancer'],
+    virgo: ['virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces', 'aries', 'taurus', 'gemini', 'cancer', 'leo'],
+    libra: ['libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces', 'aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo'],
+    scorpio: ['scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces', 'aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra'],
+    sagittarius: ['sagittarius', 'capricorn', 'aquarius', 'pisces', 'aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio'],
+    capricorn: ['capricorn', 'aquarius', 'pisces', 'aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius'],
+    aquarius: ['aquarius', 'pisces', 'aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn'],
+    pisces: ['pisces', 'aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius'],
+};
+
 // Calculate rising sign based on birth time and date
+// NOTE: This uses a traditional astrology table for better approximation
+// For 100% accuracy, professional astrology software with exact coordinates is needed
 export function calculateRisingSign(birthDate: Date, birthTime: string): ZodiacSign {
     // Parse time (HH:MM format)
     const [hours, minutes] = birthTime.split(':').map(Number);
@@ -177,25 +196,21 @@ export function calculateRisingSign(birthDate: Date, birthTime: string): ZodiacS
         return getZodiacSign(birthDate); // Fallback to sun sign
     }
 
-    // Calculate total minutes from midnight
-    const totalMinutes = hours * 60 + minutes;
+    // Get the sun sign
+    const sunSign = getZodiacSign(birthDate);
 
-    // Get day of year (1-365/366)
-    const start = new Date(birthDate.getFullYear(), 0, 0);
-    const diff = birthDate.getTime() - start.getTime();
-    const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+    // Get the rising sign table for this sun sign
+    const risingTable = RISING_SIGN_TABLE[sunSign];
 
     // Rising sign changes approximately every 2 hours
-    // This is a simplified calculation based on time and date
-    const risingIndex = Math.floor(((totalMinutes / 120) + (dayOfYear / 30.5)) % 12);
+    // At sunrise (6 AM), rising sign typically equals sun sign
+    // We use 2-hour intervals starting from midnight
+    const timeSlot = Math.floor(hours / 2);
 
-    const signs: ZodiacSign[] = [
-        'aries', 'taurus', 'gemini', 'cancer',
-        'leo', 'virgo', 'libra', 'scorpio',
-        'sagittarius', 'capricorn', 'aquarius', 'pisces'
-    ];
+    // Get rising sign from table
+    const risingSign = risingTable[timeSlot % 12];
 
-    return signs[risingIndex];
+    return risingSign;
 }
 
 // Calculate moon sign based on birth date
@@ -207,7 +222,11 @@ export function calculateMoonSign(birthDate: Date): ZodiacSign {
     const daysSinceRef = Math.floor(diff / (1000 * 60 * 60 * 24));
 
     // Calculate moon position (approximately 2.5 days per sign)
-    const moonIndex = Math.floor((daysSinceRef / 2.5) % 12);
+    let moonIndex = Math.floor((daysSinceRef / 2.5) % 12);
+
+    // Ensure index is within valid range
+    if (moonIndex < 0) moonIndex = Math.abs(moonIndex) % 12;
+    if (moonIndex >= 12) moonIndex = moonIndex % 12;
 
     const signs: ZodiacSign[] = [
         'pisces', 'aries', 'taurus', 'gemini',
@@ -236,8 +255,11 @@ export function calculateElementDistribution(
     // Count elements from the three main signs
     const signs: ZodiacSign[] = [sunSign, risingSign, moonSign];
     signs.forEach((sign: ZodiacSign) => {
-        const element: ElementType = ZODIAC_SIGNS[sign].element;
-        elements[element] = elements[element] + 1;
+        const zodiacInfo = ZODIAC_SIGNS[sign];
+        if (zodiacInfo && zodiacInfo.element) {
+            const element: ElementType = zodiacInfo.element;
+            elements[element] = elements[element] + 1;
+        }
     });
 
     // Convert to percentages

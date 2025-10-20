@@ -9,6 +9,7 @@ import {
     Query,
     UseGuards,
     Request,
+    BadRequestException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
@@ -33,7 +34,11 @@ export class ModerationController {
     @Post('report')
     @Throttle({ default: { limit: 10, ttl: 3600000 } }) // 10 reports per hour
     async reportContent(@Request() req, @Body() dto: CreateReportDto) {
-        return this.moderationService.reportContent(req.user.userId, dto);
+        const userId = req.user?.id || req.user?.userId || req.user?.sub;
+        if (!userId) {
+            throw new BadRequestException('User ID not found');
+        }
+        return this.moderationService.reportContent(userId, dto);
     }
 
     /**
@@ -68,12 +73,37 @@ export class ModerationController {
         @Request() req,
         @Param('id') reportId: string,
         @Body('action') action: ModerationAction,
+        @Body('moderatorNote') moderatorNote?: string,
     ) {
         return this.moderationService.reviewReport(
             reportId,
             action,
-            req.user.userId,
+            req.user.id,
+            moderatorNote,
         );
+    }
+
+    /**
+     * Rapor detayını getir (admin)
+     * GET /api/qna/moderation/reports/:id
+     */
+    @Get('reports/:id')
+    @UseGuards(AdminGuard)
+    async getReport(@Param('id') reportId: string) {
+        return this.moderationService.getReportById(reportId);
+    }
+
+    /**
+     * Rapor durumunu güncelle (admin)
+     * PATCH /api/qna/moderation/reports/:id/status
+     */
+    @Patch('reports/:id/status')
+    @UseGuards(AdminGuard)
+    async updateReportStatus(
+        @Param('id') reportId: string,
+        @Body('status') status: string,
+    ) {
+        return this.moderationService.updateReportStatus(reportId, status);
     }
 
     /**
@@ -112,7 +142,7 @@ export class ModerationController {
      */
     @Get('my-reports')
     async getMyReports(@Request() req) {
-        return this.moderationService.getUserReports(req.user.userId);
+        return this.moderationService.getUserReports(req.user.id);
     }
 
     /**

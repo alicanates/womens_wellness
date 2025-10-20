@@ -1,19 +1,22 @@
-import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { Comment } from '@/types/qna';
 import { OptimizedAvatar } from './OptimizedAvatar';
 import { memo } from 'react';
+import { useAuthStore } from '@/store/authStore';
 
 interface CommentListProps {
     comments: Comment[];
     loading?: boolean;
     emptyMessage?: string;
+    onReportComment?: (commentId: string) => void;
 }
 
 export const CommentList = memo(function CommentList({
     comments,
     loading = false,
     emptyMessage = 'Henüz yorum yapılmamış',
+    onReportComment,
 }: CommentListProps) {
     const theme = useTheme();
     const styles = createStyles(theme);
@@ -38,7 +41,7 @@ export const CommentList = memo(function CommentList({
         <FlatList
             data={comments}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <CommentItem comment={item} />}
+            renderItem={({ item }) => <CommentItem comment={item} onReport={onReportComment} />}
             scrollEnabled={false}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
@@ -47,11 +50,15 @@ export const CommentList = memo(function CommentList({
 
 interface CommentItemProps {
     comment: Comment;
+    onReport?: (commentId: string) => void;
 }
 
-const CommentItem = memo(function CommentItem({ comment }: CommentItemProps) {
+const CommentItem = memo(function CommentItem({ comment, onReport }: CommentItemProps) {
     const theme = useTheme();
     const styles = createStyles(theme);
+    const { user } = useAuthStore();
+
+    const isOwnComment = user?.id === comment.userId;
 
     return (
         <View style={styles.commentContainer}>
@@ -66,6 +73,15 @@ const CommentItem = memo(function CommentItem({ comment }: CommentItemProps) {
                     <Text style={styles.authorName}>{comment.user?.displayName || 'Anonim Kullanıcı'}</Text>
                     <Text style={styles.timestamp}>{formatTimestamp(comment.createdAt)}</Text>
                 </View>
+                {onReport && (
+                    <TouchableOpacity
+                        style={styles.reportButton}
+                        onPress={() => onReport(comment.id)}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.reportIcon}>🚩</Text>
+                    </TouchableOpacity>
+                )}
             </View>
             <Text style={styles.commentContent}>{comment.content}</Text>
         </View>
@@ -148,5 +164,12 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
             height: 1,
             backgroundColor: theme.colors.border,
             marginVertical: theme.spacing.xs,
+        },
+        reportButton: {
+            padding: theme.spacing.xs,
+            marginLeft: theme.spacing.xs,
+        },
+        reportIcon: {
+            fontSize: 14,
         },
     });

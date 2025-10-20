@@ -166,8 +166,8 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
       marginBottom: theme.spacing.xxl,
     },
     mascot: {
-      width: 120,
-      height: 120,
+      width: 180,
+      height: 180,
       marginBottom: theme.spacing.md,
       resizeMode: 'contain',
     },

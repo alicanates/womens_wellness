@@ -1,18 +1,25 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ModelSelectorService } from './model-selector.service';
 import { ContextBuilderService } from './context-builder.service';
+import { AIProviderService } from '../ai-provider/ai-provider.service';
+import { ModelPolicyService } from '../model-policy/model-policy.service';
 import { streamText } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { openai, createOpenAI } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { google } from '@ai-sdk/google';
+import type { AIProvider } from '@prisma/client';
 
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly modelSelector: ModelSelectorService,
     private readonly contextBuilder: ContextBuilderService,
+    private readonly aiProviderService: AIProviderService,
+    private readonly modelPolicyService: ModelPolicyService,
   ) { }
 
   async getOrCreateConversation(userId: string, conversationId?: string) {
@@ -84,18 +91,94 @@ export class ChatService {
       { role: 'user' as const, content: userMessage },
     ];
 
-    // Use Gemini Flash model (latest stable version)
-    const model = google('gemini-2.0-flash');
+    // Get user's subscription plan
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { subscription: true },
+    });
+
+    const userPlan = user?.subscription?.status === 'ACTIVE' ? 'premium' : 'free';
+    this.logger.log(`User ${userId} has plan: ${userPlan}`);
+
+    // Get model policy for user's plan
+    const modelPolicy = await this.modelPolicyService.findByPlan(userPlan);
+
+    let model;
+    let temperature = 0.8;
+    let maxTokens = 1024;
+
+    if (modelPolicy) {
+      // Use model policy configuration
+      this.logger.log(`Using model policy: ${modelPolicy.provider}/${modelPolicy.modelName}`);
+
+      const providerConfig = await this.aiProviderService.getByProvider(modelPolicy.provider);
+      if (!providerConfig || !providerConfig.isActive) {
+        throw new Error(`Provider ${modelPolicy.provider} is not available`);
+      }
+
+      model = this.getModelFromConfig(
+        modelPolicy.provider,
+        modelPolicy.modelName,
+        providerConfig.apiKey
+      );
+      temperature = modelPolicy.temperature;
+      maxTokens = modelPolicy.maxTokens;
+    } else {
+      // Fallback to active provider
+      this.logger.log('No model policy found, checking active providers...');
+      const providerConfig = await this.aiProviderService.getActiveProvider();
+
+      if (providerConfig) {
+        this.logger.log(`✅ Using active provider: ${providerConfig.provider}, model: ${providerConfig.modelName}`);
+        model = this.getModelFromConfig(providerConfig.provider, providerConfig.modelName, providerConfig.apiKey);
+      } else {
+        // Final fallback to environment variable
+        this.logger.warn('No active provider in database, falling back to env variable');
+        const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+        if (!apiKey) {
+          throw new Error('No AI provider configured');
+        }
+        process.env.GOOGLE_GENERATIVE_AI_API_KEY = apiKey;
+        model = google('gemini-2.5-flash');
+      }
+    }
 
     // Stream the response with system prompt as separate parameter
     const result = streamText({
       model,
       system: systemPrompt,
       messages,
-      temperature: 0.8,
+      temperature,
     });
 
     return result;
+  }
+
+  private getModelFromConfig(provider: AIProvider, modelName: string, apiKey: string) {
+    // Set API key as environment variable temporarily for the SDK
+    // Supported providers: google, openai, anthropic, deepseek
+    const providerStr = provider as string;
+
+    switch (providerStr) {
+      case 'google':
+        process.env.GOOGLE_GENERATIVE_AI_API_KEY = apiKey;
+        return google(modelName);
+      case 'openai':
+        process.env.OPENAI_API_KEY = apiKey;
+        return openai(modelName);
+      case 'anthropic':
+        process.env.ANTHROPIC_API_KEY = apiKey;
+        return anthropic(modelName);
+      case 'deepseek':
+        // DeepSeek uses OpenAI-compatible API
+        const deepseek = createOpenAI({
+          apiKey,
+          baseURL: 'https://api.deepseek.com/v1',
+        });
+        return deepseek.chat(modelName);
+      default:
+        throw new Error(`Unsupported provider: ${provider}`);
+    }
   }
 
   private getModel(provider: string, modelName: string) {

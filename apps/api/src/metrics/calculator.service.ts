@@ -57,20 +57,20 @@ export class CalculatorService {
   }
 
   /**
-   * Calculate daily water need (30 ml/kg baseline with modifiers)
+   * Calculate daily water need (30-35 ml/kg baseline with modifiers)
    */
   calculateDailyWaterNeed(
     weightKg: number,
     activity: Activity,
     climate: Climate,
   ): number {
-    const base = weightKg * 30; // 30 ml per kg baseline
+    const base = weightKg * 33; // 33 ml per kg baseline (average of 30-35)
     const activityMultiplier = {
       sedentary: 1.0,
-      moderate: 1.2,
-      active: 1.4,
+      moderate: 1.15,
+      active: 1.3,
     }[activity];
-    const climateBonus = { cool: 0, temperate: 200, hot: 500 }[climate];
+    const climateBonus = { cool: 0, temperate: 250, hot: 500 }[climate];
 
     return Math.round(base * activityMultiplier + climateBonus); // ml/day
   }

@@ -83,14 +83,31 @@ export default function QuestionDetailScreen() {
         enabled: hasValidId,
     });
 
-    // Debug: Log answers whenever they change
+    // Load comments for all answers (only once when answers change)
     useEffect(() => {
-        console.log('🔍 Answers changed in component:', answers.map(a => ({
-            id: a.id.substring(0, 10),
-            isBestAnswer: a.isBestAnswer,
-            content: a.content.substring(0, 20)
-        })));
-    }, [answers]);
+        const loadAnswerComments = async () => {
+            if (answers.length > 0) {
+                const answerIds = answers.map(a => a.id).sort().join(',');
+                const currentIds = Object.keys(answerCommentsMap).sort().join(',');
+
+                // Only load if answer IDs changed
+                if (answerIds !== currentIds) {
+                    const commentsMap: Record<string, any[]> = {};
+                    for (const answer of answers) {
+                        try {
+                            const comments = await qnaService.getAnswerComments(answer.id);
+                            commentsMap[answer.id] = comments;
+                        } catch (error) {
+                            console.error(`Failed to load comments for answer ${answer.id}:`, error);
+                            commentsMap[answer.id] = [];
+                        }
+                    }
+                    setAnswerCommentsMap(commentsMap);
+                }
+            }
+        };
+        loadAnswerComments();
+    }, [answers.length]);
     const { data: comments = [], isLoading: commentsLoading, refetch: refetchComments } = useQuestionComments(questionId, {
         enabled: hasValidId,
     });
@@ -271,21 +288,11 @@ export default function QuestionDetailScreen() {
     const handleFavorite = async () => {
         try {
             if (question?.isFavorited) {
+                // Unfavorite (backend auto-unfollows)
                 await unfavoriteQuestion.mutateAsync(questionId);
             } else {
+                // Favorite (backend auto-follows)
                 await favoriteQuestion.mutateAsync(questionId);
-            }
-        } catch (error: any) {
-            Alert.alert('Hata', error.message || 'İşlem başarısız');
-        }
-    };
-
-    const handleFollow = async () => {
-        try {
-            if (question?.isFollowing) {
-                await unfollowQuestion.mutateAsync(questionId);
-            } else {
-                await followQuestion.mutateAsync(questionId);
             }
         } catch (error: any) {
             Alert.alert('Hata', error.message || 'İşlem başarısız');
@@ -336,16 +343,35 @@ export default function QuestionDetailScreen() {
         setShowReportModal(true);
     };
 
+    const handleReportComment = (commentId: string) => {
+        setReportContent({
+            id: commentId,
+            type: ContentType.COMMENT,
+        });
+        setShowReportModal(true);
+    };
+
     const handleSubmitReport = async (reason: string, description?: string) => {
         if (!reportContent) return;
 
-        await reportContentMutation.mutateAsync({
+        const reportData = {
             contentId: reportContent.id,
             contentType: reportContent.type,
             reason,
             description,
-        });
-        Alert.alert('Başarılı', 'Raporunuz alındı. İnceleme yapılacaktır.');
+        };
+
+        console.log('📤 Sending report:', reportData);
+
+        try {
+            const result = await reportContentMutation.mutateAsync(reportData);
+            console.log('✅ Report success:', result);
+            Alert.alert('Başarılı', 'Raporunuz alındı. İnceleme yapılacaktır.');
+        } catch (error: any) {
+            console.error('❌ Report error:', error);
+            console.error('Error details:', JSON.stringify(error, null, 2));
+            Alert.alert('Hata', error.message || 'Rapor gönderilemedi');
+        }
     };
 
     // Loading state - render after all hooks
@@ -396,9 +422,14 @@ export default function QuestionDetailScreen() {
                     headerBackVisible: true,
                     headerBackTitle: 'Geri',
                     headerRight: () => (
-                        <TouchableOpacity onPress={handleShare} style={{ marginRight: 16 }}>
-                            <Text style={{ fontSize: 24 }}>📤</Text>
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', gap: 12, marginRight: 16 }}>
+                            <TouchableOpacity onPress={handleReport}>
+                                <Text style={{ fontSize: 24 }}>🚩</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={handleShare}>
+                                <Text style={{ fontSize: 24 }}>📤</Text>
+                            </TouchableOpacity>
+                        </View>
                     ),
                 }}
             />
@@ -478,20 +509,11 @@ export default function QuestionDetailScreen() {
                                     {question.isFavorited ? '❤️' : '🤍'}
                                 </Text>
                                 <Text style={[styles.actionButtonText, question.isFavorited && styles.actionButtonTextActive]}>
-                                    Favorile
+                                    {question.isFavorited ? 'Favorilerde' : 'Favorile'}
                                 </Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={[styles.actionButton, question.isFollowing && styles.actionButtonActive]}
-                                onPress={handleFollow}
-                            >
-                                <Text style={{ fontSize: 20 }}>
-                                    {question.isFollowing ? '🔔' : '🔕'}
-                                </Text>
-                                <Text style={[styles.actionButtonText, question.isFollowing && styles.actionButtonTextActive]}>
-                                    Takip Et
-                                </Text>
+                                {question.isFavorited && (
+                                    <Text style={{ fontSize: 12, marginLeft: 4 }}>🔔</Text>
+                                )}
                             </TouchableOpacity>
 
                             <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
@@ -499,12 +521,13 @@ export default function QuestionDetailScreen() {
                                 <Text style={styles.actionButtonText}>Paylaş</Text>
                             </TouchableOpacity>
 
-                            {!isQuestionAuthor && (
-                                <TouchableOpacity style={styles.actionButton} onPress={handleReport}>
-                                    <Text style={{ fontSize: 20 }}>🚩</Text>
-                                    <Text style={styles.actionButtonText}>Raporla</Text>
-                                </TouchableOpacity>
-                            )}
+                            <TouchableOpacity
+                                style={[styles.actionButton, styles.reportButton]}
+                                onPress={handleReport}
+                            >
+                                <Text style={{ fontSize: 20 }}>🚩</Text>
+                                <Text style={[styles.actionButtonText, styles.reportButtonText]}>Bildir</Text>
+                            </TouchableOpacity>
                         </View>
 
                         {/* Comments Section */}
@@ -523,7 +546,11 @@ export default function QuestionDetailScreen() {
 
                             {showComments && (
                                 <>
-                                    <CommentList comments={comments} loading={commentsLoading} />
+                                    <CommentList
+                                        comments={comments}
+                                        loading={commentsLoading}
+                                        onReportComment={handleReportComment}
+                                    />
                                     <View style={styles.commentInputContainer}>
                                         <CommentInput
                                             onSubmit={handleSubmitQuestionComment}
@@ -836,6 +863,14 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
         },
         actionButtonTextActive: {
             color: theme.colors.primary,
+        },
+        reportButton: {
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            borderColor: '#ef4444',
+        },
+        reportButtonText: {
+            color: '#ef4444',
+            fontWeight: '600',
         },
         commentsSection: {
             borderTopWidth: 1,

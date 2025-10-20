@@ -17,7 +17,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
 import { QnaService } from './qna.service';
 import { CreateAnswerDto, UpdateAnswerDto } from './dto';
-import { OwnerGuard, QuestionOwnerGuard } from './guards';
+import { OwnerGuard, QuestionOwnerGuard, AdminGuard } from './guards';
 import { SanitizePipe } from './pipes';
 
 @Controller('qna')
@@ -38,6 +38,19 @@ export class AnswersController {
             throw new BadRequestException('Geçersiz soru ID');
         }
         return this.qnaService.createAnswer(questionId, req.user.id, dto);
+    }
+
+    @Get('answers')
+    async getAllAnswers(@Request() req) {
+        return this.qnaService.getAllAnswers(req.user.id);
+    }
+
+    @Get('answers/:id')
+    async getAnswerById(@Request() req, @Param('id') id: string) {
+        if (!id || id.length < 10) {
+            throw new BadRequestException('Geçersiz cevap ID');
+        }
+        return this.qnaService.getAnswerById(id, req.user.id);
     }
 
     @Get('questions/:questionId/answers')
@@ -63,6 +76,19 @@ export class AnswersController {
         return this.qnaService.updateAnswer(id, req.user.id, dto);
     }
 
+    @Patch('answers/:id/admin')
+    @UseGuards(AdminGuard)
+    @UsePipes(new SanitizePipe())
+    async adminUpdateAnswer(
+        @Param('id') id: string,
+        @Body() dto: UpdateAnswerDto,
+    ) {
+        if (!id || id.length < 10) {
+            throw new BadRequestException('Geçersiz cevap ID');
+        }
+        return this.qnaService.adminUpdateAnswer(id, dto);
+    }
+
     @Delete('answers/:id')
     @HttpCode(HttpStatus.NO_CONTENT)
     @UseGuards(OwnerGuard)
@@ -72,6 +98,16 @@ export class AnswersController {
             throw new BadRequestException('Geçersiz cevap ID');
         }
         await this.qnaService.deleteAnswer(id, req.user.id);
+    }
+
+    @Delete('answers/:id/admin')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @UseGuards(AdminGuard)
+    async adminDeleteAnswer(@Param('id') id: string) {
+        if (!id || id.length < 10) {
+            throw new BadRequestException('Geçersiz cevap ID');
+        }
+        await this.qnaService.adminDeleteAnswer(id);
     }
 
     @Post('questions/:questionId/answers/:answerId/mark-best')

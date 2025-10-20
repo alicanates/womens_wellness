@@ -27,6 +27,8 @@ import { SubscriptionModule } from './subscription/subscription.module';
 import { QnaModule } from './qna/qna.module';
 import { PagesModule } from './pages/pages.module';
 import { GamificationModule } from './gamification/gamification.module';
+import { AstrologyModule } from './astrology/astrology.module';
+import { AIProviderModule } from './ai-provider/ai-provider.module';
 import aiConfig from './config/ai.config';
 
 @Module({
@@ -74,6 +76,8 @@ import aiConfig from './config/ai.config';
     QnaModule,
     PagesModule,
     GamificationModule,
+    AstrologyModule,
+    AIProviderModule,
   ],
   controllers: [AppController],
   providers: [

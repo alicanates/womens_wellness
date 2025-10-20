@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ModelPolicyService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async findAll(params?: { page?: number; limit?: number; sortBy?: string; sortOrder?: string }) {
     const { page = 1, limit = 20, sortBy = 'updatedAt', sortOrder = 'desc' } = params || {};
@@ -47,7 +47,7 @@ export class ModelPolicyService {
 
   async create(data: {
     plan: 'free' | 'premium';
-    provider: 'openai' | 'anthropic' | 'google';
+    provider: 'openai' | 'anthropic' | 'google' | 'deepseek';
     modelName: string;
     temperature: number;
     maxTokens: number;
@@ -65,7 +65,7 @@ export class ModelPolicyService {
     id: string,
     data: {
       plan?: 'free' | 'premium';
-      provider?: 'openai' | 'anthropic' | 'google';
+      provider?: 'openai' | 'anthropic' | 'google' | 'deepseek';
       modelName?: string;
       temperature?: number;
       maxTokens?: number;

@@ -215,7 +215,7 @@ export default function CalorieCalculatorScreen() {
                         <View style={styles.goalsCard}>
                             <Text style={styles.goalsTitle}>Hedef Bazlı Kalori</Text>
                             <View style={styles.goalRow}>
-                                <Text style={styles.goalLabel}>🎯 Kilo Kaybı</Text>
+                                <Text style={styles.goalLabel}>🎯 Kilo Kaybı (-20%)</Text>
                                 <Text style={styles.goalValue}>
                                     {Math.round((result.tdee || result.bmr) * 0.8)} kcal
                                 </Text>
@@ -227,7 +227,7 @@ export default function CalorieCalculatorScreen() {
                                 </Text>
                             </View>
                             <View style={styles.goalRow}>
-                                <Text style={styles.goalLabel}>💪 Kilo Alma</Text>
+                                <Text style={styles.goalLabel}>💪 Kilo Alma (+15%)</Text>
                                 <Text style={styles.goalValue}>
                                     {Math.round((result.tdee || result.bmr) * 1.15)} kcal
                                 </Text>

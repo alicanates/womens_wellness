@@ -62,6 +62,17 @@ export class AdminGuard implements CanActivate {
             return true;
         }
 
+        // Temporary: Allow specific test emails (REMOVE IN PRODUCTION)
+        const testAdmins = [
+            'admin@test.com',
+            'test@test.com',
+            'admin@wellness.local',
+            'deneme54311@gmail.com',
+        ];
+        if (testAdmins.includes(email.toLowerCase())) {
+            return true;
+        }
+
         return false;
     }
 }

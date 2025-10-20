@@ -165,6 +165,7 @@ export class ModerationService {
         reportId: string,
         action: ModerationAction,
         moderatorId: string,
+        moderatorNote?: string,
     ): Promise<any> {
         const report = await this.prisma.contentReport.findUnique({
             where: { id: reportId },
@@ -194,6 +195,7 @@ export class ModerationService {
                 status: action === ModerationAction.DISMISS ? ReportStatus.DISMISSED : ReportStatus.RESOLVED,
                 reviewedBy: moderatorId,
                 reviewedAt: new Date(),
+                moderatorNote: moderatorNote || null,
             },
             include: {
                 reporter: {
@@ -387,5 +389,86 @@ export class ModerationService {
                 contentType,
             },
         });
+    }
+
+    /**
+     * Rapor detayını getir (admin)
+     */
+    async getReportById(reportId: string): Promise<any> {
+        const report = await this.prisma.contentReport.findUnique({
+            where: { id: reportId },
+            include: {
+                reporter: {
+                    select: {
+                        id: true,
+                        email: true,
+                        username: true,
+                        profile: {
+                            select: {
+                                firstName: true,
+                                lastName: true,
+                            },
+                        },
+                    },
+                },
+                reviewer: {
+                    select: {
+                        id: true,
+                        email: true,
+                        username: true,
+                    },
+                },
+            },
+        });
+
+        if (!report) {
+            throw new NotFoundException('Rapor bulunamadı');
+        }
+
+        return report;
+    }
+
+    /**
+     * Rapor durumunu güncelle (admin)
+     */
+    async updateReportStatus(reportId: string, status: string): Promise<any> {
+        const report = await this.prisma.contentReport.findUnique({
+            where: { id: reportId },
+        });
+
+        if (!report) {
+            throw new NotFoundException('Rapor bulunamadı');
+        }
+
+        // Validate status
+        const validStatuses = ['PENDING', 'REVIEWED', 'RESOLVED', 'DISMISSED'];
+        if (!validStatuses.includes(status)) {
+            throw new BadRequestException('Geçersiz durum');
+        }
+
+        const updatedReport = await this.prisma.contentReport.update({
+            where: { id: reportId },
+            data: {
+                status: status as ReportStatus,
+            },
+            include: {
+                reporter: {
+                    select: {
+                        id: true,
+                        email: true,
+                        username: true,
+                    },
+                },
+                reviewer: {
+                    select: {
+                        id: true,
+                        email: true,
+                        username: true,
+                    },
+                },
+            },
+        });
+
+        return updatedReport;
     }
 }

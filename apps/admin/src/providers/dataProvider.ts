@@ -79,6 +79,8 @@ export const dataProvider: DataProvider = {
       endpoint = 'wellness/v1/admin/stats';
     } else if (resource === 'reminders') {
       endpoint = 'reminders/admin/all';
+    } else if (resource === 'ai-providers') {
+      endpoint = 'ai-providers';
     } else if (resource === 'ai/model-policies') {
       endpoint = 'model-policies';
     } else if (resource === 'ai/quotas') {
@@ -155,6 +157,8 @@ export const dataProvider: DataProvider = {
       endpoint = 'subscription/admin';
     } else if (resource === 'qna/questions') {
       endpoint = 'qna/questions';
+    } else if (resource === 'qna/answers') {
+      endpoint = 'qna/answers';
     } else if (resource === 'qna/reports') {
       endpoint = 'qna/moderation/reports';
     } else if (resource === 'content/articles') {
@@ -178,6 +182,8 @@ export const dataProvider: DataProvider = {
     let endpoint = resource;
     if (resource === 'content/articles') {
       endpoint = 'discover/articles';
+    } else if (resource === 'ai-providers') {
+      endpoint = 'ai-providers';
     } else if (resource === 'ai/model-policies') {
       endpoint = 'model-policies';
     }
@@ -193,10 +199,23 @@ export const dataProvider: DataProvider = {
       endpoint = 'subscription';
     } else if (resource === 'qna/questions') {
       endpoint = 'qna/questions';
-    } else if (resource === 'qna/reports') {
+    } else if (resource === 'qna/answers') {
+      // Use admin update endpoint for answers
+      const { data } = await axiosInstance.patch(`/qna/answers/${id}/admin`, variables);
+      return { data };
+    } else if (resource === 'qna/reports' || resource === 'qna/moderation/reports') {
+      // Check if it's a status-only update
+      if (variables.status && !variables.action) {
+        const { data } = await axiosInstance.patch(`/qna/moderation/reports/${id}/status`, variables);
+        return { data };
+      }
       endpoint = 'qna/moderation/reports';
     } else if (resource === 'content/articles') {
       endpoint = 'discover/articles';
+    } else if (resource === 'ai-providers') {
+      // AI providers use provider name as ID, use PUT method
+      const { data } = await axiosInstance.put(`/ai-providers/${id}`, variables);
+      return { data };
     } else if (resource === 'ai/model-policies') {
       endpoint = 'model-policies';
     } else if (resource === 'system/feature-flags') {
@@ -215,6 +234,14 @@ export const dataProvider: DataProvider = {
     if (resource === 'content/articles') {
       // Use POST for delete to match API
       const { data } = await axiosInstance.post(`/discover/articles/${id}/delete`);
+      return { data };
+    } else if (resource === 'qna/answers') {
+      // Use admin delete endpoint for answers
+      const { data } = await axiosInstance.delete(`/qna/answers/${id}/admin`);
+      return { data };
+    } else if (resource === 'ai-providers') {
+      // AI providers use provider name as ID
+      const { data } = await axiosInstance.delete(`/ai-providers/${id}`);
       return { data };
     } else if (resource === 'ai/model-policies') {
       endpoint = 'model-policies';

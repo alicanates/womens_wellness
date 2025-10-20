@@ -34,12 +34,6 @@ export function AnswerCard({
     onSubmitComment,
     isSubmittingComment = false,
 }: AnswerCardProps) {
-    console.log('🎨 AnswerCard rendering:', {
-        id: answer.id.substring(0, 10),
-        isBestAnswer: answer.isBestAnswer,
-        content: answer.content.substring(0, 20),
-        showBadge: answer.isBestAnswer ? 'YES ✅' : 'NO ❌'
-    });
 
     const theme = useTheme();
     const styles = createStyles(theme);
@@ -182,18 +176,18 @@ export function AnswerCard({
                         </TouchableOpacity>
                     )}
 
-                    {!isOwnAnswer && onReport && (
+                    {onReport && (
                         <TouchableOpacity
-                            style={styles.actionButton}
+                            style={[styles.actionButton, styles.reportButton]}
                             onPress={handleReport}
                             activeOpacity={0.7}
                             accessible={true}
                             accessibilityRole="button"
-                            accessibilityLabel="Cevabı raporla"
-                            accessibilityHint={accessibility.getButtonHint('Cevabı raporla')}
+                            accessibilityLabel="Cevabı bildir"
+                            accessibilityHint={accessibility.getButtonHint('Cevabı bildir')}
                         >
                             <Text style={{ fontSize: 16 }}>🚩</Text>
-                            <Text style={styles.actionText}>Raporla</Text>
+                            <Text style={[styles.actionText, styles.reportText]}>Bildir</Text>
                         </TouchableOpacity>
                     )}
 
@@ -223,8 +217,16 @@ export function AnswerCard({
                 {/* Comments Section */}
                 {showComments && (
                     <View style={styles.commentsSection}>
-                        {comments.length > 0 && (
-                            <CommentList comments={comments} />
+                        {comments.length > 0 ? (
+                            <CommentList
+                                comments={comments}
+                                onReportComment={(commentId) => {
+                                    console.log('Report comment:', commentId);
+                                    // TODO: Handle comment reporting
+                                }}
+                            />
+                        ) : (
+                            <Text style={styles.noCommentsText}>Henüz yorum yok</Text>
                         )}
                         {onSubmitComment && (
                             <View style={styles.commentInputWrapper}>
@@ -384,6 +386,13 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
         commentInputWrapper: {
             marginTop: theme.spacing.md,
         },
+        noCommentsText: {
+            fontSize: 14,
+            color: theme.colors.textSecondary,
+            textAlign: 'center',
+            paddingVertical: theme.spacing.md,
+            fontStyle: 'italic',
+        },
         bestAnswerIndicator: {
             flexDirection: 'row',
             alignItems: 'center',
@@ -408,5 +417,14 @@ const createStyles = (theme: ReturnType<typeof useTheme>) =>
             fontSize: 12,
             color: theme.colors.primary,
             fontWeight: '500',
+        },
+        reportButton: {
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            borderWidth: 1,
+            borderColor: '#ef4444',
+        },
+        reportText: {
+            color: '#ef4444',
+            fontWeight: '600',
         },
     });

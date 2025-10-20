@@ -26,17 +26,18 @@ export default function IdealWeightCalculatorScreen() {
         const maxWeight = 24.9 * heightM * heightM;
         const idealWeight = (minWeight + maxWeight) / 2;
 
-        // Devine Formula (for women)
-        const devine = 45.5 + 2.3 * ((h - 152.4) / 2.54);
+        // Devine Formula (for women) - 45.5 kg at 152.4 cm (5 feet), then 2.3 kg per inch
+        const heightInches = h / 2.54;
+        const devine = h >= 152.4 ? 45.5 + 2.3 * ((heightInches - 60)) : 45.5;
 
-        // Robinson Formula (for women)
-        const robinson = 49 + 1.7 * ((h - 152.4) / 2.54);
+        // Robinson Formula (for women) - 49 kg at 152.4 cm, then 1.7 kg per inch
+        const robinson = h >= 152.4 ? 49 + 1.7 * ((heightInches - 60)) : 49;
 
-        // Miller Formula (for women)
-        const miller = 53.1 + 1.36 * ((h - 152.4) / 2.54);
+        // Miller Formula (for women) - 53.1 kg at 152.4 cm, then 1.36 kg per inch
+        const miller = h >= 152.4 ? 53.1 + 1.36 * ((heightInches - 60)) : 53.1;
 
-        // Hamwi Formula (for women)
-        const hamwi = 45.5 + 2.2 * ((h - 152.4) / 2.54);
+        // Hamwi Formula (for women) - 45.5 kg at 152.4 cm, then 2.2 kg per inch
+        const hamwi = h >= 152.4 ? 45.5 + 2.2 * ((heightInches - 60)) : 45.5;
 
         setResult({
             minWeight,
