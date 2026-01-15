@@ -1074,6 +1074,17 @@ export default function SettingsScreen() {
             />
           </View>
 
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={() => router.push('/settings/language' as any)}
+          >
+            <View style={styles.settingButtonContent}>
+              <Text style={styles.settingButtonText}>🌐 Dil</Text>
+              <Text style={styles.settingButtonSubtext}>Türkçe</Text>
+            </View>
+            <Text style={styles.settingButtonIcon}>›</Text>
+          </TouchableOpacity>
+
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>PIN Kilidi</Text>
@@ -1096,6 +1107,22 @@ export default function SettingsScreen() {
               <Text style={styles.settingButtonIcon}>›</Text>
             </TouchableOpacity>
           )}
+        </View>
+
+        {/* Notifications Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Bildirimler</Text>
+
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={() => router.push('/settings/notifications' as any)}
+          >
+            <View style={styles.settingButtonContent}>
+              <Text style={styles.settingButtonText}>🔔 Bildirim Ayarları</Text>
+              <Text style={styles.settingButtonSubtext}>Bildirim tercihlerinizi yönetin</Text>
+            </View>
+            <Text style={styles.settingButtonIcon}>›</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Gamification Section */}
@@ -1162,6 +1189,88 @@ export default function SettingsScreen() {
 
           <TouchableOpacity style={styles.settingButton} onPress={handleTermsOfUse}>
             <Text style={styles.settingButtonText}>Kullanım Koşulları</Text>
+            <Text style={styles.settingButtonIcon}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Help & Support Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Yardım & Destek</Text>
+
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={() => router.push('/settings/help' as any)}
+          >
+            <View style={styles.settingButtonContent}>
+              <Text style={styles.settingButtonText}>❓ Yardım Merkezi</Text>
+              <Text style={styles.settingButtonSubtext}>SSS ve kullanım kılavuzu</Text>
+            </View>
+            <Text style={styles.settingButtonIcon}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={() => {
+              Linking.openURL('mailto:support@womenswellness.app?subject=Destek Talebi').catch(() => {
+                Alert.alert('Hata', 'E-posta uygulaması açılamadı');
+              });
+            }}
+          >
+            <View style={styles.settingButtonContent}>
+              <Text style={styles.settingButtonText}>📧 İletişim</Text>
+              <Text style={styles.settingButtonSubtext}>support@womenswellness.app</Text>
+            </View>
+            <Text style={styles.settingButtonIcon}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={() => router.push('/settings/about' as any)}
+          >
+            <View style={styles.settingButtonContent}>
+              <Text style={styles.settingButtonText}>ℹ️ Hakkında</Text>
+              <Text style={styles.settingButtonSubtext}>Uygulama bilgileri</Text>
+            </View>
+            <Text style={styles.settingButtonIcon}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={() => {
+              const storeUrl = Platform.OS === 'ios'
+                ? 'https://apps.apple.com/app/id123456789'
+                : 'https://play.google.com/store/apps/details?id=com.womenswellness';
+              Linking.openURL(storeUrl).catch(() => {
+                Alert.alert('Hata', 'Mağaza açılamadı');
+              });
+            }}
+          >
+            <View style={styles.settingButtonContent}>
+              <Text style={styles.settingButtonText}>⭐ Uygulamayı Değerlendir</Text>
+              <Text style={styles.settingButtonSubtext}>Görüşleriniz bizim için değerli</Text>
+            </View>
+            <Text style={styles.settingButtonIcon}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={() => {
+              const shareMessage = 'Women\'s Wellness Companion uygulamasını denemelisin! 🌸';
+              const shareUrl = Platform.OS === 'ios'
+                ? 'https://apps.apple.com/app/id123456789'
+                : 'https://play.google.com/store/apps/details?id=com.womenswellness';
+
+              Sharing.shareAsync(shareUrl, {
+                dialogTitle: shareMessage,
+              }).catch(() => {
+                Alert.alert('Hata', 'Paylaşım yapılamadı');
+              });
+            }}
+          >
+            <View style={styles.settingButtonContent}>
+              <Text style={styles.settingButtonText}>📤 Uygulamayı Paylaş</Text>
+              <Text style={styles.settingButtonSubtext}>Arkadaşlarınla paylaş</Text>
+            </View>
             <Text style={styles.settingButtonIcon}>›</Text>
           </TouchableOpacity>
         </View>
