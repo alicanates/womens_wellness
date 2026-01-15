@@ -4,6 +4,9 @@ import type { AuthTokens, AuthUser } from '@/types/auth';
 import { queryClient } from '@/lib/queryClient';
 import { subscriptionSyncService } from '@/services/subscriptionSync';
 import { authEvents } from '@/services/authEvents';
+// Monitoring imports (will be enabled after package installation)
+// import { setUser as setSentryUser, clearUser as clearSentryUser } from '@/lib/sentry';
+// import { identifyUser, resetUser, trackEvent, AnalyticsEvents } from '@/lib/posthog';
 
 interface AuthState {
   user: AuthUser | null;
@@ -28,6 +31,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     await SecureStore.setItemAsync('accessToken', tokens.accessToken);
     await SecureStore.setItemAsync('refreshToken', tokens.refreshToken);
     await SecureStore.setItemAsync('user', JSON.stringify(user));
+
+    // Set user context in monitoring tools (will be enabled after package installation)
+    // setSentryUser({ id: user.id, username: user.username });
+    // identifyUser(user.id, {
+    //   username: user.username,
+    //   createdAt: user.createdAt,
+    // });
+
     set({
       user,
       accessToken: tokens.accessToken,
@@ -37,6 +48,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   clearAuth: async () => {
+    // Track logout event (will be enabled after package installation)
+    // trackEvent(AnalyticsEvents.LOGOUT);
+
+    // Clear monitoring user context
+    // clearSentryUser();
+    // resetUser();
+
     // Clear React Query cache to prevent data leakage between users
     queryClient.clear();
     // Reset subscription sync service
@@ -56,6 +74,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    // Track logout event (will be enabled after package installation)
+    // trackEvent(AnalyticsEvents.LOGOUT);
+
+    // Clear monitoring user context
+    // clearSentryUser();
+    // resetUser();
+
     // Clear React Query cache to prevent data leakage between users
     queryClient.clear();
     // Reset subscription sync service

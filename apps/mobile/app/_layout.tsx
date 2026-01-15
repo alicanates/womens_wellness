@@ -14,6 +14,11 @@ import { iapManager } from '../src/services/iap.wrapper';
 import { subscriptionSyncService } from '../src/services/subscriptionSync';
 import { AnimatedSplash } from '../src/components/AnimatedSplash';
 
+// Initialize monitoring (will be enabled after package installation)
+// import { initSentry } from '../src/lib/sentry';
+// import { initPostHog } from '../src/lib/posthog';
+// initSentry();
+
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
@@ -41,6 +46,10 @@ function AppContent() {
     const prepareApp = async () => {
       try {
         await initialize();
+
+        // Initialize PostHog (will be enabled after package installation)
+        // await initPostHog();
+
         // Hide the native splash screen
         await SplashScreen.hideAsync();
       } catch (error) {

@@ -7,6 +7,37 @@ import { join } from 'path';
 import fastifyStatic from '@fastify/static';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyCors from '@fastify/cors';
+// Monitoring imports (will be enabled after package installation)
+// import * as Sentry from '@sentry/node';
+// import { ProfilingIntegration } from '@sentry/profiling-node';
+
+// Initialize Sentry as early as possible (will be enabled after package installation)
+// const SENTRY_DSN = process.env.SENTRY_DSN;
+// if (SENTRY_DSN && SENTRY_DSN !== '__OPTIONAL__') {
+//   Sentry.init({
+//     dsn: SENTRY_DSN,
+//     environment: process.env.NODE_ENV || 'development',
+//     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+//     profilesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+//     integrations: [new ProfilingIntegration()],
+//     beforeSend(event) {
+//       // Filter sensitive data
+//       if (event.request) {
+//         delete event.request.cookies;
+//         if (event.request.headers) {
+//           delete event.request.headers.authorization;
+//           delete event.request.headers.cookie;
+//         }
+//       }
+//       if (event.user) {
+//         delete event.user.email;
+//         delete event.user.ip_address;
+//       }
+//       return event;
+//     },
+//   });
+//   console.log('✅ Sentry initialized');
+// }
 
 async function bootstrap() {
   // Validate critical environment variables

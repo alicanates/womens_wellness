@@ -5,47 +5,82 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  TextInput,
-  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { pregnancyService } from '@/services/api';
 import { useTheme } from '@/hooks/useTheme';
+import { useThemeStore } from '@/store/themeStore';
 import { router } from 'expo-router';
+
+interface Contraction {
+  id: string;
+  startTime: string;
+  endTime: string;
+  durationSec: number;
+  intensity?: number;
+  notes?: string;
+}
+
+interface ContractionSummary {
+  count: number;
+  frequency: number | null;
+  avgDuration: number | null;
+  isRegular: boolean | null;
+}
 
 export default function ContractionsScreen() {
   const theme = useTheme();
+  const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const queryClient = useQueryClient();
 
   const [isTracking, setIsTracking] = useState(false);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [notes, setNotes] = useState('');
-  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [intensity, setIntensity] = useState(5);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch contractions (last 2 hours by default)
+  // Fetch recent contractions
   const { data: contractions } = useQuery({
     queryKey: ['contractions'],
-    queryFn: () => pregnancyService.getContractions(2),
-    refetchInterval: 30000, // Refresh every 30 seconds
+    queryFn: async () => {
+      const data = await pregnancyService.getContractions(24);
+      return data as Contraction[];
+    },
   });
 
   // Fetch summary
   const { data: summary } = useQuery({
     queryKey: ['contractions', 'summary'],
-    queryFn: () => pregnancyService.getContractionsSummary(),
-    refetchInterval: 30000,
+    queryFn: async () => {
+      const data = await pregnancyService.getContractionsSummary();
+      return data as ContractionSummary;
+    },
   });
 
-  const logContractionMutation = useMutation({
+  const saveContractionMutation = useMutation({
     mutationFn: (data: any) => pregnancyService.logContraction(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contractions'] });
-      Alert.alert('Kaydedildi', 'Kasılma kaydedildi');
-      setNotes('');
+      const mins = Math.floor(elapsedSeconds / 60);
+      const secs = elapsedSeconds % 60;
+      const timeStr = mins > 0
+        ? `${mins} dakika ${secs} saniye`
+        : `${secs} saniye`;
+      Alert.alert(
+        'Kaydedildi',
+        `${timeStr} süren kasılma kaydedildi`,
+        [
+          {
+            text: 'Tamam',
+            onPress: () => {
+              setElapsedSeconds(0);
+              setIntensity(5);
+            },
+          },
+        ]
+      );
     },
     onError: (error: any) => {
       Alert.alert('Hata', error.message || 'Kaydedilemedi');
@@ -57,17 +92,6 @@ export default function ContractionsScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contractions'] });
       Alert.alert('Başarılı', 'Kasılma silindi');
-    },
-    onError: (error: any) => {
-      Alert.alert('Hata', error.message || 'Silinemedi');
-    },
-  });
-
-  const deleteAllMutation = useMutation({
-    mutationFn: () => pregnancyService.deleteAllContractions(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contractions'] });
-      Alert.alert('Başarılı', 'Tüm kayıtlar silindi');
     },
     onError: (error: any) => {
       Alert.alert('Hata', error.message || 'Silinemedi');
@@ -96,67 +120,65 @@ export default function ContractionsScreen() {
     setIsTracking(true);
     setStartTime(new Date());
     setElapsedSeconds(0);
+    setIntensity(5);
   };
 
   const handleStop = () => {
-    if (!startTime) return;
-
-    setIsTracking(false);
-    const endTime = new Date();
-
     if (elapsedSeconds < 5) {
-      Alert.alert('Uyarı', 'Kasılma çok kısa sürdü. En az 5 saniye olmalı.');
+      Alert.alert('Uyarı', 'Kasılma çok kısa. En az 5 saniye olmalı.');
+      setIsTracking(false);
       setElapsedSeconds(0);
       return;
     }
 
-    // Ask for notes
-    setShowNotesModal(true);
-  };
+    setIsTracking(false);
 
-  const handleSave = () => {
-    if (!startTime) return;
+    const mins = Math.floor(elapsedSeconds / 60);
+    const secs = elapsedSeconds % 60;
+    const timeStr = mins > 0
+      ? `${mins} dakika ${secs} saniye`
+      : `${secs} saniye`;
 
-    const endTime = new Date(startTime.getTime() + elapsedSeconds * 1000);
-
-    logContractionMutation.mutate({
-      startTime: startTime.toISOString(),
-      endTime: endTime.toISOString(),
-      durationSec: elapsedSeconds,
-      notes: notes.trim() || undefined,
-    });
-
-    setShowNotesModal(false);
-    setElapsedSeconds(0);
-  };
-
-  const handleDelete = (id: string) => {
     Alert.alert(
-      'Kasılmayı Sil',
-      'Bu kaydı silmek istediğinizden emin misiniz?',
+      'Kasılma Tamamlandı',
+      `${timeStr} süren kasılmayı kaydetmek istiyor musunuz?`,
       [
-        { text: 'İptal', style: 'cancel' },
         {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: () => deleteContractionMutation.mutate(id),
+          text: 'İptal',
+          style: 'cancel',
+          onPress: () => {
+            setElapsedSeconds(0);
+            setIntensity(5);
+          },
+        },
+        {
+          text: 'Kaydet',
+          onPress: () => {
+            if (startTime) {
+              const endTime = new Date(startTime.getTime() + elapsedSeconds * 1000);
+              saveContractionMutation.mutate({
+                startTime: startTime.toISOString(),
+                endTime: endTime.toISOString(),
+                durationSec: elapsedSeconds,
+                intensity,
+              });
+            }
+          },
         },
       ]
     );
   };
 
-  const handleDeleteAll = () => {
-    if (!contractions || (contractions as any[]).length === 0) return;
-
+  const handleDeleteContraction = (contractionId: string) => {
     Alert.alert(
-      'Tüm Kayıtları Sil',
-      'Tüm kasılma kayıtlarını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+      'Kasılmayı Sil',
+      'Bu kasılmayı silmek istediğinizden emin misiniz?',
       [
         { text: 'İptal', style: 'cancel' },
         {
-          text: 'Tümünü Sil',
+          text: 'Sil',
           style: 'destructive',
-          onPress: () => deleteAllMutation.mutate(),
+          onPress: () => deleteContractionMutation.mutate(contractionId),
         },
       ]
     );
@@ -169,15 +191,23 @@ export default function ContractionsScreen() {
   };
 
   const formatDuration = (seconds: number) => {
-    if (seconds < 60) return `${seconds}s`;
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}d ${secs}s`;
+    if (mins > 0) {
+      return `${mins}dk ${secs}sn`;
+    }
+    return `${secs}sn`;
   };
 
-  const calculateInterval = (current: any, previous: any) => {
-    const diff = new Date(current.startTime).getTime() - new Date(previous.startTime).getTime();
-    return Math.floor(diff / 60000); // Minutes
+  const getTimeBetween = (current: Date, previous: Date) => {
+    const diffMs = current.getTime() - previous.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 60) {
+      return `${diffMins} dk`;
+    }
+    const hours = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    return `${hours}s ${mins}dk`;
   };
 
   const styles = StyleSheet.create({
@@ -204,14 +234,13 @@ export default function ContractionsScreen() {
     },
     content: {
       flex: 1,
-      padding: theme.spacing.lg,
+      padding: 16,
     },
-    timerCard: {
+    summaryCard: {
       backgroundColor: theme.colors.backgroundCard,
       borderRadius: theme.card.borderRadius,
-      padding: theme.card.padding,
-      alignItems: 'center',
-      marginBottom: theme.spacing.lg,
+      padding: 16,
+      marginBottom: theme.spacing.md,
       shadowColor: theme.card.shadowColor,
       shadowOffset: theme.card.shadowOffset,
       shadowOpacity: theme.card.shadowOpacity,
@@ -220,57 +249,50 @@ export default function ContractionsScreen() {
       borderWidth: 1,
       borderColor: theme.colors.border,
     },
-    timerLabel: {
-      fontSize: 16,
-      color: theme.colors.textSecondary,
-      marginBottom: theme.spacing.md,
-      fontWeight: '600',
-    },
-    timerValue: {
-      fontSize: 72,
-      fontWeight: '900',
-      color: isTracking ? theme.colors.error : theme.colors.primary,
-      lineHeight: 80,
-      letterSpacing: 4,
-    },
-    controlButtons: {
-      flexDirection: 'row',
-      gap: theme.spacing.sm,
-      marginBottom: theme.spacing.lg,
-    },
-    controlButton: {
-      flex: 1,
-      backgroundColor: theme.colors.primary,
-      borderRadius: theme.button.borderRadius,
-      padding: theme.button.padding,
-      alignItems: 'center',
-      shadowColor: theme.button.shadowColor,
-      shadowOffset: theme.button.shadowOffset,
-      shadowOpacity: theme.button.shadowOpacity,
-      shadowRadius: theme.button.shadowRadius,
-      elevation: theme.button.elevation,
-    },
-    controlButtonText: {
-      color: theme.colors.textOnPrimary,
-      fontSize: 17,
+    summaryTitle: {
+      fontSize: 15,
       fontWeight: '700',
+      color: theme.colors.text,
+      flex: 1,
     },
-    stopButton: {
-      backgroundColor: theme.colors.error,
+    summaryGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
     },
-    summaryCard: {
+    summaryItem: {
+      flex: 1,
+      minWidth: 90,
       backgroundColor: theme.colors.overlay,
-      borderRadius: theme.card.borderRadius,
-      padding: theme.card.padding,
-      marginBottom: theme.spacing.lg,
+      padding: 12,
+      borderRadius: 10,
+      alignItems: 'center',
       borderWidth: 1,
       borderColor: theme.colors.border,
     },
-    summaryTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: theme.colors.text,
-      marginBottom: theme.spacing.md,
+    summaryItemValue: {
+      fontSize: 20,
+      fontWeight: '900',
+      color: theme.colors.primary,
+      marginBottom: 4,
+    },
+    summaryItemLabel: {
+      fontSize: 11,
+      color: theme.colors.textSecondary,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    countBadge: {
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 12,
+      marginLeft: 8,
+    },
+    countBadgeText: {
+      fontSize: 14,
+      fontWeight: '900',
+      color: theme.colors.textOnPrimary,
     },
     summaryRow: {
       flexDirection: 'row',
@@ -280,58 +302,37 @@ export default function ContractionsScreen() {
     summaryLabel: {
       fontSize: 14,
       color: theme.colors.textSecondary,
+      fontWeight: '500',
     },
     summaryValue: {
       fontSize: 14,
-      fontWeight: '600',
-      color: theme.colors.text,
-    },
-    disclaimer: {
-      backgroundColor: theme.colors.overlay,
-      borderRadius: theme.card.borderRadius,
-      padding: theme.spacing.md,
-      marginBottom: theme.spacing.lg,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-    },
-    disclaimerText: {
-      fontSize: 13,
-      color: theme.colors.textSecondary,
-      lineHeight: 18,
-      textAlign: 'center',
-    },
-    historySection: {
-      marginTop: theme.spacing.lg,
-    },
-    historyHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: theme.spacing.md,
-    },
-    historyTitle: {
-      fontSize: 20,
       fontWeight: '700',
       color: theme.colors.text,
     },
-    deleteAllButton: {
-      backgroundColor: theme.colors.overlay,
-      paddingHorizontal: theme.spacing.md,
-      paddingVertical: theme.spacing.sm,
-      borderRadius: theme.button.borderRadius,
+    warningCard: {
+      backgroundColor: isDarkMode ? '#3D2F00' : '#FFF3CD',
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: theme.spacing.md,
       borderWidth: 1,
-      borderColor: theme.colors.error,
+      borderColor: isDarkMode ? '#FFC107' : '#FFC107',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
     },
-    deleteAllButtonText: {
+    warningText: {
+      flex: 1,
       fontSize: 14,
+      color: isDarkMode ? '#FFD54F' : '#856404',
       fontWeight: '600',
-      color: theme.colors.error,
+      lineHeight: 20,
     },
-    historyItem: {
+    timerCard: {
       backgroundColor: theme.colors.backgroundCard,
       borderRadius: theme.card.borderRadius,
       padding: theme.card.padding,
-      marginBottom: theme.spacing.sm,
+      alignItems: 'center',
+      marginBottom: theme.spacing.md,
       shadowColor: theme.card.shadowColor,
       shadowOffset: theme.card.shadowOffset,
       shadowOpacity: theme.card.shadowOpacity,
@@ -340,103 +341,211 @@ export default function ContractionsScreen() {
       borderWidth: 1,
       borderColor: theme.colors.border,
     },
-    historyItemHeader: {
+    timerLabel: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      marginBottom: theme.spacing.sm,
+      fontWeight: '600',
+    },
+    timerValue: {
+      fontSize: 64,
+      fontWeight: '900',
+      color: theme.colors.primary,
+      letterSpacing: 2,
+    },
+    intensitySection: {
+      width: '100%',
+      marginTop: theme.spacing.lg,
+      paddingHorizontal: theme.spacing.sm,
+    },
+    intensityLabel: {
+      fontSize: 13,
+      color: theme.colors.textSecondary,
+      marginBottom: theme.spacing.md,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    intensitySliderContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: theme.spacing.sm,
+    },
+    intensityButtons: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: theme.spacing.sm,
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    intensityButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: theme.colors.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: theme.colors.border,
+    },
+    intensityButtonActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+      transform: [{ scale: 1.1 }],
+    },
+    intensityButtonText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.colors.textSecondary,
+    },
+    intensityButtonTextActive: {
+      color: theme.colors.textOnPrimary,
+      fontSize: 14,
+    },
+    intensityDisplay: {
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: 20,
+      paddingVertical: 8,
+      borderRadius: 20,
+      marginBottom: theme.spacing.md,
+    },
+    intensityDisplayText: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: theme.colors.textOnPrimary,
+    },
+    controlButtons: {
+      marginBottom: theme.spacing.lg,
+    },
+    controlButton: {
+      backgroundColor: theme.colors.primary,
+      borderRadius: theme.button.borderRadius,
+      paddingVertical: 16,
+      paddingHorizontal: 32,
+      alignItems: 'center',
+      shadowColor: theme.button.shadowColor,
+      shadowOffset: theme.button.shadowOffset,
+      shadowOpacity: theme.button.shadowOpacity,
+      shadowRadius: theme.button.shadowRadius,
+      elevation: theme.button.elevation,
+    },
+    controlButtonText: {
+      color: theme.colors.textOnPrimary,
+      fontSize: 18,
+      fontWeight: '700',
+    },
+    stopButton: {
+      backgroundColor: theme.colors.error,
+    },
+    historySection: {
+      marginTop: theme.spacing.md,
+      marginBottom: 20,
+    },
+    historyTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: theme.colors.text,
+      marginBottom: theme.spacing.md,
+    },
+    historyItem: {
+      backgroundColor: theme.colors.backgroundCard,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 10,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      shadowColor: theme.card.shadowColor,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
     },
     historyTime: {
       fontSize: 15,
-      fontWeight: '700',
       color: theme.colors.text,
+      fontWeight: '700',
+      marginRight: 10,
     },
     historyDuration: {
-      fontSize: 15,
+      fontSize: 17,
       fontWeight: '700',
-      color: theme.colors.primary,
+      color: theme.colors.text,
+      marginTop: theme.spacing.xs,
     },
     historyInterval: {
-      fontSize: 13,
-      color: theme.colors.textSecondary,
-      marginBottom: theme.spacing.xs,
+      fontSize: 12,
+      color: theme.colors.primary,
+      fontWeight: '600',
     },
-    historyNotes: {
-      fontSize: 13,
-      color: theme.colors.text,
-      fontStyle: 'italic',
+    durationBadge: {
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    durationBadgeText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: theme.colors.textOnPrimary,
+    },
+    intensityBadge: {
+      backgroundColor: theme.colors.overlay,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginRight: 8,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      minWidth: 50,
+    },
+    intensityBadgeText: {
+      fontSize: 20,
+      fontWeight: '900',
+      color: theme.colors.primary,
+    },
+    intensityBadgeLabel: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: theme.colors.textSecondary,
+      marginTop: 2,
     },
     deleteButton: {
-      padding: theme.spacing.sm,
-      marginLeft: theme.spacing.sm,
+      padding: 8,
       backgroundColor: theme.colors.overlay,
-      borderRadius: theme.spacing.sm,
+      borderRadius: 8,
       borderWidth: 1,
       borderColor: theme.colors.error,
     },
+    deleteButtonText: {
+      fontSize: 18,
+    },
+    emptyHistoryContainer: {
+      alignItems: 'center',
+      paddingVertical: 40,
+      paddingHorizontal: 20,
+    },
     emptyHistory: {
-      fontSize: 15,
+      fontSize: 16,
+      color: theme.colors.text,
+      textAlign: 'center',
+      fontWeight: '600',
+      marginBottom: 8,
+    },
+    emptyHistorySubtext: {
+      fontSize: 13,
       color: theme.colors.textSecondary,
       textAlign: 'center',
-      marginTop: theme.spacing.xl,
-      fontWeight: '500',
-    },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    modalContent: {
-      backgroundColor: theme.colors.background,
-      borderRadius: theme.card.borderRadius,
-      padding: theme.spacing.lg,
-      width: '85%',
-      maxWidth: 400,
-    },
-    modalTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: theme.colors.text,
-      marginBottom: theme.spacing.md,
-      textAlign: 'center',
-    },
-    input: {
-      backgroundColor: theme.colors.backgroundCard,
-      borderRadius: theme.card.borderRadius,
-      padding: theme.spacing.md,
-      fontSize: 16,
-      color: theme.colors.text,
-      marginBottom: theme.spacing.md,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      minHeight: 100,
-      textAlignVertical: 'top',
-    },
-    modalButtons: {
-      flexDirection: 'row',
-      gap: theme.spacing.sm,
-    },
-    modalButton: {
-      flex: 1,
-      backgroundColor: theme.colors.primary,
-      borderRadius: theme.button.borderRadius,
-      padding: theme.spacing.md,
-      alignItems: 'center',
-    },
-    modalButtonSecondary: {
-      backgroundColor: theme.colors.backgroundCard,
-      borderWidth: 2,
-      borderColor: theme.colors.primary,
-    },
-    modalButtonText: {
-      color: theme.colors.textOnPrimary,
-      fontSize: 16,
-      fontWeight: '700',
-    },
-    modalButtonTextSecondary: {
-      color: theme.colors.primary,
+      lineHeight: 18,
     },
   });
+
+  // Check if contractions are regular and frequent (warning sign)
+  const shouldShowWarning = summary && summary.count >= 4 &&
+    summary.frequency && summary.frequency < 10 &&
+    summary.isRegular;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -452,13 +561,101 @@ export default function ContractionsScreen() {
       </View>
 
       <ScrollView style={styles.content}>
+        {/* Warning Card */}
+        {shouldShowWarning && (
+          <View style={styles.warningCard}>
+            <Text style={{ fontSize: 24 }}>⚠️</Text>
+            <Text style={styles.warningText}>
+              Kasılmalar düzenli ve sık! Doktorunuza danışmanız önerilir.
+            </Text>
+          </View>
+        )}
+
+        {/* Summary Card */}
+        {summary && summary.count > 0 && (
+          <View style={styles.summaryCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={styles.summaryTitle}>Son 2 Saat Özeti</Text>
+              <View style={styles.countBadge}>
+                <Text style={styles.countBadgeText}>{summary.count}</Text>
+              </View>
+            </View>
+            <View style={styles.summaryGrid}>
+              {summary.frequency && (
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryItemValue}>
+                    {Math.round(summary.frequency)} dk
+                  </Text>
+                  <Text style={styles.summaryItemLabel}>Ortalama Aralık</Text>
+                </View>
+              )}
+              {summary.avgDuration && (
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryItemValue}>
+                    {Math.round(summary.avgDuration)} sn
+                  </Text>
+                  <Text style={styles.summaryItemLabel}>Ortalama Süre</Text>
+                </View>
+              )}
+              {summary.isRegular !== undefined && (
+                <View style={styles.summaryItem}>
+                  <Text style={[
+                    styles.summaryItemValue,
+                    { fontSize: 16 }
+                  ]}>
+                    {summary.isRegular ? '✓ Düzenli' : '○ Düzensiz'}
+                  </Text>
+                  <Text style={styles.summaryItemLabel}>Düzenlilik</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Timer Card */}
         <View style={styles.timerCard}>
-          <Text style={styles.timerLabel}>
-            {isTracking ? 'Kasılma Süresi' : 'Hazır'}
-          </Text>
+          <Text style={styles.timerLabel}>Kasılma Süresi</Text>
           <Text style={styles.timerValue}>{formatTime(elapsedSeconds)}</Text>
+
+          {isTracking && (
+            <View style={styles.intensityDisplay}>
+              <Text style={styles.intensityDisplayText}>
+                Şiddet: {intensity}/10
+              </Text>
+            </View>
+          )}
         </View>
+
+        {/* Intensity Selector */}
+        {isTracking && (
+          <View style={styles.summaryCard}>
+            <Text style={styles.intensityLabel}>
+              Kasılma Şiddetini Seçin
+            </Text>
+            <View style={styles.intensityButtons}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
+                <TouchableOpacity
+                  key={level}
+                  style={[
+                    styles.intensityButton,
+                    intensity === level && styles.intensityButtonActive,
+                  ]}
+                  onPress={() => setIntensity(level)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.intensityButtonText,
+                      intensity === level && styles.intensityButtonTextActive,
+                    ]}
+                  >
+                    {level}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Control Buttons */}
         <View style={styles.controlButtons}>
@@ -466,152 +663,80 @@ export default function ContractionsScreen() {
             <TouchableOpacity
               style={styles.controlButton}
               onPress={handleStart}
+              activeOpacity={0.8}
             >
-              <Text style={styles.controlButtonText}>Başla</Text>
+              <Text style={styles.controlButtonText}>▶️ Kasılma Başladı</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
               style={[styles.controlButton, styles.stopButton]}
               onPress={handleStop}
+              activeOpacity={0.8}
             >
-              <Text style={styles.controlButtonText}>Durdur & Kaydet</Text>
+              <Text style={styles.controlButtonText}>
+                ⏹️ Kasılma Bitti
+              </Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Disclaimer */}
-        <View style={styles.disclaimer}>
-          <Text style={styles.disclaimerText}>
-            ⚠️ Bu araç sadece bilgilendirme amaçlıdır. Düzenli ve sık kasılmalar yaşıyorsanız,
-            doktorunuza veya hastanenize başvurun.
-          </Text>
-        </View>
-
-        {/* Summary (Last 2 hours) */}
-        {summary && (summary as any).count > 0 && (
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Son 2 Saat Özeti</Text>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Toplam Kasılma:</Text>
-              <Text style={styles.summaryValue}>{(summary as any).count}</Text>
-            </View>
-            {(summary as any).frequency && (
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Ortalama Aralık:</Text>
-                <Text style={styles.summaryValue}>
-                  {Math.round((summary as any).frequency)} dakika
-                </Text>
-              </View>
-            )}
-            {(summary as any).avgDuration && (
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Ortalama Süre:</Text>
-                <Text style={styles.summaryValue}>
-                  {Math.round((summary as any).avgDuration)} saniye
-                </Text>
-              </View>
-            )}
-            <View style={[styles.summaryRow, { marginBottom: 0 }]}>
-              <Text style={styles.summaryLabel}>Düzenlilik:</Text>
-              <Text style={styles.summaryValue}>
-                {(summary as any).regular ? '✓ Düzenli' : '✗ Düzensiz'}
-              </Text>
-            </View>
-          </View>
-        )}
-
         {/* History */}
         <View style={styles.historySection}>
-          <View style={styles.historyHeader}>
-            <Text style={styles.historyTitle}>Geçmiş Kayıtlar</Text>
-            {contractions && contractions.length > 0 && (
-              <TouchableOpacity
-                style={styles.deleteAllButton}
-                onPress={handleDeleteAll}
-              >
-                <Text style={styles.deleteAllButtonText}>Tümünü Sil</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <Text style={styles.historyTitle}>Son 24 Saat</Text>
           {contractions && contractions.length > 0 ? (
             contractions.map((contraction: any, index: number) => (
               <View key={contraction.id} style={styles.historyItem}>
-                <View style={styles.historyItemHeader}>
-                  <Text style={styles.historyTime}>
-                    {new Date(contraction.startTime).toLocaleTimeString('tr-TR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                  <Text style={styles.historyDuration}>
-                    {formatDuration(contraction.durationSec)}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => handleDelete(contraction.id)}
-                  >
-                    <Text>🗑️</Text>
-                  </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <Text style={styles.historyTime}>
+                      {new Date(contraction.startTime).toLocaleTimeString('tr-TR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Text>
+                    <View style={styles.durationBadge}>
+                      <Text style={styles.durationBadgeText}>
+                        {formatDuration(contraction.durationSec)}
+                      </Text>
+                    </View>
+                  </View>
+                  {index < contractions.length - 1 && (
+                    <Text style={styles.historyInterval}>
+                      ↓ {getTimeBetween(
+                        new Date(contraction.startTime),
+                        new Date(contractions[index + 1].startTime)
+                      )} sonra
+                    </Text>
+                  )}
                 </View>
-                {index < contractions.length - 1 && (
-                  <Text style={styles.historyInterval}>
-                    Aralık: {calculateInterval(contraction, contractions[index + 1])} dakika
+                <View style={styles.intensityBadge}>
+                  <Text style={styles.intensityBadgeText}>
+                    {contraction.intensity || 5}
                   </Text>
-                )}
-                {contraction.notes && (
-                  <Text style={styles.historyNotes}>Not: {contraction.notes}</Text>
-                )}
+                  <Text style={styles.intensityBadgeLabel}>şiddet</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteContraction(contraction.id)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.deleteButtonText}>🗑️</Text>
+                </TouchableOpacity>
               </View>
             ))
           ) : (
-            <Text style={styles.emptyHistory}>
-              Henüz kasılma kaydı yok
-            </Text>
+            <View style={styles.emptyHistoryContainer}>
+              <Text style={{ fontSize: 48, marginBottom: 12 }}>⏱️</Text>
+              <Text style={styles.emptyHistory}>
+                Henüz kayıtlı kasılma yok
+              </Text>
+              <Text style={styles.emptyHistorySubtext}>
+                Kasılma başladığında yukarıdaki butona basarak kayıt başlatabilirsiniz
+              </Text>
+            </View>
           )}
         </View>
       </ScrollView>
-
-      {/* Notes Modal */}
-      <Modal
-        visible={showNotesModal}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setShowNotesModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Not Ekle (Opsiyonel)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Kasılma hakkında notlarınız..."
-              placeholderTextColor={theme.colors.textSecondary}
-              value={notes}
-              onChangeText={setNotes}
-              multiline
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSecondary]}
-                onPress={() => {
-                  setShowNotesModal(false);
-                  setNotes('');
-                  setElapsedSeconds(0);
-                }}
-              >
-                <Text style={[styles.modalButtonText, styles.modalButtonTextSecondary]}>
-                  İptal
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={handleSave}
-              >
-                <Text style={styles.modalButtonText}>Kaydet</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }

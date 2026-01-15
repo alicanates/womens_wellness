@@ -15,6 +15,15 @@ import { pregnancyService } from '@/services/api';
 import { useTheme } from '@/hooks/useTheme';
 import { router } from 'expo-router';
 
+const CATEGORY_EMOJIS: Record<string, string> = {
+  'Anne': '👩',
+  'Bebek': '👶',
+  'Eş': '👨',
+  'Diğer': '📦',
+};
+
+const CATEGORIES = ['Anne', 'Bebek', 'Eş', 'Diğer'];
+
 const DEFAULT_ITEMS = [
   // Anne
   { category: 'Anne', itemName: 'Kimlik, Sağlık Sigortası Kartı' },
@@ -51,8 +60,10 @@ export default function HospitalBagScreen() {
   const queryClient = useQueryClient();
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState('Anne');
+  const [editingItem, setEditingItem] = useState<any>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Fetch hospital bag items
@@ -119,10 +130,10 @@ export default function HospitalBagScreen() {
       return;
     }
 
-    const maxSortOrder = items?.reduce(
+    const maxSortOrder = ((items || []) as any[]).reduce(
       (max: number, item: any) => Math.max(max, item.sortOrder || 0),
       0
-    ) || 0;
+    );
 
     addItemMutation.mutate({
       category: newItemCategory,
@@ -150,15 +161,54 @@ export default function HospitalBagScreen() {
     );
   };
 
+  const handleEditItem = (item: any) => {
+    setEditingItem(item);
+    setNewItemName(item.itemName);
+    setNewItemCategory(item.category);
+    setEditModalVisible(true);
+  };
+
+  const handleUpdateItem = () => {
+    if (!newItemName.trim()) {
+      Alert.alert('Uyarı', 'Lütfen öğe adı giriniz');
+      return;
+    }
+
+    updateItemMutation.mutate({
+      id: editingItem.id,
+      data: {
+        itemName: newItemName.trim(),
+        category: newItemCategory,
+      },
+    });
+
+    setNewItemName('');
+    setEditModalVisible(false);
+    setEditingItem(null);
+    Alert.alert('Başarılı', 'Öğe güncellendi');
+  };
+
+  const handleToggleAllInCategory = (category: string, packed: boolean) => {
+    const categoryItems = groupedItems[category] || [];
+    categoryItems.forEach((item: any) => {
+      if (item.isPacked !== packed) {
+        updateItemMutation.mutate({
+          id: item.id,
+          data: { isPacked: packed },
+        });
+      }
+    });
+  };
+
   // Group items by category
-  const groupedItems = (items as any[])?.reduce((groups: any, item: any) => {
+  const groupedItems = ((items || []) as any[]).reduce((groups: any, item: any) => {
     const category = item.category || 'Diğer';
     if (!groups[category]) {
       groups[category] = [];
     }
     groups[category].push(item);
     return groups;
-  }, {}) || {};
+  }, {});
 
   const categories = Object.keys(groupedItems).sort();
 
@@ -249,11 +299,38 @@ export default function HospitalBagScreen() {
     categorySection: {
       marginBottom: theme.spacing.xl,
     },
+    categoryHeader: {
+      marginBottom: theme.spacing.md,
+    },
+    categoryTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: theme.spacing.xs,
+    },
+    categoryEmoji: {
+      fontSize: 20,
+      marginRight: theme.spacing.sm,
+    },
     categoryTitle: {
       fontSize: 18,
       fontWeight: '700',
       color: theme.colors.text,
-      marginBottom: theme.spacing.md,
+      flex: 1,
+    },
+    categoryCount: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.textSecondary,
+    },
+    toggleAllButton: {
+      alignSelf: 'flex-start',
+      paddingVertical: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.sm,
+    },
+    toggleAllText: {
+      fontSize: 13,
+      color: theme.colors.primary,
+      fontWeight: '600',
     },
     itemCard: {
       backgroundColor: theme.colors.backgroundCard,
@@ -355,17 +432,22 @@ export default function HospitalBagScreen() {
     },
     categoryButtons: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: theme.spacing.sm,
       marginBottom: theme.spacing.lg,
     },
     categoryButton: {
-      flex: 1,
+      minWidth: '22%',
       backgroundColor: theme.colors.backgroundCard,
       borderRadius: theme.card.borderRadius,
-      padding: theme.spacing.md,
+      padding: theme.spacing.sm,
       alignItems: 'center',
       borderWidth: 2,
       borderColor: 'transparent',
+    },
+    categoryButtonEmoji: {
+      fontSize: 20,
+      marginBottom: theme.spacing.xs,
     },
     categoryButtonActive: {
       borderColor: theme.colors.primary,
@@ -445,42 +527,70 @@ export default function HospitalBagScreen() {
 
         {/* Items by Category */}
         {categories.length > 0 ? (
-          categories.map((category) => (
-            <View key={category} style={styles.categorySection}>
-              <Text style={styles.categoryTitle}>{category}</Text>
-              {groupedItems[category].map((item: any) => (
-                <View key={item.id} style={styles.itemCard}>
+          categories.map((category) => {
+            const categoryItems = groupedItems[category] || [];
+            const packedCount = categoryItems.filter((item: any) => item.isPacked).length;
+            const allPacked = packedCount === categoryItems.length;
+
+            return (
+              <View key={category} style={styles.categorySection}>
+                <View style={styles.categoryHeader}>
+                  <View style={styles.categoryTitleRow}>
+                    <Text style={styles.categoryEmoji}>{CATEGORY_EMOJIS[category] || '📦'}</Text>
+                    <Text style={styles.categoryTitle}>{category}</Text>
+                    <Text style={styles.categoryCount}>
+                      {packedCount}/{categoryItems.length}
+                    </Text>
+                  </View>
                   <TouchableOpacity
-                    style={[
-                      styles.checkbox,
-                      item.isPacked && styles.checkboxChecked,
-                    ]}
-                    onPress={() => handleTogglePacked(item)}
+                    style={styles.toggleAllButton}
+                    onPress={() => handleToggleAllInCategory(category, !allPacked)}
                   >
-                    {item.isPacked && (
-                      <Text style={{ color: theme.colors.textOnPrimary, fontSize: 18 }}>
-                        ✓
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                  <Text
-                    style={[
-                      styles.itemText,
-                      item.isPacked && styles.itemTextPacked,
-                    ]}
-                  >
-                    {item.itemName}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => handleDeleteItem(item)}
-                  >
-                    <Text style={{ fontSize: 18 }}>🗑️</Text>
+                    <Text style={styles.toggleAllText}>
+                      {allPacked ? 'Tümünü Kaldır' : 'Tümünü İşaretle'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
-              ))}
-            </View>
-          ))
+                {categoryItems.map((item: any) => (
+                  <View key={item.id} style={styles.itemCard}>
+                    <TouchableOpacity
+                      style={[
+                        styles.checkbox,
+                        item.isPacked && styles.checkboxChecked,
+                      ]}
+                      onPress={() => handleTogglePacked(item)}
+                    >
+                      {item.isPacked && (
+                        <Text style={{ color: theme.colors.textOnPrimary, fontSize: 18 }}>
+                          ✓
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                    <Text
+                      style={[
+                        styles.itemText,
+                        item.isPacked && styles.itemTextPacked,
+                      ]}
+                    >
+                      {item.itemName}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => handleEditItem(item)}
+                    >
+                      <Text style={{ fontSize: 18 }}>✏️</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => handleDeleteItem(item)}
+                    >
+                      <Text style={{ fontSize: 18 }}>🗑️</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            );
+          })
         ) : (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🎒</Text>
@@ -505,7 +615,7 @@ export default function HospitalBagScreen() {
 
             <Text style={styles.label}>Kategori</Text>
             <View style={styles.categoryButtons}>
-              {['Anne', 'Bebek', 'Eş'].map((cat) => (
+              {CATEGORIES.map((cat) => (
                 <TouchableOpacity
                   key={cat}
                   style={[
@@ -514,6 +624,9 @@ export default function HospitalBagScreen() {
                   ]}
                   onPress={() => setNewItemCategory(cat)}
                 >
+                  <Text style={styles.categoryButtonEmoji}>
+                    {CATEGORY_EMOJIS[cat]}
+                  </Text>
                   <Text
                     style={[
                       styles.categoryButtonText,
@@ -552,6 +665,80 @@ export default function HospitalBagScreen() {
                 onPress={handleAddItem}
               >
                 <Text style={styles.modalButtonText}>Ekle</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Item Modal */}
+      <Modal
+        visible={editModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => {
+          setEditModalVisible(false);
+          setEditingItem(null);
+          setNewItemName('');
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Öğeyi Düzenle</Text>
+
+            <Text style={styles.label}>Kategori</Text>
+            <View style={styles.categoryButtons}>
+              {CATEGORIES.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[
+                    styles.categoryButton,
+                    newItemCategory === cat && styles.categoryButtonActive,
+                  ]}
+                  onPress={() => setNewItemCategory(cat)}
+                >
+                  <Text style={styles.categoryButtonEmoji}>
+                    {CATEGORY_EMOJIS[cat]}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.categoryButtonText,
+                      newItemCategory === cat && styles.categoryButtonTextActive,
+                    ]}
+                  >
+                    {cat}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.label}>Öğe Adı</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Örn: Kimlik belgesi"
+              placeholderTextColor={theme.colors.textSecondary}
+              value={newItemName}
+              onChangeText={setNewItemName}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonSecondary]}
+                onPress={() => {
+                  setEditModalVisible(false);
+                  setEditingItem(null);
+                  setNewItemName('');
+                }}
+              >
+                <Text style={[styles.modalButtonText, styles.modalButtonTextSecondary]}>
+                  İptal
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={handleUpdateItem}
+              >
+                <Text style={styles.modalButtonText}>Güncelle</Text>
               </TouchableOpacity>
             </View>
           </View>

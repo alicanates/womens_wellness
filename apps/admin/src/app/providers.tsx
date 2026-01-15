@@ -24,6 +24,12 @@ import {
   TrophyOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
+// Monitoring imports (will be enabled after package installation)
+// import { initSentry } from '@/lib/sentry';
+// import { initPostHog } from '@/lib/posthog';
+
+// Initialize monitoring (will be enabled after package installation)
+// initSentry();
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
@@ -33,6 +39,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       },
     },
   }));
+
+  // Initialize PostHog on mount (will be enabled after package installation)
+  // useEffect(() => {
+  //   initPostHog();
+  // }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

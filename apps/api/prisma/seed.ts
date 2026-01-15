@@ -1,11 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import { hash } from 'bcryptjs';
 
 const prisma = new PrismaClient();
-
-async function hash(password: string, rounds = 10): Promise<string> {
-  return bcrypt.hash(password, rounds);
-}
 
 async function main() {
   console.log('🌱 Seeding database...');
