@@ -205,7 +205,8 @@ export const dataProvider: DataProvider = {
       return { data };
     } else if (resource === 'qna/reports' || resource === 'qna/moderation/reports') {
       // Check if it's a status-only update
-      if (variables.status && !variables.action) {
+      const vars = variables as any;
+      if (vars.status && !vars.action) {
         const { data } = await axiosInstance.patch(`/qna/moderation/reports/${id}/status`, variables);
         return { data };
       }
