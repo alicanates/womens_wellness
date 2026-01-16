@@ -27,6 +27,8 @@ COPY --from=dependencies /app/apps/api/node_modules ./apps/api/node_modules
 COPY . .
 WORKDIR /app/apps/api
 RUN pnpm prisma generate
+# Remove test files before build
+RUN find . -name "*.spec.ts" -type f -delete
 RUN pnpm build
 
 # Production stage
