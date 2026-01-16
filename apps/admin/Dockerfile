@@ -36,7 +36,6 @@ COPY apps/admin/package.json ./apps/admin/
 RUN pnpm install --prod --frozen-lockfile
 
 COPY --from=builder /app/apps/admin/.next ./apps/admin/.next
-COPY --from=builder /app/apps/admin/public ./apps/admin/public
 COPY --from=builder /app/apps/admin/next.config.js ./apps/admin/
 
 WORKDIR /app/apps/admin
