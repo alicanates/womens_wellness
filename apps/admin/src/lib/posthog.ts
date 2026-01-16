@@ -1,4 +1,10 @@
-import posthog from 'posthog-js';
+// PostHog is optional - only import if available
+let posthog: any = null;
+try {
+    posthog = require('posthog-js');
+} catch (e) {
+    console.log('PostHog not installed, analytics disabled');
+}
 
 const POSTHOG_API_KEY = process.env.NEXT_PUBLIC_POSTHOG_API_KEY;
 const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com';
@@ -6,6 +12,11 @@ const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.postho
 let initialized = false;
 
 export function initPostHog() {
+    if (!posthog) {
+        console.log('PostHog not available, skipping initialization');
+        return;
+    }
+
     if (!POSTHOG_API_KEY || POSTHOG_API_KEY === '__OPTIONAL__') {
         console.log('PostHog API key not configured, skipping initialization');
         return;
@@ -16,7 +27,7 @@ export function initPostHog() {
     try {
         posthog.init(POSTHOG_API_KEY, {
             api_host: POSTHOG_HOST,
-            loaded: (posthog) => {
+            loaded: (posthog: any) => {
                 if (process.env.NODE_ENV === 'development') {
                     posthog.debug();
                 }
@@ -33,22 +44,22 @@ export function initPostHog() {
 
 // Analytics helper functions
 export function trackEvent(eventName: string, properties?: Record<string, any>) {
-    if (!initialized) return;
+    if (!initialized || !posthog) return;
     posthog.capture(eventName, properties);
 }
 
 export function identifyUser(userId: string, properties?: Record<string, any>) {
-    if (!initialized) return;
+    if (!initialized || !posthog) return;
     posthog.identify(userId, properties);
 }
 
 export function resetUser() {
-    if (!initialized) return;
+    if (!initialized || !posthog) return;
     posthog.reset();
 }
 
 export function setUserProperties(properties: Record<string, any>) {
-    if (!initialized) return;
+    if (!initialized || !posthog) return;
     posthog.setPersonProperties(properties);
 }
 
