@@ -3,12 +3,27 @@ module.exports = {
     rootDir: 'src',
     testRegex: '.*\\.spec\\.ts$',
     transform: {
-        '^.+\\.(t|j)s$': 'ts-jest',
+        '^.+\\.ts$': ['ts-jest', {
+            tsconfig: {
+                esModuleInterop: true,
+                allowSyntheticDefaultImports: true,
+            },
+        }],
     },
     collectCoverageFrom: [
-        '**/*.(t|j)s',
+        '**/*.ts',
+        '!**/*.spec.ts',
+        '!**/*.e2e.spec.ts',
+        '!**/node_modules/**',
+        '!**/dist/**',
+        '!**/coverage/**',
+        '!**/*.module.ts',
+        '!**/main.ts',
+        '!**/test-*.ts',
+        '!**/manual-test.ts',
     ],
     coverageDirectory: '../coverage',
+    coverageReporters: ['text', 'lcov', 'html'],
     testEnvironment: 'node',
     moduleNameMapper: {
         '^src/(.*)$': '<rootDir>/$1',

@@ -83,3 +83,16 @@ credentials/
 
 # Claude AI context
 .claude/
+
+# Docker
+docker-compose.override.yml
+.env.docker.local
+.env.production
+
+# Backups
+backups/
+*.sql
+*.sql.gz
+
+# Nginx SSL
+nginx/ssl/

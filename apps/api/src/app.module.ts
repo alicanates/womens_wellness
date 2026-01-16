@@ -29,6 +29,7 @@ import { PagesModule } from './pages/pages.module';
 import { GamificationModule } from './gamification/gamification.module';
 import { AstrologyModule } from './astrology/astrology.module';
 import { AIProviderModule } from './ai-provider/ai-provider.module';
+import { AdminModule } from './admin/admin.module';
 import aiConfig from './config/ai.config';
 
 @Module({
@@ -78,6 +79,7 @@ import aiConfig from './config/ai.config';
     GamificationModule,
     AstrologyModule,
     AIProviderModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

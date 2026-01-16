@@ -1,0 +1,55 @@
+# Dependencies
+node_modules
+**/node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/venv
+**/.Python
+
+# Build outputs
+dist
+build
+.next
+.expo
+.turbo
+**/.turbo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# Testing
+coverage
+.nyc_output
+
+# Logs
+logs
+*.log
+
+# Misc
+.git
+.gitignore
+README.md
+*.md
+!apps/*/README.md
+
+# Prisma
+**/prisma/migrations

@@ -489,12 +489,20 @@ bash scripts/dev-setup.sh # Automated setup
 
 ## 📚 Documentation
 
+### General
 - **[CLAUDE.md](./CLAUDE.md)** - Full technical specification (71KB)
 - **[PHASE_*_PROGRESS.md](./PHASE_6_PROGRESS.md)** - Implementation logs
 - **[docs/gemini-api-setup.md](./docs/gemini-api-setup.md)** - Gemini API kurulum rehberi (Türkçe)
 - **[docs/troubleshooting.md](./docs/troubleshooting.md)** - Common issues
 - **[docs/google-oauth-flow.md](./docs/google-oauth-flow.md)** - OAuth setup
 - **[API Docs](http://localhost:4000/api/docs)** - Interactive Swagger
+
+### 🚀 Production Deployment
+- **[PRODUCTION_QUICK_START.md](./PRODUCTION_QUICK_START.md)** - ⚡ 30 dakikada production'a geç (Cloud)
+- **[SELF_HOSTED_SETUP.md](./SELF_HOSTED_SETUP.md)** - 🏠 Kendi sunucunda çalıştır (Self-hosted)
+- **[PRODUCTION_ENV_GUIDE.md](./PRODUCTION_ENV_GUIDE.md)** - 📖 Detaylı environment variables rehberi
+- **[DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)** - ✅ Kapsamlı deployment checklist
+- **[PRODUCTION_SECURITY_CHECKLIST.md](./PRODUCTION_SECURITY_CHECKLIST.md)** - 🔐 Güvenlik kontrolleri
 
 ---
 

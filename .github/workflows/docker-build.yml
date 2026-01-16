@@ -1,0 +1,65 @@
+name: Docker Build Test
+
+on:
+  pull_request:
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'docker-compose*.yml'
+      - '**/Dockerfile'
+      - '.github/workflows/docker-build.yml'
+
+jobs:
+  test-docker-build:
+    name: Test Docker Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api, admin, astrology]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Test build ${{ matrix.service }}
+        run: |
+          if [ "${{ matrix.service }}" = "astrology" ]; then
+            docker build -f apps/astrology-service/Dockerfile apps/astrology-service
+          else
+            docker build -f apps/${{ matrix.service }}/Dockerfile .
+          fi
+
+  test-docker-compose:
+    name: Test Docker Compose
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create .env file
+        run: cp .env.docker .env
+
+      - name: Test docker-compose config
+        run: docker-compose config
+
+      - name: Test docker-compose build
+        run: docker-compose build --parallel
+
+      - name: Test docker-compose up
+        run: |
+          docker-compose up -d
+          sleep 30
+          docker-compose ps
+          docker-compose logs
+
+      - name: Health check
+        run: |
+          curl -f http://localhost:3000/health || exit 1
+          curl -f http://localhost:3001 || exit 1
+          curl -f http://localhost:5000 || exit 1
+
+      - name: Cleanup
+        if: always()
+        run: docker-compose down -v

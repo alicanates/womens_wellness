@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: wellness-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-wellness}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wellness123}
+      POSTGRES_DB: ${POSTGRES_DB:-wellness_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wellness}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: wellness-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Service (NestJS)
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: ${NODE_ENV:-development}
+    container_name: wellness-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-wellness}:${POSTGRES_PASSWORD:-wellness123}@postgres:5432/${POSTGRES_DB:-wellness_db}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - ./apps/api:/app/apps/api
+      - ./packages:/app/packages
+      - /app/node_modules
+      - /app/apps/api/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: pnpm --filter @wellness/api dev
+
+  # Admin Panel (Next.js)
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      target: ${NODE_ENV:-development}
+    container_name: wellness-admin
+    restart: unless-stopped
+    ports:
+      - "${ADMIN_PORT:-3001}:3001"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+    volumes:
+      - ./apps/admin:/app/apps/admin
+      - /app/node_modules
+      - /app/apps/admin/node_modules
+      - /app/apps/admin/.next
+    depends_on:
+      - api
+    command: pnpm --filter admin dev
+
+  # Astrology Service (Python)
+  astrology:
+    build:
+      context: ./apps/astrology-service
+      dockerfile: Dockerfile
+    container_name: wellness-astrology
+    restart: unless-stopped
+    ports:
+      - "${ASTROLOGY_PORT:-5000}:5000"
+    environment:
+      FLASK_ENV: ${FLASK_ENV:-development}
+    volumes:
+      - ./apps/astrology-service:/app
+      - astrology_cache:/app/cache
+    command: python app.py
+
+volumes:
+  postgres_data:
+  redis_data:
+  astrology_cache:
+
+networks:
+  default:
+    name: wellness-network

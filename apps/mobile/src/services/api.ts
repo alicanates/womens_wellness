@@ -1100,3 +1100,141 @@ export const pagesService = {
       updatedAt: string;
     }>(`/pages/slug/${slug}`, false), // Public endpoint, no auth needed
 };
+
+// Admin Panel endpoints
+export const adminService = {
+  // Dashboard
+  getDashboardStats: (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return api.get<{
+      users: {
+        total: number;
+        active: number;
+        new: number;
+        growth: number;
+      };
+      subscriptions: {
+        total: number;
+        active: number;
+        revenue: number;
+        growth: number;
+      };
+      engagement: {
+        dailyActive: number;
+        weeklyActive: number;
+        monthlyActive: number;
+        avgSessionTime: number;
+      };
+      content: {
+        questions: number;
+        answers: number;
+        articles: number;
+        conversations: number;
+      };
+    }>(`/admin/dashboard/stats${query}`);
+  },
+
+  // Charts
+  getUserGrowthChart: (days: number = 30) =>
+    api.get<{
+      labels: string[];
+      datasets: Array<{
+        label: string;
+        data: number[];
+        backgroundColor?: string;
+        borderColor?: string;
+      }>;
+    }>(`/admin/charts/user-growth?days=${days}`),
+
+  getRevenueChart: (days: number = 30) =>
+    api.get<{
+      labels: string[];
+      datasets: Array<{
+        label: string;
+        data: number[];
+        backgroundColor?: string;
+        borderColor?: string;
+      }>;
+    }>(`/admin/charts/revenue?days=${days}`),
+
+  // Bulk Operations
+  bulkUpdateUsers: (userIds: string[], data: { status?: string; isAdmin?: boolean }) =>
+    api.post<{
+      success: number;
+      failed: number;
+      errors: string[];
+    }>('/admin/bulk/update-users', { userIds, data }),
+
+  bulkDeleteUsers: (userIds: string[]) =>
+    api.post<{
+      success: number;
+      failed: number;
+      errors: string[];
+    }>('/admin/bulk/delete-users', { userIds }),
+
+  bulkSendNotifications: (userIds: string[], notification: { title: string; body: string }) =>
+    api.post<{
+      success: number;
+      failed: number;
+      errors: string[];
+    }>('/admin/bulk/send-notifications', { userIds, notification }),
+
+  // Advanced Search
+  searchUsers: (filters: {
+    search?: string;
+    status?: string;
+    subscriptionStatus?: string;
+    createdAfter?: string;
+    createdBefore?: string;
+    lastLoginAfter?: string;
+    lastLoginBefore?: string;
+    hasSubscription?: boolean;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        params.append(key, value.toString());
+      }
+    });
+    return api.get<{
+      data: Array<any>;
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    }>(`/admin/users/search?${params.toString()}`);
+  },
+
+  // User Impersonation
+  impersonateUser: (userId: string) =>
+    api.post<{
+      user: any;
+      impersonationToken: string;
+    }>(`/admin/impersonate/${userId}`, {}),
+
+  // System Health
+  getSystemHealth: () =>
+    api.get<{
+      status: string;
+      database: {
+        connected: boolean;
+        responseTime: number;
+      };
+      users: {
+        total: number;
+        active: number;
+      };
+      errors: {
+        rate: number;
+        threshold: number;
+      };
+      timestamp: string;
+    }>('/admin/system/health'),
+};

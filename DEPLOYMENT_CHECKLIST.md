@@ -1,511 +1,448 @@
-# 🚀 Deployment Checklist
+# 🚀 Production Deployment Checklist
 
-Use this checklist to verify everything is ready for deployment.
+Comprehensive checklist for deploying Women's Wellness App to production.
 
----
+## 📋 Pre-Deployment
 
-## 🤖 Gemini AI Integration Deployment
+### Environment Setup
+- [ ] Run `./scripts/setup-production-env.sh` or manually configure all env vars
+- [ ] Validate environment: `./scripts/validate-production-env.sh`
+- [ ] All critical variables set (JWT, Database, Redis, AI API)
+- [ ] All secrets are secure (not default/placeholder values)
+- [ ] SSL/TLS enabled for Database and Redis
+- [ ] CORS origins updated to production domains
+- [ ] Admin emails updated (no test emails)
 
-### Pre-Deployment Verification
+### Infrastructure
+- [ ] PostgreSQL database provisioned
+- [ ] Database backups configured
+- [ ] Redis instance provisioned
+- [ ] File storage configured (S3/MinIO)
+- [ ] Email service configured (SendGrid/SES)
+- [ ] Domain names registered
+- [ ] DNS records configured
+- [ ] SSL certificates obtained (Let's Encrypt)
 
-#### Environment Configuration
-- [ ] `GOOGLE_GENERATIVE_AI_API_KEY` set in production environment
-- [ ] API key tested and validated
-- [ ] API key has sufficient quota (15 req/min minimum)
-- [ ] Backup AI provider configured (OpenAI or Anthropic)
-- [ ] All environment variables documented
-
-#### Backend (API)
-- [ ] ContextBuilderService created and tested
-- [ ] ChatService updated to use Gemini API
-- [ ] `@ai-sdk/google` package installed
-- [ ] TypeScript compilation successful
-- [ ] All unit tests passing
-- [ ] Integration tests passing
-- [ ] Error handling implemented for all scenarios
-- [ ] Quota system working correctly
-- [ ] Turkish error messages verified
-
-#### Testing Checklist
-- [ ] Gemini API connection test passed
-  ```bash
-  cd apps/api
-  pnpm test:gemini
-  ```
-- [ ] Context building tests passed (4 scenarios)
-  ```bash
-  pnpm test context-builder.service.spec.ts
-  ```
-- [ ] End-to-end chat flow test passed
-  ```bash
-  pnpm test:chat-flow
-  ```
-- [ ] Error scenarios test passed
-  ```bash
-  pnpm test:error-scenarios
-  ```
-- [ ] Forget conversation test passed
-  ```bash
-  pnpm test:forget-conversation
-  ```
-
-#### Mobile App
-- [ ] SSE buffer optimization verified
-- [ ] Chat screen error handling tested
-- [ ] Quota display updates correctly
-- [ ] iOS platform tested
-- [ ] Android platform tested
-- [ ] Keyboard behavior correct
-- [ ] Auto-scroll working
-- [ ] "Stop" button functional
-- [ ] "Forget" button functional
-
-#### Performance & Optimization
-- [ ] Database queries optimized (indexes verified)
-- [ ] Context building queries use select for specific fields
-- [ ] Conversation history limited to 10 messages
-- [ ] SSE buffer size configured (512 chars)
-- [ ] Flush interval optimized (50ms)
-- [ ] API timeout set (30s)
-
-#### Security
-- [ ] API key not logged anywhere
-- [ ] No PII sent to Gemini API
-- [ ] User data encrypted in database
-- [ ] JWT authentication working
-- [ ] Conversation ownership verified
-- [ ] Rate limiting per user active
-
-### Functional Testing
-
-#### Chat Functionality
-- [ ] New conversation creation works
-- [ ] Message sending works
-- [ ] Streaming response displays correctly
-- [ ] Messages saved to database
-- [ ] Conversation history loads correctly
-- [ ] Context includes user health data
-- [ ] System prompt personalized correctly
-
-#### User Context Scenarios
-- [ ] Pregnant user context correct
-  - Weeks/days calculated
-  - Trimester shown
-  - Due date displayed
-  - Anonymous mode respected
-- [ ] Cycling user context correct
-  - Cycle day calculated
-  - Phase determined
-  - Next period estimated
-- [ ] Wellness data context correct
-  - Water intake shown
-  - Steps displayed
-  - Meditation minutes shown
-  - Sleep data included
-- [ ] New user (no data) handled gracefully
-
-#### Error Handling
-- [ ] Timeout error shows user-friendly message
-- [ ] Rate limit error shows retry suggestion
-- [ ] Network error shows connection message
-- [ ] API key error logged (not shown to user)
-- [ ] Quota exceeded shows upgrade option
-- [ ] Invalid request handled gracefully
-
-#### Quota Management
-- [ ] Free plan: 100 messages/month enforced
-- [ ] Premium plan: 1000 messages/month enforced
-- [ ] Quota increments after successful response
-- [ ] Quota display updates in real-time
-- [ ] Quota reset works on new month
-- [ ] Quota exceeded message in Turkish
-
-### API Testing
-
-Test with authenticated user token:
-
-```bash
-# Send message
-curl -X POST \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"content":"Merhaba NOVA"}' \
-  http://localhost:4000/chat/CONVERSATION_ID/message
-
-# Stream response (SSE)
-curl -N -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:4000/chat/CONVERSATION_ID/stream
-
-# Forget conversation
-curl -X POST \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:4000/chat/CONVERSATION_ID/forget
-
-# Check quota
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:4000/quota
-```
-
-- [ ] All endpoints return expected responses
-- [ ] SSE streaming works correctly
-- [ ] Error responses in Turkish
-- [ ] Authentication required for all endpoints
-
-### Performance Testing
-- [ ] First token latency < 2s
-- [ ] Full response time < 10s (average)
-- [ ] Context building < 500ms
-- [ ] Database queries < 100ms each
-- [ ] No memory leaks during streaming
-- [ ] Concurrent users handled (10+ simultaneous)
-
-### Edge Cases
-- [ ] Very long message (500 chars)
-- [ ] Rapid successive messages
-- [ ] Connection interrupted during streaming
-- [ ] User deletes conversation mid-stream
-- [ ] Quota limit reached mid-conversation
-- [ ] API key invalid/expired
-- [ ] Gemini API down (fallback works)
-- [ ] Database connection lost
-- [ ] Redis connection lost
-
-### Documentation
-- [x] README updated with Gemini setup instructions
-- [x] Environment variables documented
-- [x] API endpoints documented
-- [x] Testing guides created
-- [x] Deployment checklist updated (this file)
-- [ ] Production deployment guide reviewed
-
-### Deployment Steps
-
-#### 1. Pre-Deployment
-```bash
-# Validate environment
-cd apps/api
-pnpm validate:env
-
-# Run all tests
-pnpm test
-
-# Build API
-pnpm build
-```
-
-#### 2. Deploy API
-```bash
-# Set environment variables on production server
-export GOOGLE_GENERATIVE_AI_API_KEY="your-production-key"
-export DATABASE_URL="production-url"
-export REDIS_URL="production-url"
-export JWT_SECRET="production-secret"
-export JWT_REFRESH_SECRET="production-secret"
-
-# Deploy application
-# (deployment method depends on your infrastructure)
-
-# Verify deployment
-curl https://your-api.com/healthz
-```
-
-#### 3. Deploy Mobile App
-```bash
-cd apps/mobile
-
-# Update API URL in .env.local
-EXPO_PUBLIC_API_URL=https://your-api.com
-
-# Build and submit
-eas build --platform all
-eas submit --platform all
-```
-
-#### 4. Monitor
-- [ ] Check API logs for errors
-- [ ] Monitor Gemini API usage
-- [ ] Track response times
-- [ ] Monitor quota consumption
-- [ ] Check error rates
-- [ ] Review user feedback
-- [ ] Monitor costs (Gemini API usage)
-
-### Rollback Plan
-
-If issues arise:
-
-1. **Gemini API Issues**:
-   - Switch to backup provider (OpenAI/Anthropic) via admin panel
-   - Update model policy to use different provider
-   - No code changes needed
-
-2. **Performance Issues**:
-   - Increase API timeout
-   - Reduce conversation history limit
-   - Disable context building temporarily
-   - Scale up server resources
-
-3. **Critical Bugs**:
-   - Revert to previous deployment
-   - Disable chat feature via feature flag
-   - Show maintenance message to users
-
-### Monitoring Metrics
-
-Track these metrics post-deployment:
-
-- **API Performance**:
-  - Average response time
-  - First token latency
-  - Error rate by type
-  - Timeout rate
-
-- **Usage**:
-  - Messages per day
-  - Active conversations
-  - Quota consumption rate
-  - User engagement
-
-- **Costs**:
-  - Gemini API requests/day
-  - Token usage
-  - Estimated monthly cost
-
-- **Quality**:
-  - User satisfaction (feedback)
-  - Conversation length
-  - Retry rate
-  - Error recovery rate
-
-### Sign-off
-
-- [ ] Backend Developer: _______________
-- [ ] Frontend Developer: _______________
-- [ ] QA Engineer: _______________
-- [ ] Product Manager: _______________
-- [ ] DevOps Engineer: _______________
-
-Date: _______________
-
----
-
-## 🏠 Home Screen Deployment Checklist
-
-Use this checklist to verify everything is ready for deployment.
-
-## Pre-Deployment Verification
+### Security
+- [ ] JWT secrets generated with `openssl rand -hex 32`
+- [ ] Webhook verification enabled (`SKIP_WEBHOOK_VERIFICATION=false`)
+- [ ] Cookie secure flag enabled (`COOKIE_SECURE=true`)
+- [ ] Rate limiting configured
+- [ ] Security headers enabled (Helmet.js)
+- [ ] Input validation active
+- [ ] SQL injection protection verified
+- [ ] XSS protection verified
 
 ### Database
-- [x] Migration created: `20251007203642_add_home_preferences`
-- [x] Migration applied successfully
-- [x] Prisma client regenerated
-- [ ] Seed educational articles (optional but recommended)
-  ```bash
-  cd apps/api
-  DATABASE_URL="..." pnpm prisma:seed
-  ```
+- [ ] Migrations tested locally
+- [ ] Migrations run on production DB
+- [ ] Database indexes created
+- [ ] Connection pooling configured
+- [ ] Backup strategy tested
+- [ ] Restore procedure documented
 
-### Backend (API)
-- [x] HomeModule created and registered in app.module.ts
-- [x] HomeService implements all business logic
-- [x] HomeController exposes 5 endpoints
-- [x] TypeScript compilation successful
-- [x] Build completes without errors
-- [ ] API server starts successfully
-  ```bash
-  cd apps/api
-  DATABASE_URL="..." pnpm dev
-  ```
-- [ ] Test GET /home/snapshot endpoint with curl or Postman
-
-### Frontend (Mobile)
-- [x] New home screen created with all 5 zones
-- [x] Old home screen backed up as home-old.tsx
-- [x] Components created (StreakChip, StatusPill, PriorityCard)
-- [x] API service updated with homeService
-- [x] All imports resolve correctly
-- [ ] Mobile app builds successfully
-  ```bash
-  cd apps/mobile
-  pnpm dev
-  ```
-- [ ] Navigate to home screen and verify it loads
-
-### Localization
-- [x] Turkish (TR) translations complete
-- [x] English (EN) translations complete
-- [ ] Test both locales work correctly
-
-## Functional Testing
-
-### Zone A - Identity & Quick Access
-- [ ] Greeting changes based on time of day
-- [ ] User display name shows correctly
-- [ ] Profile picture loads (or placeholder shows)
-- [ ] Tapping avatar navigates to Settings
-- [ ] Streak chip appears when streak > 0
-- [ ] Streak chip shows correct count
-
-### Zone B - Status Pills
-- [ ] Pills scroll horizontally
-- [ ] Cycle pill shows when data exists
-- [ ] Pregnancy pill shows when active
-- [ ] Water pill shows current progress
-- [ ] Reminders pill shows count
-- [ ] Tapping pills navigates to correct screens
-
-### Zone C - Priority Cards
-- [ ] Cards display based on priority
-- [ ] Hydration card shows when behind target
-- [ ] Cycle insight card shows near period date
-- [ ] Symptom log card always available
-- [ ] Reminders card shows upcoming
-- [ ] NOVA prompt shows (max once per day)
-- [ ] Dismiss button (✕) works
-- [ ] Dismissed cards disappear
-
-### Zone D - Educational Articles
-- [ ] Articles appear (if seeded)
-- [ ] Category labels display correctly
-- [ ] Title and excerpt visible
-- [ ] Tapping article shows full content (or placeholder)
-
-### Zone E - Quick Actions
-- [ ] Su Ekle navigates to water screen
-- [ ] Semptom Ekle navigates to calendar
-- [ ] Metrikler navigates to BMI calculator
-
-### General Features
-- [ ] Pull-to-refresh updates data
-- [ ] Loading state shows while fetching
-- [ ] Empty state shows when no cards
-- [ ] Dark mode renders correctly
-- [ ] Light mode renders correctly
-- [ ] No console errors
-- [ ] No TypeScript errors
-
-## API Testing
-
-Test with authenticated user token:
-
-```bash
-# Get snapshot
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:4000/home/snapshot
-
-# Dismiss card
-curl -X POST \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"cardId":"hydration","days":7}' \
-  http://localhost:4000/home/cards/dismiss
-
-# Pin card
-curl -X POST \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"cardId":"cycle_insight"}' \
-  http://localhost:4000/home/cards/pin
-```
-
-- [ ] All endpoints return 200 OK
-- [ ] Response structure matches expected types
-- [ ] Error handling works (401 for unauthorized)
-
-## Performance Testing
-- [ ] API /home/snapshot responds in <500ms
-- [ ] Mobile home screen renders in <200ms (cached)
-- [ ] Pull-to-refresh completes in <1s
-- [ ] No memory leaks in app
-- [ ] Smooth scrolling on all zones
-
-## Edge Cases
-- [ ] New user with no data (should show empty states)
-- [ ] User with incomplete profile
-- [ ] User with no cycle data
-- [ ] User with no pregnancy
-- [ ] User with no water logs
-- [ ] User with no reminders
-- [ ] All cards dismissed (should show empty state)
-- [ ] Network offline (should show cached data)
-- [ ] Network error (should show error message)
-
-## Documentation
-- [x] Implementation summary created
-- [x] Activation guide created
-- [x] Deployment checklist created (this file)
-- [x] API endpoints documented
-- [x] Component usage documented
-
-## Deployment Steps
-
-### 1. Deploy Database Changes
-```bash
-# On production server
-cd apps/api
-DATABASE_URL="production_url" npx prisma migrate deploy
-DATABASE_URL="production_url" npx prisma generate
-```
-
-### 2. Deploy API
-```bash
-cd apps/api
-npm run build
-# Deploy dist/ folder to production
-# Ensure environment variables are set
-```
-
-### 3. Deploy Mobile App
-```bash
-cd apps/mobile
-# For iOS
-eas build --platform ios
-eas submit --platform ios
-
-# For Android
-eas build --platform android
-eas submit --platform android
-```
-
-### 4. Monitor
-- [ ] Check server logs for errors
-- [ ] Monitor API response times
-- [ ] Track user engagement metrics
-- [ ] Monitor crash reports
-- [ ] Check user feedback
-
-## Rollback Plan
-
-If issues arise:
-
-1. **API Issues**:
-   - Revert app.module.ts to remove HomeModule
-   - Restart API server
-   - Old endpoints remain functional
-
-2. **Mobile Issues**:
-   - Rename home.tsx to home-new.tsx
-   - Rename home-old.tsx to home.tsx
-   - Push hotfix update
-
-3. **Database Issues**:
-   - New tables are non-breaking (no existing data affected)
-   - Can safely leave tables empty
-   - Or migrate down:
-     ```bash
-     npx prisma migrate resolve --rolled-back 20251007203642_add_home_preferences
-     ```
-
-## Sign-off
-
-- [ ] Backend Developer: _______________
-- [ ] Frontend Developer: _______________
-- [ ] QA Engineer: _______________
-- [ ] Product Manager: _______________
-- [ ] DevOps Engineer: _______________
-
-Date: _______________
+### Monitoring
+- [ ] Sentry configured for error tracking
+- [ ] PostHog configured for analytics
+- [ ] Alert rules configured
+- [ ] Slack/Email notifications set up
+- [ ] Health check endpoint working
+- [ ] Uptime monitoring configured (optional)
 
 ---
 
-**Once all checkboxes are complete, the Home Screen Revamp is ready for production deployment!** 🎉
+## 🔐 Authentication & OAuth
+
+### Google OAuth
+- [ ] Google Cloud project created
+- [ ] OAuth consent screen configured
+- [ ] iOS client ID created
+- [ ] Android client ID created
+- [ ] Web client ID created
+- [ ] Redirect URIs registered
+- [ ] Client IDs added to .env files
+- [ ] OAuth flow tested
+
+### JWT
+- [ ] JWT_SECRET is secure (32+ chars)
+- [ ] JWT_REFRESH_SECRET is secure (32+ chars)
+- [ ] Token TTL configured appropriately
+- [ ] Token refresh flow tested
+
+---
+
+## 📱 Mobile App
+
+### Expo Configuration
+- [ ] Expo account created
+- [ ] EAS CLI installed (`npm install -g eas-cli`)
+- [ ] Logged in to Expo (`eas login`)
+- [ ] Project configured (`eas build:configure`)
+- [ ] Access token generated
+- [ ] Access token added to API .env
+
+### iOS Setup
+- [ ] Apple Developer account ($99/year)
+- [ ] Bundle ID registered
+- [ ] App ID created
+- [ ] Provisioning profiles created
+- [ ] Push notification certificates configured
+- [ ] App Store Connect app created
+- [ ] App Store screenshots prepared (6.7", 6.5", 5.5")
+- [ ] App Store description written (Turkish + English)
+- [ ] Privacy Policy URL added
+- [ ] Terms of Service URL added
+- [ ] App Review information filled
+
+### Android Setup
+- [ ] Google Play Console account ($25 one-time)
+- [ ] Package name registered
+- [ ] Signing key generated
+- [ ] App created in Play Console
+- [ ] Play Store screenshots prepared
+- [ ] Play Store description written (Turkish + English)
+- [ ] Privacy Policy URL added
+- [ ] Terms of Service URL added
+- [ ] Content rating completed
+
+### Build & Submit
+- [ ] iOS production build: `eas build --platform ios --profile production`
+- [ ] Android production build: `eas build --platform android --profile production`
+- [ ] iOS TestFlight beta test completed
+- [ ] Android internal testing completed
+- [ ] iOS submitted: `eas submit --platform ios`
+- [ ] Android submitted: `eas submit --platform android`
+
+---
+
+## 💳 In-App Purchase
+
+### Apple IAP
+- [ ] Subscriptions created in App Store Connect
+- [ ] Pricing configured
+- [ ] Shared secret generated
+- [ ] Shared secret added to .env
+- [ ] Sandbox testing completed
+- [ ] Production testing plan ready
+
+### Google IAP
+- [ ] Subscriptions created in Play Console
+- [ ] Pricing configured
+- [ ] Service account created
+- [ ] Service account JSON downloaded
+- [ ] Service account JSON added to .env
+- [ ] Pub/Sub topic created
+- [ ] Pub/Sub push subscription configured
+- [ ] Push token added to .env
+- [ ] Sandbox testing completed
+
+---
+
+## 📧 Email & Notifications
+
+### Email Service
+- [ ] SMTP credentials configured
+- [ ] From email verified
+- [ ] SPF record added to DNS
+- [ ] DKIM configured
+- [ ] DMARC configured
+- [ ] Test email sent successfully
+- [ ] Password reset email tested
+- [ ] Welcome email tested (if applicable)
+
+### Push Notifications
+- [ ] Expo push token configured
+- [ ] iOS push certificates configured
+- [ ] Android FCM configured
+- [ ] Test notification sent
+- [ ] Notification permissions flow tested
+- [ ] Deep linking tested
+
+---
+
+## 📄 Legal & Compliance
+
+### Required Documents
+- [ ] Privacy Policy created (Turkish + English)
+- [ ] Terms of Service created (Turkish + English)
+- [ ] KVKK Aydınlatma Metni created
+- [ ] Cookie Policy created (for web admin)
+- [ ] Documents hosted on public URLs
+- [ ] URLs added to app stores
+- [ ] URLs added to app settings
+
+### KVKK Compliance
+- [ ] Data controller information added
+- [ ] Data processing purposes documented
+- [ ] User rights (Article 11) documented
+- [ ] Consent flows implemented
+- [ ] Data retention policy defined
+- [ ] Data deletion procedure implemented
+
+### Consent Flows
+- [ ] KVKK consent on first launch
+- [ ] Push notification permission request
+- [ ] Location permission request (if used)
+- [ ] Analytics consent (optional)
+- [ ] Consent storage implemented
+- [ ] Consent withdrawal option available
+
+---
+
+## 🧪 Testing
+
+### API Testing
+- [ ] Health check endpoint: `GET /health`
+- [ ] Authentication flow tested
+- [ ] Google OAuth tested
+- [ ] AI chat tested
+- [ ] Period tracking tested
+- [ ] Push notifications tested
+- [ ] IAP webhook tested
+- [ ] File upload tested
+- [ ] Rate limiting tested
+
+### Mobile Testing
+- [ ] Login flow tested
+- [ ] Registration flow tested
+- [ ] Google OAuth tested
+- [ ] AI chat tested
+- [ ] Period calendar tested
+- [ ] Reminders tested
+- [ ] Push notifications tested
+- [ ] IAP flow tested
+- [ ] Offline mode tested
+- [ ] Deep linking tested
+
+### Admin Panel Testing
+- [ ] Login tested
+- [ ] User management tested
+- [ ] Content management tested
+- [ ] Feature flags tested
+- [ ] Analytics dashboard tested
+- [ ] Audit logs tested
+
+### Load Testing (Optional)
+- [ ] API load test completed
+- [ ] Database performance tested
+- [ ] Redis performance tested
+- [ ] Concurrent users tested
+
+---
+
+## 🚀 Deployment
+
+### API Deployment
+- [ ] Docker image built
+- [ ] Image pushed to registry
+- [ ] Environment variables configured on host
+- [ ] Database migrations run
+- [ ] Health check passing
+- [ ] Logs accessible
+- [ ] Monitoring active
+
+### Admin Panel Deployment
+- [ ] Next.js app built
+- [ ] Static files deployed
+- [ ] Environment variables configured
+- [ ] API connection tested
+- [ ] Authentication working
+
+### Database
+- [ ] Final backup taken
+- [ ] Connection string updated
+- [ ] Migrations applied
+- [ ] Indexes verified
+- [ ] Performance baseline recorded
+
+### DNS & SSL
+- [ ] A records configured
+- [ ] CNAME records configured (if needed)
+- [ ] SSL certificates installed
+- [ ] HTTPS redirect enabled
+- [ ] Certificate auto-renewal configured
+
+---
+
+## ✅ Post-Deployment
+
+### Smoke Tests
+- [ ] API health check: `curl https://api.yourdomain.com/health`
+- [ ] Admin panel accessible
+- [ ] Mobile app connects to API
+- [ ] User registration works
+- [ ] Login works
+- [ ] AI chat works
+- [ ] Push notification sent
+- [ ] Error tracking receiving events
+- [ ] Analytics receiving events
+
+### Monitoring Setup
+- [ ] Sentry receiving errors
+- [ ] PostHog receiving events
+- [ ] Alert rules triggered correctly
+- [ ] Notification channels working
+- [ ] Dashboard accessible
+
+### Documentation
+- [ ] API documentation updated
+- [ ] Admin guide created
+- [ ] User guide created (optional)
+- [ ] Troubleshooting guide created
+- [ ] Runbook created for on-call
+
+### Backup & Recovery
+- [ ] Database backup verified
+- [ ] Backup restoration tested
+- [ ] Recovery time objective (RTO) documented
+- [ ] Recovery point objective (RPO) documented
+
+---
+
+## 📊 Launch
+
+### Soft Launch
+- [ ] Internal team testing (1-2 days)
+- [ ] Beta testers invited (1 week)
+- [ ] Feedback collected
+- [ ] Critical bugs fixed
+- [ ] Performance optimized
+
+### Public Launch
+- [ ] App Store review approved
+- [ ] Play Store review approved
+- [ ] Apps published
+- [ ] Landing page live
+- [ ] Social media announcement
+- [ ] Press release (optional)
+- [ ] Blog post (optional)
+
+### Post-Launch Monitoring
+- [ ] Monitor error rates (first 24h)
+- [ ] Monitor API response times
+- [ ] Monitor user registrations
+- [ ] Monitor crash rates
+- [ ] Monitor IAP conversions
+- [ ] Collect user feedback
+
+---
+
+## 🔧 Maintenance
+
+### Daily
+- [ ] Check error tracking dashboard
+- [ ] Review critical alerts
+- [ ] Monitor API health
+- [ ] Check database performance
+
+### Weekly
+- [ ] Review analytics
+- [ ] Check user feedback
+- [ ] Review security logs
+- [ ] Update dependencies (if needed)
+
+### Monthly
+- [ ] Database backup verification
+- [ ] Security audit
+- [ ] Performance review
+- [ ] Cost optimization review
+- [ ] User retention analysis
+
+---
+
+## 🆘 Rollback Plan
+
+### If Critical Issues Occur
+1. **Immediate Actions**
+   - [ ] Notify team
+   - [ ] Assess severity
+   - [ ] Check monitoring dashboards
+
+2. **Rollback Steps**
+   - [ ] Revert to previous Docker image
+   - [ ] Rollback database migrations (if needed)
+   - [ ] Update DNS (if needed)
+   - [ ] Clear CDN cache (if applicable)
+
+3. **Communication**
+   - [ ] Notify users (if needed)
+   - [ ] Update status page
+   - [ ] Post-mortem document
+
+---
+
+## 📞 Emergency Contacts
+
+```
+On-Call Engineer: [phone]
+DevOps Lead: [phone]
+Database Admin: [phone]
+Security Team: [email]
+
+Hosting Provider Support: [link]
+DNS Provider Support: [link]
+Email Service Support: [link]
+```
+
+---
+
+## 🎯 Success Metrics
+
+### Technical Metrics
+- API uptime: > 99.9%
+- API response time (p95): < 200ms
+- Error rate: < 0.1%
+- Crash-free rate: > 99.5%
+
+### Business Metrics
+- Daily Active Users (DAU)
+- Monthly Active Users (MAU)
+- Retention rate (Day 1, Day 7, Day 30)
+- Conversion rate (Free → Premium)
+- AI chat engagement
+- Push notification engagement
+
+---
+
+## 📚 Resources
+
+### Documentation
+- [PRODUCTION_ENV_GUIDE.md](./PRODUCTION_ENV_GUIDE.md) - Environment setup
+- [DOCKER_SETUP.md](./DOCKER_SETUP.md) - Docker guide
+- [DEVOPS_COMPLETE.md](./DEVOPS_COMPLETE.md) - DevOps features
+- [README.md](./README.md) - Project overview
+
+### External Links
+- [Expo EAS Build](https://docs.expo.dev/build/introduction/)
+- [App Store Connect](https://appstoreconnect.apple.com)
+- [Google Play Console](https://play.google.com/console)
+- [Sentry Documentation](https://docs.sentry.io)
+- [PostHog Documentation](https://posthog.com/docs)
+
+---
+
+## ✅ Final Checklist
+
+Before going live, ensure:
+
+- [ ] All environment variables validated
+- [ ] All tests passing
+- [ ] Monitoring active
+- [ ] Backups configured
+- [ ] Legal documents published
+- [ ] App stores approved
+- [ ] Team trained
+- [ ] Rollback plan ready
+- [ ] Emergency contacts updated
+- [ ] Success metrics defined
+
+---
+
+**Ready to launch? 🚀**
+
+Run final validation:
+```bash
+./scripts/validate-production-env.sh
+```
+
+If all checks pass, you're good to go!

@@ -12,6 +12,9 @@ import {
     BadRequestException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { AdminGuard } from '../common/guards/admin.guard';
+import { AppleWebhookGuard } from './guards/apple-webhook.guard';
+import { GoogleWebhookGuard } from './guards/google-webhook.guard';
 import { SubscriptionService } from './subscription.service';
 import { WebhookHandlerService } from './webhook-handler.service';
 import { SubscriptionAnalyticsService } from './subscription-analytics.service';
@@ -284,12 +287,15 @@ export class SubscriptionController {
      * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6
      * 
      * This endpoint receives notifications from Apple about subscription events
-     * No authentication required as Apple sends these notifications
+     * Protected with signature verification guard
      */
     @Post('webhook/apple')
+    @UseGuards(AppleWebhookGuard)
     @HttpCode(HttpStatus.OK)
-    async handleAppleWebhook(@Body() body: any): Promise<{ status: string }> {
-        await this.webhookHandler.handleAppleNotification(body);
+    async handleAppleWebhook(@Body() body: any, @Request() req): Promise<{ status: string }> {
+        // Use the verified payload from the guard
+        const payload = req.appleWebhookPayload || body;
+        await this.webhookHandler.handleAppleNotification(payload);
         return { status: 'ok' };
     }
 
@@ -298,12 +304,15 @@ export class SubscriptionController {
      * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6
      * 
      * This endpoint receives notifications from Google Play about subscription events
-     * No authentication required as Google sends these notifications via Pub/Sub
+     * Protected with signature verification guard
      */
     @Post('webhook/google')
+    @UseGuards(GoogleWebhookGuard)
     @HttpCode(HttpStatus.OK)
-    async handleGoogleWebhook(@Body() body: any): Promise<{ status: string }> {
-        await this.webhookHandler.handleGoogleNotification(body);
+    async handleGoogleWebhook(@Body() body: any, @Request() req): Promise<{ status: string }> {
+        // Use the verified data from the guard
+        const data = req.googleWebhookData || body;
+        await this.webhookHandler.handleGoogleNotification(data);
         return { status: 'ok' };
     }
 
@@ -313,7 +322,7 @@ export class SubscriptionController {
      * Requirements: 20.1, 20.2, 20.3, 20.4, 20.5, 20.6
      */
     @Get('analytics/dashboard')
-    @UseGuards(AuthGuard('jwt'))
+    @UseGuards(AuthGuard('jwt'), AdminGuard)
     async getAnalyticsDashboard(
         @Query('startDate') startDate?: string,
         @Query('endDate') endDate?: string,
@@ -329,7 +338,7 @@ export class SubscriptionController {
      * Requirements: 20.4
      */
     @Get('analytics/mrr')
-    @UseGuards(AuthGuard('jwt'))
+    @UseGuards(AuthGuard('jwt'), AdminGuard)
     async getMRR() {
         return this.analyticsService.calculateMRR();
     }
@@ -339,7 +348,7 @@ export class SubscriptionController {
      * Requirements: 20.4
      */
     @Get('analytics/arpu')
-    @UseGuards(AuthGuard('jwt'))
+    @UseGuards(AuthGuard('jwt'), AdminGuard)
     async getARPU() {
         return this.analyticsService.calculateARPU();
     }
@@ -349,7 +358,7 @@ export class SubscriptionController {
      * Requirements: 20.3
      */
     @Get('analytics/churn')
-    @UseGuards(AuthGuard('jwt'))
+    @UseGuards(AuthGuard('jwt'), AdminGuard)
     async getChurnRate(
         @Query('startDate') startDate: string,
         @Query('endDate') endDate: string,
@@ -369,7 +378,7 @@ export class SubscriptionController {
      * Requirements: 20.2
      */
     @Get('analytics/conversion')
-    @UseGuards(AuthGuard('jwt'))
+    @UseGuards(AuthGuard('jwt'), AdminGuard)
     async getConversionMetrics(
         @Query('startDate') startDate: string,
         @Query('endDate') endDate: string,
@@ -389,7 +398,7 @@ export class SubscriptionController {
      * Requirements: 20.4
      */
     @Get('analytics/revenue')
-    @UseGuards(AuthGuard('jwt'))
+    @UseGuards(AuthGuard('jwt'), AdminGuard)
     async getRevenueMetrics(
         @Query('startDate') startDate: string,
         @Query('endDate') endDate: string,
@@ -409,7 +418,7 @@ export class SubscriptionController {
      * Requirements: 20.1
      */
     @Get('analytics/distribution')
-    @UseGuards(AuthGuard('jwt'))
+    @UseGuards(AuthGuard('jwt'), AdminGuard)
     async getSubscriptionDistribution() {
         return this.analyticsService.getSubscriptionDistribution();
     }
@@ -419,7 +428,7 @@ export class SubscriptionController {
      * Requirements: 20.5
      */
     @Get('analytics/ltv')
-    @UseGuards(AuthGuard('jwt'))
+    @UseGuards(AuthGuard('jwt'), AdminGuard)
     async getLTV() {
         return this.analyticsService.calculateLTV();
     }
@@ -428,7 +437,7 @@ export class SubscriptionController {
      * Admin: Get all subscriptions with pagination
      */
     @Get('admin/all')
-    @UseGuards(AuthGuard('jwt'))
+    @UseGuards(AuthGuard('jwt'), AdminGuard)
     async getAllSubscriptions(
         @Query('page') page: string = '1',
         @Query('limit') limit: string = '20',
@@ -475,7 +484,7 @@ export class SubscriptionController {
      * Admin: Get single subscription with details
      */
     @Get('admin/:id')
-    @UseGuards(AuthGuard('jwt'))
+    @UseGuards(AuthGuard('jwt'), AdminGuard)
     async getSubscriptionById(@Param('id') id: string) {
         return this.subscriptionService['prisma'].subscription.findUnique({
             where: { id },
