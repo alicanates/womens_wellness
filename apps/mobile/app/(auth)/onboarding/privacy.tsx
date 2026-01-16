@@ -48,8 +48,7 @@ export default function PrivacyStep() {
   };
 
   const openPrivacyPolicy = () => {
-    // Replace with actual privacy policy URL
-    Linking.openURL('https://example.com/privacy-policy');
+    router.push('/settings/privacy-policy' as any);
   };
 
   const styles = createStyles(theme);

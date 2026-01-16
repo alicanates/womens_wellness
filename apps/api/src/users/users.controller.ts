@@ -29,8 +29,22 @@ class UpdateUsernameDto {
 
 class UpdateUserDto {
   email?: string;
+  username?: string;
   status?: string;
-  password?: string;
+  isAdmin?: boolean;
+  pinEnabled?: boolean;
+  newPassword?: string;
+  confirmPassword?: string;
+  profile?: {
+    firstName?: string;
+    lastName?: string;
+    displayName?: string;
+    dateOfBirth?: string;
+    heightCm?: number;
+    weightKg?: number;
+    country?: string;
+    timezone?: string;
+  };
 }
 
 class SetupPinDto {
@@ -244,5 +258,16 @@ export class UsersController {
   @ApiOperation({ summary: 'Change PIN' })
   async changePin(@CurrentUser() user: any, @Body() dto: ChangePinDto) {
     return this.usersService.changePin(user.id, dto.oldPin, dto.newPin);
+  }
+
+  @Patch('me/password')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change password' })
+  async changePassword(
+    @CurrentUser() user: any,
+    @Body() dto: { currentPassword: string; newPassword: string },
+  ) {
+    return this.usersService.changePassword(user.id, dto.currentPassword, dto.newPassword);
   }
 }

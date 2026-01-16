@@ -55,6 +55,23 @@
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.VIBRATE",
         "com.android.vending.BILLING"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "wellness-companion.app",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
       ]
     },
     "web": {

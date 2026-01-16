@@ -49,6 +49,7 @@ import {
     OfflineBanner,
     OptimizedAvatar,
 } from '@/components/qna';
+import { createQuestionShareLink } from '@/utils/deepLinkHelpers';
 import { VoteType, ContentType } from '@/types/qna';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 
@@ -302,7 +303,7 @@ export default function QuestionDetailScreen() {
     const handleShare = () => {
         setShareContent({
             title: question?.title || '',
-            url: `https://app.wellnesscompanion.com/community/${questionId}`,
+            url: createQuestionShareLink(questionId),
         });
         setShowShareSheet(true);
     };
@@ -313,7 +314,7 @@ export default function QuestionDetailScreen() {
             : answerContent;
         setShareContent({
             title: `${question?.title} - Cevap: ${preview}`,
-            url: `https://app.wellnesscompanion.com/community/${questionId}#answer-${answerId}`,
+            url: `${createQuestionShareLink(questionId)}#answer-${answerId}`,
         });
         setShowShareSheet(true);
     };

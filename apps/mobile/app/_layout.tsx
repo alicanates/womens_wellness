@@ -8,6 +8,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
 import { useNotifications } from '../src/hooks/useNotifications';
 import { useQnaNotificationHandler } from '../src/hooks/useQnaNotificationHandler';
+import { useDeepLinking } from '../src/hooks/useDeepLinking';
 import { useAuthStore } from '../src/store/authStore';
 import { queryClient } from '../src/lib/queryClient';
 import { iapManager } from '../src/services/iap.wrapper';
@@ -38,6 +39,9 @@ function AppContent() {
 
   // Initialize QnA notification handler
   useQnaNotificationHandler();
+
+  // Initialize deep linking
+  useDeepLinking();
 
   // 2. All useEffect hooks (unconditionally)
 

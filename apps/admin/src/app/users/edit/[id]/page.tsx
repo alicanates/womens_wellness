@@ -66,6 +66,38 @@ export default function UserEdit() {
           <Switch checkedChildren="Aktif" unCheckedChildren="Pasif" />
         </Form.Item>
 
+        <Divider orientation="left">Şifre Değiştirme (Opsiyonel)</Divider>
+
+        <Form.Item
+          label="Yeni Şifre"
+          name="newPassword"
+          tooltip="Boş bırakırsanız şifre değiştirilmez"
+          rules={[
+            { min: 6, message: 'Şifre en az 6 karakter olmalıdır' },
+          ]}
+        >
+          <Input.Password placeholder="Yeni şifre (opsiyonel)" />
+        </Form.Item>
+
+        <Form.Item
+          label="Şifre Tekrar"
+          name="confirmPassword"
+          dependencies={['newPassword']}
+          rules={[
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const newPassword = getFieldValue('newPassword');
+                if (!newPassword || !value || newPassword === value) {
+                  return Promise.resolve();
+                }
+                return Promise.reject(new Error('Şifreler eşleşmiyor!'));
+              },
+            }),
+          ]}
+        >
+          <Input.Password placeholder="Şifre tekrar" />
+        </Form.Item>
+
         <Divider orientation="left">Profil Bilgileri</Divider>
 
         <Form.Item

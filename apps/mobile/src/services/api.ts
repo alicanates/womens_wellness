@@ -238,6 +238,10 @@ export const userService = {
 
   changePin: (oldPin: string, newPin: string) =>
     api.patch<{ success: boolean; message: string }>('/me/pin/change', { oldPin, newPin }),
+
+  // Password Management
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.patch<{ success: boolean; message: string }>('/me/password', { currentPassword, newPassword }),
 };
 
 // Metrics endpoints

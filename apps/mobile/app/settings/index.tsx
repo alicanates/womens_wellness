@@ -5,26 +5,22 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   Image,
   Alert,
   Switch,
   Platform,
-  Modal,
   Linking,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as SecureStore from 'expo-secure-store';
 
 // Type assertion to fix TypeScript module resolution issue
 const { cacheDirectory, writeAsStringAsync } = FileSystem as any;
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
 import { userService, qnaService } from '@/services/api';
@@ -42,18 +38,6 @@ export default function SettingsScreen() {
   const { isDarkMode, setDarkMode } = useThemeStore();
   const theme = useTheme();
 
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [birthDate, setBirthDate] = useState<Date | null>(null);
-  const [heightCm, setHeightCm] = useState(165);
-  const [weightKg, setWeightKg] = useState(60);
-  const [profilePictureUri, setProfilePictureUri] = useState<string | null>(null);
-  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
-  const [checkingUsername, setCheckingUsername] = useState(false);
-
   // Premium subscription hook
   const { subscription, isPremium, isLoading: isPremiumLoading } = usePremium();
 
@@ -61,339 +45,36 @@ export default function SettingsScreen() {
   const { data: qnaQuota } = useQuery<QnaQuota>({
     queryKey: ['qna', 'quota'],
     queryFn: () => qnaService.getQuota(),
-    staleTime: 0, // Always fetch fresh data
-    refetchOnMount: 'always', // Always refetch on component mount
-    refetchOnWindowFocus: true, // Refetch when window gains focus
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
-  const { data: userData, isLoading, refetch } = useQuery({
+  const { data: userData, isLoading } = useQuery({
     queryKey: ['me'],
     queryFn: () => userService.getMe(),
-    staleTime: 0, // Always consider data stale
-    refetchOnMount: 'always', // Always refetch on component mount
-    refetchOnWindowFocus: true, // Refetch when window gains focus
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
-  // Sync local state with query data - ALWAYS update when userData changes
-  useEffect(() => {
-    if (userData) {
-      const data = userData as any;
-      console.log('Settings - Received userData:', data); // Debug log
-      console.log('Settings - Profile data:', data?.profile); // Debug log
-      console.log('Settings - Email:', data?.email); // Debug log
-      console.log('Settings - Username:', data?.username); // Debug log
+  const [isExporting, setIsExporting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [showPinChange, setShowPinChange] = useState(false);
+  const [pinEnabled, setPinEnabled] = useState(false);
 
-      setFirstName(data?.profile?.firstName || '');
-      setLastName(data?.profile?.lastName || '');
-      setUsername(data?.username || '');
-      setEmail(data?.email || '');
-
-      if (data?.profile?.dateOfBirth) {
-        setBirthDate(new Date(data.profile.dateOfBirth));
-      } else {
-        setBirthDate(null);
-      }
-      setHeightCm(data?.profile?.heightCm || 165);
-      setWeightKg(data?.profile?.weightKg || 60);
-      if (data?.profile?.profilePictureUrl) {
-        setProfilePictureUri(data.profile.profilePictureUrl);
-      } else {
-        setProfilePictureUri(null);
-      }
-
-      console.log('Settings - State updated:', {
-        firstName: data?.profile?.firstName,
-        lastName: data?.profile?.lastName,
-        username: data?.username,
-        email: data?.email
-      }); // Debug log
-    }
-  }, [userData]);
-
-  // Check username availability in real-time (debounced)
-  useEffect(() => {
-    const currentUsername = (userData as any)?.username;
-
-    // Don't check if editing is not active
-    if (!isEditingProfile) {
-      setUsernameAvailable(null);
-      return;
-    }
-
-    // Don't check if username hasn't changed
-    if (!username || username.toLowerCase() === currentUsername?.toLowerCase()) {
-      setUsernameAvailable(null);
-      return;
-    }
-
-    // Don't check if username is too short
-    if (username.length < 3) {
-      setUsernameAvailable(null);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      setCheckingUsername(true);
-      try {
-        const normalizedUsername = username.toLowerCase();
-        const response = await userService.checkUsernameAvailability(normalizedUsername);
-        setUsernameAvailable((response as any).available);
-      } catch (error) {
-        console.error('Username check failed:', error);
-        setUsernameAvailable(null);
-      } finally {
-        setCheckingUsername(false);
-      }
-    }, 500); // 500ms debounce
-
-    return () => clearTimeout(timer);
-  }, [username, isEditingProfile, userData]);
-
-  const updateProfileMutation = useMutation({
-    mutationFn: (data: any) => userService.updateMe(data),
-    onSuccess: async (updatedData) => {
-      console.log('Profile update successful, received data:', updatedData);
-
-      // Set the query data directly to ensure immediate update
-      queryClient.setQueryData(['me'], updatedData);
-
-      // Invalidate all related queries to ensure fresh data everywhere
-      await queryClient.invalidateQueries({ queryKey: ['me'] });
-      await queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
-
-      // Update the user in authStore with fresh data
-      if (user && updatedData) {
-        const updatedUser = {
-          ...user,
-          email: (updatedData as any).email,
-          username: (updatedData as any).username,
-          profile: (updatedData as any).profile,
-        };
-        useAuthStore.setState({ user: updatedUser });
-
-        // Also update SecureStore to persist changes
-        await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
-      }
-      setIsEditingProfile(false);
-      Alert.alert('Başarılı', 'Profil güncellendi');
-    },
-    onError: (error: any) => {
-      console.error('Profile update failed:', error);
-      Alert.alert('Hata', error.message || 'Profil güncellenemedi');
-    },
+  // Fetch PIN status
+  const { data: pinStatus } = useQuery({
+    queryKey: ['pin-status'],
+    queryFn: () => userService.getPinStatus(),
   });
 
-  const pickImage = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permissionResult.granted) {
-      Alert.alert('İzin Gerekli', 'Profil fotoğrafı eklemek için galeriye erişim izni gerekiyor');
-      return;
+  useEffect(() => {
+    if (pinStatus) {
+      setPinEnabled(pinStatus.pinEnabled);
     }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const localUri = result.assets[0].uri;
-      setProfilePictureUri(localUri);
-
-      try {
-        // Upload image to server
-        const response = await userService.uploadProfilePicture(localUri);
-        setProfilePictureUri(response.profilePictureUrl);
-
-        // Invalidate all related queries
-        await queryClient.invalidateQueries({ queryKey: ['me'] });
-        await queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
-
-        // Update authStore
-        if (user && user.profile) {
-          const updatedUser = {
-            ...user,
-            profile: {
-              ...user.profile,
-              profilePictureUrl: response.profilePictureUrl,
-            },
-          };
-          useAuthStore.setState({ user: updatedUser });
-          await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
-        }
-
-        Alert.alert('Başarılı', 'Profil fotoğrafı güncellendi');
-      } catch (error: any) {
-        Alert.alert('Hata', error.message || 'Fotoğraf yüklenemedi');
-        setProfilePictureUri((userData as any)?.profile?.profilePictureUrl || null);
-      }
-    }
-  };
-
-  const takePhoto = async () => {
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-
-    if (!permissionResult.granted) {
-      Alert.alert('İzin Gerekli', 'Fotoğraf çekmek için kamera erişim izni gerekiyor');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const localUri = result.assets[0].uri;
-      setProfilePictureUri(localUri);
-
-      try {
-        // Upload image to server
-        const response = await userService.uploadProfilePicture(localUri);
-        setProfilePictureUri(response.profilePictureUrl);
-
-        // Invalidate all related queries
-        await queryClient.invalidateQueries({ queryKey: ['me'] });
-        await queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
-
-        // Update authStore
-        if (user && user.profile) {
-          const updatedUser = {
-            ...user,
-            profile: {
-              ...user.profile,
-              profilePictureUrl: response.profilePictureUrl,
-            },
-          };
-          useAuthStore.setState({ user: updatedUser });
-          await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
-        }
-
-        Alert.alert('Başarılı', 'Profil fotoğrafı güncellendi');
-      } catch (error: any) {
-        Alert.alert('Hata', error.message || 'Fotoğraf yüklenemedi');
-        setProfilePictureUri((userData as any)?.profile?.profilePictureUrl || null);
-      }
-    }
-  };
-
-  const deleteProfilePicture = () => {
-    Alert.alert(
-      'Profil Fotoğrafını Sil',
-      'Profil fotoğrafınızı silmek istediğinizden emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Delete from server by setting to null
-              await userService.updateMe({ profilePictureUrl: null });
-              setProfilePictureUri(null);
-
-              // Invalidate all related queries
-              await queryClient.invalidateQueries({ queryKey: ['me'] });
-              await queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
-
-              // Update authStore
-              if (user && user.profile) {
-                const updatedUser = {
-                  ...user,
-                  profile: {
-                    ...user.profile,
-                    profilePictureUrl: undefined,
-                  },
-                };
-                useAuthStore.setState({ user: updatedUser });
-                await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
-              }
-
-              Alert.alert('Başarılı', 'Profil fotoğrafı silindi');
-            } catch (error: any) {
-              Alert.alert('Hata', error.message || 'Fotoğraf silinemedi');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleProfilePicturePress = () => {
-    Alert.alert(
-      'Profil Fotoğrafı',
-      'Profil fotoğrafınızı nasıl güncellemek istersiniz?',
-      [
-        { text: 'Galeriden Seç', onPress: pickImage },
-        { text: 'Fotoğraf Çek', onPress: takePhoto },
-        ...(profilePictureUri
-          ? [{ text: 'Fotoğrafı Sil', onPress: deleteProfilePicture, style: 'destructive' as const }]
-          : []),
-        { text: 'İptal', style: 'cancel' },
-      ]
-    );
-  };
-
-  const handleSaveProfile = async () => {
-    try {
-      // Check if username changed and validate it (case-insensitive)
-      const currentUsername = (userData as any)?.username;
-      if (username && username.toLowerCase() !== currentUsername?.toLowerCase()) {
-        // Check if username is available based on real-time check
-        if (usernameAvailable === false) {
-          Alert.alert('Hata', 'Bu kullanıcı adı zaten kullanılıyor');
-          return;
-        }
-
-        // Validate username format
-        const normalizedUsername = username.toLowerCase();
-        if (!/^[a-z0-9._]+$/.test(normalizedUsername)) {
-          Alert.alert('Hata', 'Kullanıcı adı sadece küçük harf, rakam, nokta ve alt çizgi içerebilir');
-          return;
-        }
-        if (normalizedUsername.length < 3 || normalizedUsername.length > 24) {
-          Alert.alert('Hata', 'Kullanıcı adı 3-24 karakter arasında olmalıdır');
-          return;
-        }
-
-        // Update username first
-        const usernameResponse = await userService.updateUsername(normalizedUsername);
-
-        // Update queries and store with username change
-        queryClient.setQueryData(['me'], usernameResponse);
-        await queryClient.invalidateQueries({ queryKey: ['homeSnapshot'] });
-
-        if (user) {
-          const updatedUser = {
-            ...user,
-            username: (usernameResponse as any).username,
-            profile: (usernameResponse as any).profile,
-          };
-          useAuthStore.setState({ user: updatedUser });
-          await SecureStore.setItemAsync('user', JSON.stringify(updatedUser));
-        }
-      }
-
-      // Update profile data (including email)
-      const profileData: any = {
-        firstName: firstName,
-        lastName: lastName,
-        email: email,
-        dateOfBirth: birthDate ? birthDate.toISOString() : null,
-        heightCm: heightCm,
-        weightKg: weightKg,
-      };
-
-      console.log('Saving profile data:', profileData); // Debug log
-
-      updateProfileMutation.mutate(profileData);
-    } catch (error: any) {
-      Alert.alert('Hata', error.message || 'Profil güncellenemedi');
-    }
-  };
+  }, [pinStatus]);
 
   const handleLogout = () => {
     Alert.alert(
@@ -456,24 +137,6 @@ export default function SettingsScreen() {
     console.log('Navigating to terms of use page');
     router.push('/terms-of-use');
   };
-
-  const [isExporting, setIsExporting] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [showPinSetup, setShowPinSetup] = useState(false);
-  const [showPinChange, setShowPinChange] = useState(false);
-  const [pinEnabled, setPinEnabled] = useState(false);
-
-  // Fetch PIN status
-  const { data: pinStatus } = useQuery({
-    queryKey: ['pin-status'],
-    queryFn: () => userService.getPinStatus(),
-  });
-
-  useEffect(() => {
-    if (pinStatus) {
-      setPinEnabled(pinStatus.pinEnabled);
-    }
-  }, [pinStatus]);
 
   const handleSyncData = async () => {
     try {
@@ -619,191 +282,41 @@ export default function SettingsScreen() {
         {/* Profile Section */}
         <View style={styles.section}>
           <View style={styles.profileHeader}>
-            <TouchableOpacity onPress={handleProfilePicturePress}>
-              <View style={styles.profileImageContainer}>
-                {profilePictureUri ? (
-                  <Image source={{ uri: profilePictureUri }} style={styles.profileImage} />
-                ) : (
-                  <View style={styles.profilePlaceholder}>
-                    <Text style={styles.profilePlaceholderText}>
-                      {currentDisplayName.charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                )}
-                {isPremium && (
-                  <View style={styles.premiumBadgeOverlay}>
-                    <PremiumBadge size="small" variant="icon" />
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
+            <View style={styles.profileImageContainer}>
+              {(userData as any)?.profile?.profilePictureUrl ? (
+                <Image source={{ uri: (userData as any).profile.profilePictureUrl }} style={styles.profileImage} />
+              ) : (
+                <View style={styles.profilePlaceholder}>
+                  <Text style={styles.profilePlaceholderText}>
+                    {currentDisplayName.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              {isPremium && (
+                <View style={styles.premiumBadgeOverlay}>
+                  <PremiumBadge size="small" variant="icon" />
+                </View>
+              )}
+            </View>
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>
-                {firstName && lastName ? `${firstName} ${lastName}` : currentDisplayName}
+                {(userData as any)?.profile?.firstName && (userData as any)?.profile?.lastName
+                  ? `${(userData as any).profile.firstName} ${(userData as any).profile.lastName}`
+                  : currentDisplayName}
               </Text>
-              <Text style={styles.profileUsername}>@{username || 'kullaniciadi'}</Text>
-              <Text style={styles.profileEmail}>{email}</Text>
+              <Text style={styles.profileUsername}>@{(userData as any)?.username || 'kullaniciadi'}</Text>
+              <Text style={styles.profileEmail}>{(userData as any)?.email}</Text>
             </View>
           </View>
 
           <TouchableOpacity
             style={styles.editProfileButton}
-            onPress={() => setIsEditingProfile(true)}
+            onPress={() => router.push('/settings/profile' as any)}
           >
             <Text style={styles.editProfileButtonText}>Profili Düzenle</Text>
             <Text style={styles.settingButtonIcon}>›</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Profile Edit Modal */}
-        <Modal visible={isEditingProfile} animationType="slide" presentationStyle="pageSheet">
-          <SafeAreaView style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity
-                onPress={() => {
-                  setIsEditingProfile(false);
-                  // Reset values
-                  setFirstName((userData as any)?.profile?.firstName || '');
-                  setLastName((userData as any)?.profile?.lastName || '');
-                  setUsername((userData as any)?.username || '');
-                  setEmail((userData as any)?.email || '');
-                  if ((userData as any)?.profile?.dateOfBirth) {
-                    setBirthDate(new Date((userData as any).profile.dateOfBirth));
-                  } else {
-                    setBirthDate(null);
-                  }
-                  setHeightCm((userData as any)?.profile?.heightCm || 165);
-                  setWeightKg((userData as any)?.profile?.weightKg || 60);
-                  setUsernameAvailable(null);
-                  setCheckingUsername(false);
-                }}
-              >
-                <Text style={styles.modalCancelText}>İptal</Text>
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>Profili Düzenle</Text>
-              <TouchableOpacity
-                onPress={handleSaveProfile}
-                disabled={updateProfileMutation.isPending || usernameAvailable === false || checkingUsername}
-              >
-                <Text style={[styles.modalSaveText, (updateProfileMutation.isPending || usernameAvailable === false || checkingUsername) && styles.modalSaveTextDisabled]}>
-                  {updateProfileMutation.isPending ? 'Kaydediliyor...' : 'Kaydet'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalContent}>
-              {/* Profile Picture */}
-              <View style={styles.modalProfilePictureSection}>
-                <TouchableOpacity onPress={handleProfilePicturePress}>
-                  <View style={styles.profileImageContainer}>
-                    {profilePictureUri ? (
-                      <Image source={{ uri: profilePictureUri }} style={styles.profileImageLarge} />
-                    ) : (
-                      <View style={styles.profilePlaceholderLarge}>
-                        <Text style={styles.profilePlaceholderTextLarge}>
-                          {currentDisplayName.charAt(0).toUpperCase()}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleProfilePicturePress} style={styles.changePhotoButton}>
-                  <Text style={styles.changePhotoText}>Fotoğrafı Değiştir</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Profile Form */}
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Ad</Text>
-                <TextInput
-                  style={styles.input}
-                  value={firstName}
-                  onChangeText={setFirstName}
-                  placeholder="Adınız"
-                  placeholderTextColor={theme.colors.textLight}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Soyad</Text>
-                <TextInput
-                  style={styles.input}
-                  value={lastName}
-                  onChangeText={setLastName}
-                  placeholder="Soyadınız"
-                  placeholderTextColor={theme.colors.textLight}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Kullanıcı Adı</Text>
-                <TextInput
-                  style={styles.input}
-                  value={username}
-                  onChangeText={setUsername}
-                  placeholder="kullaniciadi"
-                  placeholderTextColor={theme.colors.textLight}
-                  autoCapitalize="none"
-                />
-                {username && username.toLowerCase() !== (userData as any)?.username?.toLowerCase() && (
-                  <>
-                    {checkingUsername && (
-                      <Text style={styles.helperText}>Kontrol ediliyor...</Text>
-                    )}
-                    {!checkingUsername && usernameAvailable === true && (
-                      <Text style={styles.successText}>✓ Kullanılabilir</Text>
-                    )}
-                    {!checkingUsername && usernameAvailable === false && (
-                      <Text style={styles.errorTextSmall}>✗ Bu kullanıcı adı alınmış</Text>
-                    )}
-                  </>
-                )}
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>E-posta</Text>
-                <TextInput
-                  style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="E-posta adresiniz"
-                  placeholderTextColor={theme.colors.textLight}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Doğum Tarihi</Text>
-                <DatePickerButton value={birthDate} onChange={setBirthDate} theme={theme} />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Boy (cm)</Text>
-                <NumberPickerButton
-                  value={heightCm}
-                  onChange={setHeightCm}
-                  min={100}
-                  max={250}
-                  label="Boy Seçin"
-                  theme={theme}
-                />
-              </View>
-
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Kilo (kg)</Text>
-                <NumberPickerButton
-                  value={weightKg}
-                  onChange={setWeightKg}
-                  min={30}
-                  max={200}
-                  label="Kilo Seçin"
-                  theme={theme}
-                />
-              </View>
-            </ScrollView>
-          </SafeAreaView>
-        </Modal>
 
         {/* Subscription Section */}
         <View style={styles.section}>
@@ -1107,6 +620,17 @@ export default function SettingsScreen() {
               <Text style={styles.settingButtonIcon}>›</Text>
             </TouchableOpacity>
           )}
+
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={() => router.push('/settings/change-password' as any)}
+          >
+            <View style={styles.settingButtonContent}>
+              <Text style={styles.settingButtonText}>🔑 Şifre Değiştir</Text>
+              <Text style={styles.settingButtonSubtext}>Hesap şifrenizi güncelleyin</Text>
+            </View>
+            <Text style={styles.settingButtonIcon}>›</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Notifications Section */}
@@ -1180,6 +704,17 @@ export default function SettingsScreen() {
             ) : (
               <Text style={styles.settingButtonIcon}>📥</Text>
             )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={() => router.push('/settings/kvkk-consent' as any)}
+          >
+            <View style={styles.settingButtonContent}>
+              <Text style={styles.settingButtonText}>🔒 KVKK İzinleri</Text>
+              <Text style={styles.settingButtonSubtext}>Veri işleme tercihlerinizi yönetin</Text>
+            </View>
+            <Text style={styles.settingButtonIcon}>›</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.settingButton} onPress={handlePrivacyPolicy}>

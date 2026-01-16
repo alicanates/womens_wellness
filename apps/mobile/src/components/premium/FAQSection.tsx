@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
 
 interface FAQ {
@@ -35,17 +36,16 @@ const FAQS: FAQ[] = [
 ];
 
 export function FAQSection() {
+    const router = useRouter();
     const theme = useTheme();
     const styles = createStyles(theme);
 
     const handleTerms = () => {
-        // TODO: Update with actual terms URL
-        Linking.openURL('https://example.com/terms');
+        router.push('/settings/terms-of-service' as any);
     };
 
     const handlePrivacy = () => {
-        // TODO: Update with actual privacy URL
-        Linking.openURL('https://example.com/privacy');
+        router.push('/settings/privacy-policy' as any);
     };
 
     return (

@@ -232,13 +232,11 @@ export default function PremiumScreen() {
     };
 
     const handleTerms = () => {
-        // TODO: Open terms of service
-        Linking.openURL('https://example.com/terms');
+        router.push('/settings/terms-of-service' as any);
     };
 
     const handlePrivacy = () => {
-        // TODO: Open privacy policy
-        Linking.openURL('https://example.com/privacy');
+        router.push('/settings/privacy-policy' as any);
     };
 
     if (isLoading) {

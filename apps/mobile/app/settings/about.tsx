@@ -98,7 +98,16 @@ export default function AboutScreen() {
 
                     <TouchableOpacity
                         style={styles.linkItem}
-                        onPress={() => router.push('/privacy-policy')}
+                        onPress={() => router.push('/settings/kvkk-consent')}
+                    >
+                        <Text style={styles.linkIcon}>🔐</Text>
+                        <Text style={styles.linkText}>KVKK İzinleri</Text>
+                        <Text style={styles.linkArrow}>›</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.linkItem}
+                        onPress={() => router.push('/settings/privacy-policy')}
                     >
                         <Text style={styles.linkIcon}>🔒</Text>
                         <Text style={styles.linkText}>Gizlilik Politikası</Text>
@@ -107,7 +116,7 @@ export default function AboutScreen() {
 
                     <TouchableOpacity
                         style={styles.linkItem}
-                        onPress={() => router.push('/terms-of-use')}
+                        onPress={() => router.push('/settings/terms-of-service')}
                     >
                         <Text style={styles.linkIcon}>📄</Text>
                         <Text style={styles.linkText}>Kullanım Koşulları</Text>

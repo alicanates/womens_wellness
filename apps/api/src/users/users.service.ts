@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -189,9 +189,32 @@ export class UsersService {
       updateData.email = data.email;
     }
 
+    // Check for username uniqueness if username is being updated
+    if (data.username !== undefined && data.username !== null && data.username !== '') {
+      const normalizedUsername = data.username.toLowerCase();
+
+      // Validate username format
+      if (!/^[a-z0-9._]+$/.test(normalizedUsername)) {
+        throw new BadRequestException('Kullanıcı adı sadece küçük harf, rakam, nokta ve alt çizgi içerebilir');
+      }
+
+      if (normalizedUsername.length < 3 || normalizedUsername.length > 24) {
+        throw new BadRequestException('Kullanıcı adı 3-24 karakter arasında olmalıdır');
+      }
+
+      const existingUser = await this.prisma.user.findUnique({
+        where: { username: normalizedUsername },
+      });
+
+      if (existingUser && existingUser.id !== userId) {
+        throw new ConflictException('Bu kullanıcı adı zaten kullanılıyor');
+      }
+
+      updateData.username = normalizedUsername;
+    }
+
     // User fields
     if (data.status) updateData.status = data.status;
-    if (data.username !== undefined) updateData.username = data.username;
     if (data.isAdmin !== undefined) updateData.isAdmin = data.isAdmin;
     if (data.pinEnabled !== undefined) {
       updateData.pinEnabled = data.pinEnabled;
@@ -201,9 +224,20 @@ export class UsersService {
       }
     }
 
-    if (data.password) {
+    // Handle password change (admin can set new password)
+    if (data.newPassword) {
+      // Validate password
+      if (data.newPassword.length < 6) {
+        throw new BadRequestException('Şifre en az 6 karakter olmalıdır');
+      }
+
+      // Check if passwords match (if confirmPassword is provided)
+      if (data.confirmPassword && data.newPassword !== data.confirmPassword) {
+        throw new BadRequestException('Şifreler eşleşmiyor');
+      }
+
       const bcrypt = require('bcrypt');
-      updateData.password = await bcrypt.hash(data.password, 10);
+      updateData.password = await bcrypt.hash(data.newPassword, 10);
     }
 
     // Profile fields
@@ -416,5 +450,47 @@ export class UsersService {
     });
 
     return { pinEnabled: user?.pinEnabled || false };
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const bcrypt = require('bcrypt');
+
+    // Get user with password
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, password: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Kullanıcı bulunamadı');
+    }
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      throw new BadRequestException('Mevcut şifre yanlış');
+    }
+
+    // Validate new password
+    if (newPassword.length < 6) {
+      throw new BadRequestException('Yeni şifre en az 6 karakter olmalıdır');
+    }
+
+    // Check if new password is same as current
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      throw new BadRequestException('Yeni şifre mevcut şifre ile aynı olamaz');
+    }
+
+    // Hash new password
+    const password = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password },
+    });
+
+    return { success: true, message: 'Şifre başarıyla değiştirildi' };
   }
 }
