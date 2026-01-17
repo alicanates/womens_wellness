@@ -1,0 +1,13 @@
+# Ignore everything at root
+../../*
+
+# But include necessary files
+!../../pnpm-lock.yaml
+!../../pnpm-workspace.yaml
+!../../package.json
+
+# Include mobile app
+!../mobile/**
+
+# Include i18n package (if needed)
+!../../packages/i18n/**

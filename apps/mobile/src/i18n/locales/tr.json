@@ -1,0 +1,461 @@
+{
+  "auth": {
+    "signIn": "Giriş Yap",
+    "signUp": "Kayıt Ol",
+    "email": "E-posta",
+    "password": "Şifre",
+    "forgotPassword": "Şifremi Unuttum",
+    "continueWithGoogle": "Google ile Devam Et",
+    "emailRequired": "E-posta adresi gerekli",
+    "passwordMinLength": "Şifre en az 8 karakter olmalı"
+  },
+  "home": {
+    "welcome": "Hoş Geldiniz",
+    "greeting": {
+      "morning": "Günaydın",
+      "afternoon": "İyi günler",
+      "evening": "İyi akşamlar",
+      "night": "İyi geceler"
+    },
+    "question": "Bugün nasılsın?",
+    "todayAtGlance": "Bugün Bir Bakışta",
+    "streak": {
+      "title": "Seri",
+      "current": "Güncel Seri",
+      "longest": "En Uzun Seri",
+      "days": "gün"
+    },
+    "pills": {
+      "cycle": "Döngü",
+      "fertility": "Verimlilik",
+      "pregnancy": "Gebelik",
+      "reminders": "Hatırlatıcılar",
+      "hydration": "Hidrasyon",
+      "medication": "İlaç"
+    },
+    "tiles": {
+      "water": {
+        "title": "Su",
+        "target": "Hedef",
+        "noData": "Bugün henüz kayıt yok – +250 ml ile başla",
+        "quickAdd250": "+250 ml",
+        "quickAdd500": "+500 ml"
+      },
+      "steps": {
+        "title": "Adım",
+        "target": "Hedef",
+        "noData": "Bugün veri yok – Manuel Ekle",
+        "goalReached": "Hedefe ulaştın!",
+        "editGoal": "Hedefi Düzenle",
+        "remind10min": "10 dk yürüyüş hatırlat",
+        "connectHealth": "Sağlık verisini bağla",
+        "manualAdd": "Manuel Ekle",
+        "permissionDenied": "Sağlık izni verilmedi"
+      },
+      "meditation": {
+        "title": "Meditasyon",
+        "subtitle": "Nefes",
+        "target": "Hedef",
+        "todayMin": "Bugün {minutes} dk",
+        "noData": "1 dk nefes ile başla",
+        "completed": "Tebrikler, bugün hedefe yaklaştın",
+        "quickBreath1": "1 dk nefes",
+        "quickMeditation5": "5 dk meditasyon"
+      },
+      "sleep": {
+        "title": "Uyku",
+        "target": "Hedef",
+        "hours": "s",
+        "minutes": "dk",
+        "quality": "Kalite",
+        "qualityGood": "iyi",
+        "qualityMedium": "orta",
+        "qualityPoor": "zayıf",
+        "noData": "Dün gece kaydı yok",
+        "confirmLastNight": "Dün geceyi onayla",
+        "addNote": "Uyku notu ekle",
+        "importedPending": "Yeni uyku verisi – onayla",
+        "fragmentedSleep": "Parçalı uyku tespit edildi – değerleri gözden geçir",
+        "preset5h": "5 s",
+        "preset6h": "6 s",
+        "preset7h": "7 s",
+        "preset8h": "8 s"
+      }
+    },
+    "cycleSnapshot": {
+      "day": "Gün",
+      "estimate": "Tahmini",
+      "confidence": {
+        "low": "Düşük",
+        "medium": "Orta",
+        "high": "Yüksek"
+      },
+      "fertilityWindow": "Verimlilik penceresi",
+      "ovulation": "Yumurtlama tahmini"
+    },
+    "pregnancy": {
+      "weeks": "hafta",
+      "days": "gün",
+      "dueDate": "Tahmini doğum tarihi"
+    },
+    "hydration": {
+      "title": "Hidrasyon",
+      "todayTotal": "Bugünkü Toplam",
+      "target": "Hedef",
+      "quickAdd": "Hızlı Ekle",
+      "behindTarget": "Hedefin gerisinde",
+      "onTrack": "Hedefinde"
+    },
+    "symptoms": {
+      "title": "Semptomlar & Ruh Hali",
+      "quickLog": "Hızlı Kayıt",
+      "howToday": "Bugün nasıl?",
+      "more": "Daha Fazla"
+    },
+    "medication": {
+      "title": "İlaç",
+      "taken": "alındı",
+      "confirm": "Aldım",
+      "snooze": "Ertele"
+    },
+    "reminders": {
+      "title": "Hatırlatıcılar",
+      "today": "Bugün",
+      "next": "Sonraki",
+      "seeAll": "Tümü"
+    },
+    "nova": {
+      "title": "NOVA Öneri",
+      "tapToChat": "Sohbet için dokun"
+    },
+    "education": {
+      "title": "Eğitim",
+      "categories": {
+        "menstrual_health": "Regl Sağlığı",
+        "hydration": "Hidrasyon",
+        "sleep": "Uyku",
+        "exercise": "Egzersiz",
+        "mindfulness": "Farkındalık"
+      }
+    },
+    "quickActions": {
+      "log": "Kayıt",
+      "addWater": "Su Ekle",
+      "logSymptom": "Semptom Ekle",
+      "logMood": "Ruh Hali Ekle",
+      "logMedication": "İlaç Ekle",
+      "logPeriod": "Regl Başlat/Bitir",
+      "seeMetrics": "Tüm Metrikleri Gör"
+    },
+    "cards": {
+      "dismiss": "Kapat",
+      "pin": "Sabitle",
+      "unpin": "Sabitlemeyi Kaldır"
+    },
+    "privacy": {
+      "title": "Gizlilik",
+      "anonymousMode": "Anonim Mod",
+      "dataControls": "Veri Kontrolleri"
+    },
+    "todayWater": "Bugünkü Su Tüketimi",
+    "nextPeriod": "Sonraki Regl",
+    "pregnancyWeek": "Hamilelik Haftası"
+  },
+  "chat": {
+    "typeMessage": "Mesajınızı yazın...",
+    "stop": "Durdur",
+    "clearChat": "Sohbeti Temizle",
+    "forgetEverything": "Her Şeyi Unut",
+    "quotaExceeded": "Aylık mesaj limitinize ulaştınız"
+  },
+  "calculators": {
+    "bmi": {
+      "title": "Vücut Kitle İndeksi",
+      "underweight": "Zayıf",
+      "normal": "Normal",
+      "overweight": "Fazla Kilolu",
+      "obese": "Obez"
+    }
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "wellness": {
+      "title": "İyilik Hali Kartları",
+      "tilesShowHide": "Kartları Göster/Gizle",
+      "showSteps": "Adım Kartını Göster",
+      "showMeditation": "Meditasyon Kartını Göster",
+      "showSleep": "Uyku Kartını Göster",
+      "showWater": "Su Kartını Göster",
+      "goals": "Hedefler",
+      "stepsGoal": "Adım Hedefi",
+      "meditationGoal": "Meditasyon Hedefi (dakika)",
+      "sleepGoal": "Uyku Hedefi (saat)",
+      "healthPermissions": "Sağlık İzinleri",
+      "healthConnect": "Bağla",
+      "healthDisconnect": "Kaldır",
+      "healthConnected": "Bağlı",
+      "healthNotConnected": "Bağlı değil",
+      "notifications": "Bildirimler",
+      "stepsNotifications": "Adım Bildirimleri",
+      "meditationNotifications": "Meditasyon Bildirimleri",
+      "sleepNotifications": "Uyku Hatırlatıcıları",
+      "quietHours": "Sessiz Saatler",
+      "quietHoursStart": "Başlangıç",
+      "quietHoursEnd": "Bitiş"
+    }
+  },
+  "wellness": {
+    "permissions": {
+      "title": "Sağlık Verisi İzni",
+      "rationale": "Adım sayısı, uyku ve meditasyon verilerinizi otomatik olarak senkronize etmek için sağlık verilerine erişim izni gerekiyor.",
+      "grant": "İzin Ver",
+      "cancel": "İptal",
+      "denied": "İzin reddedildi. Ayarlar > Gizlilik > Sağlık üzerinden izin verebilirsiniz."
+    },
+    "manual": {
+      "addSteps": "Adım Ekle",
+      "addMeditation": "Meditasyon Ekle",
+      "addSleep": "Uyku Ekle",
+      "stepsCount": "Adım Sayısı",
+      "duration": "Süre (dakika)",
+      "sleepDuration": "Uyku Süresi (saat)",
+      "quality": "Kalite",
+      "notes": "Notlar",
+      "save": "Kaydet",
+      "cancel": "İptal"
+    }
+  },
+  "errors": {
+    "networkError": "Bağlantı hatası",
+    "serverError": "Sunucu hatası",
+    "unauthorized": "Yetkisiz erişim"
+  },
+  "qna": {
+    "community": "Topluluk",
+    "askQuestion": "Soru Sor",
+    "title": "Başlık",
+    "titlePlaceholder": "Sorunuzu kısaca özetleyin",
+    "content": "Açıklama",
+    "contentPlaceholder": "Sorunuzu detaylı olarak açıklayın...",
+    "category": "Kategori",
+    "selectCategory": "Kategori Seçin",
+    "tags": "Etiketler",
+    "tagsPlaceholder": "Etiket ekleyin (virgülle ayırın)",
+    "anonymousMode": "Anonim Olarak Sor",
+    "anonymousModeDesc": "Kimliğiniz gizli kalacak",
+    "anonymousUser": "Anonim Kullanıcı",
+    "publish": "Yayınla",
+    "saveDraft": "Taslak Kaydet",
+    "cancel": "İptal",
+    "search": "Soru ara...",
+    "filter": "Filtrele",
+    "sort": {
+      "recent": "En Yeni",
+      "popular": "Popüler",
+      "unanswered": "Cevaplanmamış"
+    },
+    "status": {
+      "all": "Tümü",
+      "open": "Açık",
+      "answered": "Cevaplanmış",
+      "closed": "Kapalı"
+    },
+    "categoryFilter": {
+      "all": "Tümü",
+      "menstrualHealth": "Adet",
+      "pregnancy": "Hamilelik",
+      "fertility": "Doğurganlık",
+      "nutrition": "Beslenme",
+      "exercise": "Egzersiz",
+      "mentalHealth": "Ruh Sağlığı",
+      "general": "Genel"
+    },
+    "questionDetail": {
+      "title": "Soru Detayı",
+      "loading": "Yükleniyor...",
+      "error": "Hata",
+      "notFound": "Soru bulunamadı",
+      "goBack": "Geri Dön",
+      "views": "görüntülenme",
+      "answers": "cevap",
+      "answer": "cevap",
+      "comments": "Yorumlar",
+      "favorite": "Favorile",
+      "follow": "Takip Et",
+      "share": "Paylaş",
+      "report": "Raporla",
+      "answerQuestion": "Cevap Ver",
+      "submitAnswer": "Cevabı Gönder",
+      "noAnswers": "Henüz cevap yok",
+      "beFirst": "İlk cevabı siz verin!",
+      "bestAnswer": "En İyi Cevap",
+      "markAsBest": "En İyi Olarak İşaretle",
+      "changeBestAnswer": "Zaten bir en iyi cevap seçilmiş. Değiştirmek istiyor musunuz?",
+      "change": "Değiştir",
+      "bestAnswerMarked": "Cevap en iyi cevap olarak işaretlendi",
+      "bestAnswerUpdated": "En iyi cevap güncellendi",
+      "cannotVoteOwn": "Kendi cevabınıza oy veremezsiniz",
+      "onlyAuthorCanMarkBest": "Sadece soru sahibi en iyi cevabı seçebilir",
+      "addComment": "Soruya yorum yap...",
+      "now": "Şimdi",
+      "minutesAgo": "{count} dk önce",
+      "hoursAgo": "{count} saat önce",
+      "daysAgo": "{count} gün önce",
+      "reputation": "puan"
+    },
+    "list": {
+      "questions": "soru",
+      "noQuestions": "Henüz soru yok",
+      "beFirstToAsk": "İlk soruyu sormak için yukarıdaki butona tıklayın",
+      "errorLoading": "Bir hata oluştu",
+      "errorLoadingQuestions": "Sorular yüklenirken bir sorun oluştu",
+      "retry": "Tekrar Dene"
+    },
+    "myQuestions": {
+      "title": "Sorularım",
+      "empty": "Henüz soru sormadınız",
+      "startAsking": "Topluluktan cevap almak için soru sormaya başlayın"
+    },
+    "myAnswers": {
+      "title": "Cevaplarım",
+      "empty": "Henüz cevap vermediniz",
+      "startAnswering": "Topluluğa yardımcı olmak için cevap vermeye başlayın"
+    },
+    "favorites": {
+      "title": "Favoriler",
+      "empty": "Favori soru yok",
+      "startFavoriting": "Daha sonra kolayca erişmek için soruları favorileyin"
+    },
+    "following": {
+      "title": "Takip Edilenler",
+      "questions": "Sorular",
+      "users": "Kullanıcılar",
+      "emptyQuestions": "Takip edilen soru yok",
+      "emptyUsers": "Takip edilen kullanıcı yok",
+      "startFollowing": "Güncellemeler almak için soruları ve kullanıcıları takip edin"
+    },
+    "badges": {
+      "title": "Rozetler",
+      "earned": "Kazanıldı",
+      "notEarned": "Henüz Kazanılmadı",
+      "progress": "İlerleme"
+    },
+    "notifications": {
+      "title": "Bildirim Tercihleri",
+      "description": "Hangi topluluk aktivitelerinden bildirim almak istediğinizi seçin",
+      "newAnswers": "Yeni Cevaplar",
+      "newAnswersDesc": "Sorularınıza yeni cevap geldiğinde bildirim alın",
+      "answerVotes": "Cevap Oyları",
+      "answerVotesDesc": "Cevaplarınız oy aldığında bildirim alın",
+      "bestAnswerSelected": "En İyi Cevap",
+      "bestAnswerSelectedDesc": "Cevabınız en iyi cevap seçildiğinde bildirim alın",
+      "comments": "Yorumlar",
+      "commentsDesc": "Sorularınıza veya cevaplarınıza yorum yapıldığında bildirim alın",
+      "followedContent": "Takip Edilen İçerik",
+      "followedContentDesc": "Takip ettiğiniz sorulara ve kullanıcılara ait güncellemeler",
+      "badgesEarned": "Rozetler",
+      "badgesEarnedDesc": "Yeni rozet kazandığınızda bildirim alın",
+      "footer": "💡 Bildirimleri tamamen kapatmak için cihaz ayarlarınızdan uygulama bildirimlerini devre dışı bırakabilirsiniz."
+    },
+    "quota": {
+      "title": "Soru Kotası",
+      "remaining": "Kalan: {count}/{limit}",
+      "exceeded": "Aylık soru limitinize ulaştınız",
+      "upgradeToPremium": "Premium'a Geç",
+      "premiumBenefit": "Premium üyeler ayda {limit} soru sorabilir"
+    },
+    "validation": {
+      "titleRequired": "Başlık gerekli",
+      "titleMinLength": "Başlık en az 10 karakter olmalı",
+      "titleMaxLength": "Başlık en fazla 200 karakter olabilir",
+      "contentRequired": "Açıklama gerekli",
+      "contentMinLength": "Açıklama en az 20 karakter olmalı",
+      "contentMaxLength": "Açıklama en fazla 5000 karakter olabilir",
+      "categoryRequired": "Kategori seçmelisiniz",
+      "tagsMaxCount": "En fazla 5 etiket ekleyebilirsiniz",
+      "commentMaxLength": "Yorum en fazla 300 karakter olabilir"
+    },
+    "categories": {
+      "MENSTRUAL_HEALTH": "Regl Sağlığı",
+      "PREGNANCY": "Hamilelik",
+      "FERTILITY": "Doğurganlık",
+      "NUTRITION": "Beslenme",
+      "EXERCISE": "Egzersiz",
+      "MENTAL_HEALTH": "Ruh Sağlığı",
+      "SLEEP": "Uyku",
+      "CONTRACEPTION": "Doğum Kontrolü",
+      "PMS": "PMS",
+      "MENOPAUSE": "Menopoz",
+      "SEXUAL_HEALTH": "Cinsel Sağlık",
+      "GENERAL": "Genel"
+    },
+    "draft": {
+      "saved": "Taslak kaydedildi",
+      "restored": "Taslak geri yüklendi",
+      "discardTitle": "Taslağı Sil",
+      "discardMessage": "Kaydedilmiş taslağınız var. Silmek istiyor musunuz?",
+      "discard": "Sil",
+      "keep": "Tut"
+    },
+    "success": {
+      "questionCreated": "Sorunuz başarıyla yayınlandı",
+      "answerSubmitted": "Cevabınız gönderildi",
+      "commentAdded": "Yorumunuz eklendi",
+      "draftSaved": "Taslak kaydedildi",
+      "favorited": "Favorilere eklendi",
+      "unfavorited": "Favorilerden çıkarıldı",
+      "following": "Takip ediliyor",
+      "unfollowing": "Takip bırakıldı"
+    },
+    "errors": {
+      "createFailed": "Soru oluşturulamadı",
+      "submitFailed": "Gönderim başarısız",
+      "quotaExceeded": "Aylık soru limitinize ulaştınız",
+      "networkError": "Bağlantı hatası. Lütfen tekrar deneyin.",
+      "notFound": "Bulunamadı",
+      "unauthorized": "Bu işlem için yetkiniz yok"
+    },
+    "share": {
+      "title": "Paylaş",
+      "copyLink": "Linki Kopyala",
+      "linkCopied": "Link kopyalandı",
+      "share": "Paylaş",
+      "whatsapp": "WhatsApp",
+      "twitter": "Twitter",
+      "facebook": "Facebook",
+      "failed": "Paylaşılamadı"
+    },
+    "report": {
+      "title": "İçeriği Raporla",
+      "question": "Bu soruyu neden raporlamak istiyorsunuz?",
+      "answer": "Bu cevabı neden raporlamak istiyorsunuz?",
+      "reasons": {
+        "spam": "Spam veya Reklam",
+        "inappropriate": "Uygunsuz İçerik",
+        "misleading": "Yanıltıcı Bilgi",
+        "harassment": "Taciz veya Zorbalık",
+        "violence": "Şiddet veya Tehdit",
+        "hate": "Nefret Söylemi",
+        "privacy": "Gizlilik İhlali",
+        "other": "Diğer"
+      },
+      "additionalDetails": "Ek Açıklama (İsteğe Bağlı)",
+      "detailsPlaceholder": "Daha fazla detay ekleyin...",
+      "info": "Raporunuz gizli tutulacak ve moderasyon ekibimiz tarafından incelenecektir.",
+      "submit": "Gönder",
+      "cancel": "İptal",
+      "success": "Raporunuz alındı. İnceleme yapılacaktır.",
+      "failed": "Rapor gönderilemedi"
+    },
+    "search": {
+      "title": "Ara",
+      "placeholder": "Soru ara...",
+      "noResults": "Sonuç bulunamadı",
+      "tryDifferent": "Farklı anahtar kelimeler deneyin",
+      "suggestions": "Öneriler",
+      "relatedQuestions": "İlgili Sorular",
+      "popularQuestions": "Popüler Sorular",
+      "seeAll": "Tümünü Gör"
+    }
+  }
+}

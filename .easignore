@@ -1,0 +1,14 @@
+apps/api
+apps/admin
+apps/astrology-service
+docs
+scripts
+maskot
+nginx
+.git
+.github
+.turbo
+.vscode
+node_modules
+*.md
+!apps/mobile/**
