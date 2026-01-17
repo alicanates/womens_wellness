@@ -1,5 +1,6 @@
 # Base stage - shared dependencies
 FROM node:20-alpine AS base
+RUN apk add --no-cache openssl
 RUN corepack enable && corepack prepare pnpm@10.14.0 --activate
 WORKDIR /app
 
@@ -33,6 +34,7 @@ RUN pnpm build
 
 # Production stage
 FROM node:20-alpine AS production
+RUN apk add --no-cache openssl
 RUN corepack enable && corepack prepare pnpm@10.14.0 --activate
 WORKDIR /app
 
