@@ -63,7 +63,9 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - wellness-network
+      wellness-network:
+        aliases:
+          - api
     logging:
       driver: "json-file"
       options:
@@ -86,7 +88,9 @@ services:
     depends_on:
       - api
     networks:
-      - wellness-network
+      wellness-network:
+        aliases:
+          - admin
     logging:
       driver: "json-file"
       options:
@@ -107,7 +111,9 @@ services:
     volumes:
       - astrology_cache:/app/cache
     networks:
-      - wellness-network
+      wellness-network:
+        aliases:
+          - astrology
     logging:
       driver: "json-file"
       options:
