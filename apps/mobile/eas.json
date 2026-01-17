@@ -1,0 +1,37 @@
+{
+    "cli": {
+        "version": ">= 13.2.0",
+        "appVersionSource": "remote"
+    },
+    "build": {
+        "development": {
+            "developmentClient": true,
+            "distribution": "internal",
+            "android": {
+                "buildType": "apk",
+                "gradleCommand": ":app:assembleDebug"
+            }
+        },
+        "preview": {
+            "distribution": "internal",
+            "android": {
+                "buildType": "apk",
+                "gradleCommand": ":app:assembleRelease"
+            },
+            "env": {
+                "EXPO_PUBLIC_API_BASE_URL": "https://api.kadinatlasi.com"
+            }
+        },
+        "production": {
+            "android": {
+                "buildType": "apk"
+            },
+            "env": {
+                "EXPO_PUBLIC_API_BASE_URL": "https://api.kadinatlasi.com"
+            }
+        }
+    },
+    "submit": {
+        "production": {}
+    }
+}
