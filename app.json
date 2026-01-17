@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "5f44e5cf-3274-4c0f-b68c-241f41450ae1"
+      }
+    },
+    "android": {
+      "package": "com.meoacar.wellnessroot"
+    }
+  }
+}

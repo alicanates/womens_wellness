@@ -1,5 +1,5 @@
 {
-  "name": "@wellness/monorepo",
+  "name": "wellness-root",
   "version": "1.0.0",
   "description": "Women's Wellness Companion - Monorepo",
   "private": true,
