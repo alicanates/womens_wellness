@@ -44,17 +44,29 @@ jobs:
           expo-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: 📦 Install dependencies
+      - name: 📦 Prepare standalone mobile build
         working-directory: apps/mobile
-        run: pnpm install --no-frozen-lockfile
+        run: |
+          # Remove pnpm-specific files
+          rm -f pnpm-lock.yaml
+          
+          # Install with npm for better Expo compatibility
+          npm install
+          
+          # Verify expo installation
+          npx expo --version
 
       - name: 🏗️ Generate Android native code
         working-directory: apps/mobile
         run: npx expo prebuild --platform android --clean
 
+      - name: 🔧 Make gradlew executable
+        working-directory: apps/mobile/android
+        run: chmod +x gradlew
+
       - name: 🔨 Build Android APK
         working-directory: apps/mobile/android
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease --stacktrace
 
       - name: 📤 Upload APK artifact
         uses: actions/upload-artifact@v4
