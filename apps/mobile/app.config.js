@@ -103,7 +103,7 @@ module.exports = {
                 origin: false
             },
             eas: {
-                projectId: "76d59681-ec69-472c-b1f5-b38abee8a3d7"
+                projectId: "6facc7f8-f777-4a91-8b10-c8f04b0a3310"
             }
         }
     }
