@@ -24,11 +24,6 @@ jobs:
         with:
           node-version: '20.x'
 
-      - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 10.14.0
-
       - name: ☕ Setup Java
         uses: actions/setup-java@v4
         with:
@@ -44,29 +39,31 @@ jobs:
           expo-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: 📦 Prepare standalone mobile build
+      - name: 📦 Install dependencies
         working-directory: apps/mobile
         run: |
-          # Remove pnpm-specific files
-          rm -f pnpm-lock.yaml
+          # Use npm for standalone build
+          npm install --legacy-peer-deps
           
-          # Install with npm for better Expo compatibility
-          npm install
-          
-          # Verify expo installation
+      - name: 🔍 Verify Expo installation
+        working-directory: apps/mobile
+        run: |
           npx expo --version
+          echo "Checking for expo-modules-core..."
+          ls -la node_modules/expo-modules-core 2>/dev/null || echo "expo-modules-core not found in node_modules"
 
       - name: 🏗️ Generate Android native code
         working-directory: apps/mobile
-        run: npx expo prebuild --platform android --clean
-
+        run: |
+          npx expo prebuild --platform android --clean
+          
       - name: 🔧 Make gradlew executable
         working-directory: apps/mobile/android
         run: chmod +x gradlew
 
       - name: 🔨 Build Android APK
         working-directory: apps/mobile/android
-        run: ./gradlew assembleRelease --stacktrace
+        run: ./gradlew assembleRelease --stacktrace --info
 
       - name: 📤 Upload APK artifact
         uses: actions/upload-artifact@v4
