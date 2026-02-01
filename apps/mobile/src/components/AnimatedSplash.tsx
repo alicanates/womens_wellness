@@ -11,18 +11,18 @@ export function AnimatedSplash({ onAnimationEnd }: AnimatedSplashProps) {
     const [imageLoaded, setImageLoaded] = useState(false);
     const [forceEnd, setForceEnd] = useState(false);
 
-    // Force end after 5 seconds no matter what
+    // Force end after 3 seconds no matter what
     useEffect(() => {
         const forceTimeout = setTimeout(() => {
-            console.log('[Splash] Force ending after 5 seconds');
+            console.log('[Splash] Force ending after 3 seconds');
             setForceEnd(true);
             onAnimationEnd?.();
-        }, 5000);
+        }, 3000);
 
         return () => clearTimeout(forceTimeout);
     }, [onAnimationEnd]);
 
-    // If image doesn't load in 3 seconds, skip splash
+    // If image doesn't load in 2 seconds, skip splash
     useEffect(() => {
         if (imageLoaded || forceEnd) return;
 
@@ -31,7 +31,7 @@ export function AnimatedSplash({ onAnimationEnd }: AnimatedSplashProps) {
                 console.log('[Splash] Image load timeout, skipping...');
                 onAnimationEnd?.();
             }
-        }, 3000);
+        }, 2000);
 
         return () => clearTimeout(loadTimeout);
     }, [imageLoaded, forceEnd, onAnimationEnd]);
@@ -54,7 +54,7 @@ export function AnimatedSplash({ onAnimationEnd }: AnimatedSplashProps) {
             }),
         ]).start();
 
-        // Auto hide after 2 seconds
+        // Auto hide after 1.5 seconds
         const timer = setTimeout(() => {
             Animated.timing(fadeAnim, {
                 toValue: 0,
@@ -65,7 +65,7 @@ export function AnimatedSplash({ onAnimationEnd }: AnimatedSplashProps) {
                     onAnimationEnd?.();
                 }
             });
-        }, 2000);
+        }, 1500);
 
         return () => clearTimeout(timer);
     }, [fadeAnim, scaleAnim, onAnimationEnd, imageLoaded, forceEnd]);
