@@ -285,6 +285,22 @@ export const waterService = {
     api.get(`/water/stats${days ? `?days=${days}` : ''}`),
 };
 
+// Steps endpoints
+export const stepsService = {
+  getLogs: (params?: { startDate?: string; endDate?: string }) => {
+    const query = new URLSearchParams(params as any).toString();
+    return api.get(`/steps${query ? `?${query}` : ''}`);
+  },
+
+  logSteps: (data: { steps: number; loggedAt?: string; source?: 'manual' | 'pedometer' }) =>
+    api.post('/steps', data),
+
+  getTodayTotal: () => api.get('/steps/today'),
+
+  getStats: (days?: number) =>
+    api.get(`/steps/stats${days ? `?days=${days}` : ''}`),
+};
+
 // Chat endpoints
 export const chatService = {
   getConversations: () => api.get('/chat/conversations'),

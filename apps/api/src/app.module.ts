@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { WaterModule } from './water/water.module';
+import { StepsModule } from './steps/steps.module';
 import { ChatModule } from './chat/chat.module';
 import { MemoryModule } from './memory/memory.module';
 import { QuotaModule } from './quota/quota.module';
@@ -62,6 +63,7 @@ import aiConfig from './config/ai.config';
     UsersModule,
     MetricsModule,
     WaterModule,
+    StepsModule,
     ChatModule,
     MemoryModule,
     QuotaModule,
