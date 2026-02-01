@@ -285,20 +285,43 @@ export const waterService = {
     api.get(`/water/stats${days ? `?days=${days}` : ''}`),
 };
 
+// Steps types
+export interface StepsLog {
+  id: string;
+  userId: string;
+  steps: number;
+  source: 'manual' | 'pedometer';
+  loggedAt: string;
+}
+
+export interface StepsTodayResponse {
+  date: string;
+  totalSteps: number;
+  logs: StepsLog[];
+}
+
+export interface StepsStatsResponse {
+  days: number;
+  totalSteps: number;
+  avgSteps: number;
+  dailyTotals: Record<string, number>;
+  logCount: number;
+}
+
 // Steps endpoints
 export const stepsService = {
   getLogs: (params?: { startDate?: string; endDate?: string }) => {
     const query = new URLSearchParams(params as any).toString();
-    return api.get(`/steps${query ? `?${query}` : ''}`);
+    return api.get<StepsLog[]>(`/steps${query ? `?${query}` : ''}`);
   },
 
   logSteps: (data: { steps: number; loggedAt?: string; source?: 'manual' | 'pedometer' }) =>
-    api.post('/steps', data),
+    api.post<StepsLog>('/steps', data),
 
-  getTodayTotal: () => api.get('/steps/today'),
+  getTodayTotal: () => api.get<StepsTodayResponse>('/steps/today'),
 
   getStats: (days?: number) =>
-    api.get(`/steps/stats${days ? `?days=${days}` : ''}`),
+    api.get<StepsStatsResponse>(`/steps/stats${days ? `?days=${days}` : ''}`),
 };
 
 // Chat endpoints

@@ -11,27 +11,8 @@ import {
 import { Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { stepsService } from '../src/services/api';
+import { stepsService, type StepsTodayResponse, type StepsStatsResponse } from '../src/services/api';
 import { usePedometer } from '../src/hooks/usePedometer';
-
-interface StepsTodayResponse {
-    date: string;
-    totalSteps: number;
-    logs: Array<{
-        id: string;
-        steps: number;
-        source: string;
-        loggedAt: string;
-    }>;
-}
-
-interface StepsStatsResponse {
-    days: number;
-    totalSteps: number;
-    avgSteps: number;
-    dailyTotals: Record<string, number>;
-    logCount: number;
-}
 
 export default function StepsScreen() {
     const queryClient = useQueryClient();
