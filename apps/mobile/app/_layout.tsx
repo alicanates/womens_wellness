@@ -172,6 +172,7 @@ function AppContent() {
     return (
       <AnimatedSplash
         onAnimationEnd={() => {
+          console.log('[Layout] AnimatedSplash ended');
           setShowAnimatedSplash(false);
         }}
       />

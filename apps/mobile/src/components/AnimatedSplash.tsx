@@ -1,120 +1,60 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Image, StyleSheet, Animated, ActivityIndicator } from 'react-native';
+import { View, Image, StyleSheet, Animated } from 'react-native';
 
 interface AnimatedSplashProps {
     onAnimationEnd?: () => void;
 }
 
 export function AnimatedSplash({ onAnimationEnd }: AnimatedSplashProps) {
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    const scaleAnim = useRef(new Animated.Value(0.8)).current;
-    const [imageLoaded, setImageLoaded] = useState(false);
-    const [forceEnd, setForceEnd] = useState(false);
-    const hasCalledEnd = useRef(false); // Prevent multiple calls
+    const fadeAnim = useRef(new Animated.Value(1)).current;
+    const hasEnded = useRef(false);
 
-    // Helper to call onAnimationEnd only once
-    const callOnAnimationEnd = () => {
-        if (!hasCalledEnd.current && onAnimationEnd) {
-            hasCalledEnd.current = true;
-            console.log('[Splash] Calling onAnimationEnd');
-            onAnimationEnd();
-        }
+    // Single function to end animation
+    const endAnimation = () => {
+        if (hasEnded.current) return;
+        hasEnded.current = true;
+        console.log('[Splash] Animation ending');
+
+        Animated.timing(fadeAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+        }).start(() => {
+            if (onAnimationEnd) {
+                onAnimationEnd();
+            }
+        });
     };
 
-    // Force end after 3 seconds no matter what
+    // Absolute maximum timeout - 2 seconds
     useEffect(() => {
-        const forceTimeout = setTimeout(() => {
-            console.log('[Splash] Force ending after 3 seconds');
-            setForceEnd(true);
-            callOnAnimationEnd();
-        }, 3000);
-
-        return () => clearTimeout(forceTimeout);
-    }, []); // Remove onAnimationEnd from deps
-
-    // If image doesn't load in 2 seconds, skip splash
-    useEffect(() => {
-        if (imageLoaded || forceEnd) return;
-
-        const loadTimeout = setTimeout(() => {
-            if (!imageLoaded && !forceEnd) {
-                console.log('[Splash] Image load timeout, skipping...');
-                callOnAnimationEnd();
-            }
+        const maxTimeout = setTimeout(() => {
+            console.log('[Splash] Max timeout reached');
+            endAnimation();
         }, 2000);
 
-        return () => clearTimeout(loadTimeout);
-    }, [imageLoaded, forceEnd]); // Remove onAnimationEnd from deps
-
-    useEffect(() => {
-        if (!imageLoaded || forceEnd) return;
-
-        // Fade in and scale animation
-        Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 800,
-                useNativeDriver: true,
-            }),
-            Animated.spring(scaleAnim, {
-                toValue: 1,
-                tension: 50,
-                friction: 7,
-                useNativeDriver: true,
-            }),
-        ]).start();
-
-        // Auto hide after 1.5 seconds
-        const timer = setTimeout(() => {
-            Animated.timing(fadeAnim, {
-                toValue: 0,
-                duration: 500,
-                useNativeDriver: true,
-            }).start(() => {
-                if (!forceEnd) {
-                    callOnAnimationEnd();
-                }
-            });
-        }, 1500);
-
-        return () => clearTimeout(timer);
-    }, [fadeAnim, scaleAnim, imageLoaded, forceEnd]); // Remove onAnimationEnd from deps
-
-    if (forceEnd) {
-        return null;
-    }
+        return () => clearTimeout(maxTimeout);
+    }, []);
 
     return (
         <Animated.View
             style={[
                 styles.container,
-                {
-                    opacity: imageLoaded ? fadeAnim : 1,
-                },
+                { opacity: fadeAnim },
             ]}
         >
-            {!imageLoaded && (
-                <ActivityIndicator size="large" color="#FF69B4" />
-            )}
-            <Animated.Image
+            <Image
                 source={require('../../assets/images/mascots/scbaby.gif')}
-                style={[
-                    styles.gif,
-                    {
-                        transform: [{ scale: scaleAnim }],
-                        opacity: imageLoaded ? 1 : 0,
-                    },
-                ]}
+                style={styles.gif}
                 resizeMode="contain"
+                onError={() => {
+                    console.log('[Splash] Image error');
+                    endAnimation();
+                }}
                 onLoad={() => {
                     console.log('[Splash] Image loaded');
-                    setImageLoaded(true);
-                }}
-                onError={(error) => {
-                    console.error('[Splash] Image load error:', error);
-                    if (!forceEnd) {
-                        callOnAnimationEnd();
-                    }
+                    // End after 1 second of showing
+                    setTimeout(endAnimation, 1000);
                 }}
             />
         </Animated.View>
