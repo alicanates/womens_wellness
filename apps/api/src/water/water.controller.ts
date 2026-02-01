@@ -6,13 +6,20 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
 import { WaterService } from './water.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 class LogWaterDto {
+  @ApiProperty({ example: 250, description: 'Amount of water in milliliters' })
+  @IsNumber()
   amountMl!: number;
+
+  @ApiProperty({ required: false, example: '2024-01-01T12:00:00Z' })
+  @IsOptional()
+  @IsString()
   loggedAt?: string;
 }
 
