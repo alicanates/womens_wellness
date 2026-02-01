@@ -1,13 +1,16 @@
-# Ignore everything at root
-../../*
+# Ignore workspace root files
+../../pnpm-workspace.yaml
+../../pnpm-lock.yaml
+../../package.json
+../../turbo.json
+../../packages
+../../apps/api
+../../apps/admin
+../../apps/astrology-service
+../../node_modules
+../../.turbo
 
-# But include necessary files
-!../../pnpm-lock.yaml
-!../../pnpm-workspace.yaml
-!../../package.json
-
-# Include mobile app
-!../mobile/**
-
-# Include i18n package (if needed)
-!../../packages/i18n/**
+# Ignore other workspace apps
+../api
+../admin
+../astrology-service

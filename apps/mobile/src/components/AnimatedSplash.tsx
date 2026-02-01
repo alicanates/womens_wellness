@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Image, StyleSheet, Animated } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Image, StyleSheet, Animated, ActivityIndicator } from 'react-native';
 
 interface AnimatedSplashProps {
     onAnimationEnd?: () => void;
@@ -8,8 +8,23 @@ interface AnimatedSplashProps {
 export function AnimatedSplash({ onAnimationEnd }: AnimatedSplashProps) {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.8)).current;
+    const [imageLoaded, setImageLoaded] = useState(false);
 
     useEffect(() => {
+        // If image doesn't load in 3 seconds, skip splash
+        const loadTimeout = setTimeout(() => {
+            if (!imageLoaded) {
+                console.log('[Splash] Image load timeout, skipping...');
+                onAnimationEnd?.();
+            }
+        }, 3000);
+
+        return () => clearTimeout(loadTimeout);
+    }, [imageLoaded, onAnimationEnd]);
+
+    useEffect(() => {
+        if (!imageLoaded) return;
+
         // Fade in and scale animation
         Animated.parallel([
             Animated.timing(fadeAnim, {
@@ -37,26 +52,38 @@ export function AnimatedSplash({ onAnimationEnd }: AnimatedSplashProps) {
         }, 2500);
 
         return () => clearTimeout(timer);
-    }, [fadeAnim, scaleAnim, onAnimationEnd]);
+    }, [fadeAnim, scaleAnim, onAnimationEnd, imageLoaded]);
 
     return (
         <Animated.View
             style={[
                 styles.container,
                 {
-                    opacity: fadeAnim,
+                    opacity: imageLoaded ? fadeAnim : 1,
                 },
             ]}
         >
+            {!imageLoaded && (
+                <ActivityIndicator size="large" color="#FF69B4" />
+            )}
             <Animated.Image
                 source={require('../../assets/images/mascots/scbaby.gif')}
                 style={[
                     styles.gif,
                     {
                         transform: [{ scale: scaleAnim }],
+                        opacity: imageLoaded ? 1 : 0,
                     },
                 ]}
-                resizeMode="cover"
+                resizeMode="contain"
+                onLoad={() => {
+                    console.log('[Splash] Image loaded');
+                    setImageLoaded(true);
+                }}
+                onError={(error) => {
+                    console.error('[Splash] Image load error:', error);
+                    onAnimationEnd?.();
+                }}
             />
         </Animated.View>
     );
@@ -70,9 +97,11 @@ const styles = StyleSheet.create({
         right: 0,
         bottom: 0,
         backgroundColor: '#ffffff',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     gif: {
-        width: '100%',
-        height: '100%',
+        width: '80%',
+        height: '80%',
     },
 });

@@ -60,9 +60,24 @@
 - **Ana Domain**: http://kadinatlasi.com (admin'e yönlendiriyor)
 - **www**: http://www.kadinatlasi.com (admin'e yönlendiriyor)
 
+## 📱 Android APK Build
+
+Android APK build işlemi GitHub Actions ile otomatik olarak yapılıyor:
+- **Workflow Dosyası**: `.github/workflows/build-android.yml`
+- **Build Durumu**: https://github.com/alicanates/womens_wellness/actions
+- **APK İndirme**: Actions → Build Android APK → Artifacts → app-release
+- **Detaylı Bilgi**: `ANDROID_BUILD_STATUS.md` ve `ANDROID_BUILD_GUIDE.md` dosyalarına bakın
+
+### APK İndirme Adımları:
+1. GitHub Actions sayfasına git
+2. "Build Android APK" workflow'una tıkla
+3. En son başarılı build'i seç
+4. Artifacts bölümünden "app-release" ZIP'ini indir
+5. ZIP'i aç ve `app-release.apk` dosyasını Android cihazına yükle
+
 ## Sıradaki Adımlar
 
-### 1. SSL Sertifikası Kurulumu (ÖNEMLİ!)
+### 1. ✅ SSL Sertifikası Kurulumu (TAMAMLANDI!)
 ```bash
 # Let's Encrypt ile SSL sertifikası al
 ssh root@31.97.34.163

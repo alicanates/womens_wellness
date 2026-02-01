@@ -12,6 +12,20 @@
             },
             "node": "20.18.0"
         },
+        "demo": {
+            "distribution": "internal",
+            "android": {
+                "buildType": "apk",
+                "gradleCommand": ":app:assembleRelease"
+            },
+            "ios": {
+                "simulator": false
+            },
+            "env": {
+                "EXPO_PUBLIC_API_BASE_URL": "https://api.kadinatlasi.com"
+            },
+            "node": "20.18.0"
+        },
         "preview": {
             "distribution": "internal",
             "android": {
