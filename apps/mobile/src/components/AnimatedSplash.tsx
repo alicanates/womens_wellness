@@ -9,21 +9,35 @@ export function AnimatedSplash({ onAnimationEnd }: AnimatedSplashProps) {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.8)).current;
     const [imageLoaded, setImageLoaded] = useState(false);
+    const [forceEnd, setForceEnd] = useState(false);
 
+    // Force end after 5 seconds no matter what
     useEffect(() => {
-        // If image doesn't load in 3 seconds, skip splash
+        const forceTimeout = setTimeout(() => {
+            console.log('[Splash] Force ending after 5 seconds');
+            setForceEnd(true);
+            onAnimationEnd?.();
+        }, 5000);
+
+        return () => clearTimeout(forceTimeout);
+    }, [onAnimationEnd]);
+
+    // If image doesn't load in 3 seconds, skip splash
+    useEffect(() => {
+        if (imageLoaded || forceEnd) return;
+
         const loadTimeout = setTimeout(() => {
-            if (!imageLoaded) {
+            if (!imageLoaded && !forceEnd) {
                 console.log('[Splash] Image load timeout, skipping...');
                 onAnimationEnd?.();
             }
         }, 3000);
 
         return () => clearTimeout(loadTimeout);
-    }, [imageLoaded, onAnimationEnd]);
+    }, [imageLoaded, forceEnd, onAnimationEnd]);
 
     useEffect(() => {
-        if (!imageLoaded) return;
+        if (!imageLoaded || forceEnd) return;
 
         // Fade in and scale animation
         Animated.parallel([
@@ -40,19 +54,25 @@ export function AnimatedSplash({ onAnimationEnd }: AnimatedSplashProps) {
             }),
         ]).start();
 
-        // Auto hide after 2.5 seconds
+        // Auto hide after 2 seconds
         const timer = setTimeout(() => {
             Animated.timing(fadeAnim, {
                 toValue: 0,
                 duration: 500,
                 useNativeDriver: true,
             }).start(() => {
-                onAnimationEnd?.();
+                if (!forceEnd) {
+                    onAnimationEnd?.();
+                }
             });
-        }, 2500);
+        }, 2000);
 
         return () => clearTimeout(timer);
-    }, [fadeAnim, scaleAnim, onAnimationEnd, imageLoaded]);
+    }, [fadeAnim, scaleAnim, onAnimationEnd, imageLoaded, forceEnd]);
+
+    if (forceEnd) {
+        return null;
+    }
 
     return (
         <Animated.View
@@ -82,7 +102,9 @@ export function AnimatedSplash({ onAnimationEnd }: AnimatedSplashProps) {
                 }}
                 onError={(error) => {
                     console.error('[Splash] Image load error:', error);
-                    onAnimationEnd?.();
+                    if (!forceEnd) {
+                        onAnimationEnd?.();
+                    }
                 }}
             />
         </Animated.View>

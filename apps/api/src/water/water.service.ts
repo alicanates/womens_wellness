@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class WaterService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async getWaterLogs(
     userId: string,
@@ -31,6 +31,9 @@ export class WaterService {
     userId: string,
     data: { amountMl: number; loggedAt: Date },
   ) {
+    console.log('[WaterService] logWater called with:', { userId, data });
+    console.log('[WaterService] amountMl value:', data.amountMl, 'type:', typeof data.amountMl);
+
     return this.prisma.waterLog.create({
       data: {
         userId,

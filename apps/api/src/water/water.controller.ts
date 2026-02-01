@@ -21,7 +21,7 @@ class LogWaterDto {
 @UseGuards(AuthGuard('jwt'))
 @ApiBearerAuth()
 export class WaterController {
-  constructor(private readonly waterService: WaterService) {}
+  constructor(private readonly waterService: WaterService) { }
 
   @Get()
   @ApiOperation({ summary: 'Get water logs' })
@@ -36,6 +36,9 @@ export class WaterController {
   @Post()
   @ApiOperation({ summary: 'Log water intake' })
   async logWater(@CurrentUser() user: any, @Body() dto: LogWaterDto) {
+    console.log('[WaterController] Received request:', { userId: user.id, dto });
+    console.log('[WaterController] dto.amountMl:', dto.amountMl, 'type:', typeof dto.amountMl);
+
     return this.waterService.logWater(user.id, {
       amountMl: dto.amountMl,
       loggedAt: dto.loggedAt ? new Date(dto.loggedAt) : new Date(),
