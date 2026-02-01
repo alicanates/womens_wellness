@@ -10,17 +10,27 @@ export function AnimatedSplash({ onAnimationEnd }: AnimatedSplashProps) {
     const scaleAnim = useRef(new Animated.Value(0.8)).current;
     const [imageLoaded, setImageLoaded] = useState(false);
     const [forceEnd, setForceEnd] = useState(false);
+    const hasCalledEnd = useRef(false); // Prevent multiple calls
+
+    // Helper to call onAnimationEnd only once
+    const callOnAnimationEnd = () => {
+        if (!hasCalledEnd.current && onAnimationEnd) {
+            hasCalledEnd.current = true;
+            console.log('[Splash] Calling onAnimationEnd');
+            onAnimationEnd();
+        }
+    };
 
     // Force end after 3 seconds no matter what
     useEffect(() => {
         const forceTimeout = setTimeout(() => {
             console.log('[Splash] Force ending after 3 seconds');
             setForceEnd(true);
-            onAnimationEnd?.();
+            callOnAnimationEnd();
         }, 3000);
 
         return () => clearTimeout(forceTimeout);
-    }, [onAnimationEnd]);
+    }, []); // Remove onAnimationEnd from deps
 
     // If image doesn't load in 2 seconds, skip splash
     useEffect(() => {
@@ -29,12 +39,12 @@ export function AnimatedSplash({ onAnimationEnd }: AnimatedSplashProps) {
         const loadTimeout = setTimeout(() => {
             if (!imageLoaded && !forceEnd) {
                 console.log('[Splash] Image load timeout, skipping...');
-                onAnimationEnd?.();
+                callOnAnimationEnd();
             }
         }, 2000);
 
         return () => clearTimeout(loadTimeout);
-    }, [imageLoaded, forceEnd, onAnimationEnd]);
+    }, [imageLoaded, forceEnd]); // Remove onAnimationEnd from deps
 
     useEffect(() => {
         if (!imageLoaded || forceEnd) return;
@@ -62,13 +72,13 @@ export function AnimatedSplash({ onAnimationEnd }: AnimatedSplashProps) {
                 useNativeDriver: true,
             }).start(() => {
                 if (!forceEnd) {
-                    onAnimationEnd?.();
+                    callOnAnimationEnd();
                 }
             });
         }, 1500);
 
         return () => clearTimeout(timer);
-    }, [fadeAnim, scaleAnim, onAnimationEnd, imageLoaded, forceEnd]);
+    }, [fadeAnim, scaleAnim, imageLoaded, forceEnd]); // Remove onAnimationEnd from deps
 
     if (forceEnd) {
         return null;
@@ -103,7 +113,7 @@ export function AnimatedSplash({ onAnimationEnd }: AnimatedSplashProps) {
                 onError={(error) => {
                     console.error('[Splash] Image load error:', error);
                     if (!forceEnd) {
-                        onAnimationEnd?.();
+                        callOnAnimationEnd();
                     }
                 }}
             />
