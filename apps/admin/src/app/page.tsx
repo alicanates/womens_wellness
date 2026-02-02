@@ -98,9 +98,9 @@ export default function Dashboard() {
     { title: 'Kullanıcılar', path: '/users', icon: <UserOutlined />, color: '#1890ff' },
     { title: 'AI Analizi', path: '/ai-analytics', icon: <RiseOutlined />, color: '#13c2c2' },
     { title: 'Segmentasyon', path: '/user-segmentation', icon: <TeamOutlined />, color: '#722ed1' },
+    { title: 'Finansal', path: '/financial-dashboard', icon: <CrownOutlined />, color: '#52c41a' },
     { title: 'Abonelikler', path: '/subscriptions', icon: <CrownOutlined />, color: '#faad14' },
     { title: 'Sorular', path: '/qna/questions', icon: <QuestionCircleOutlined />, color: '#52c41a' },
-    { title: 'Cevaplar', path: '/qna/answers', icon: <MessageOutlined />, color: '#13c2c2' },
     { title: 'Raporlar', path: '/qna/reports', icon: <WarningOutlined />, color: '#f5222d' },
     { title: 'Makaleler', path: '/content/articles', icon: <FileTextOutlined />, color: '#722ed1' },
   ];

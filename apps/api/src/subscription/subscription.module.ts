@@ -6,6 +6,8 @@ import { WebhookHandlerService } from './webhook-handler.service';
 import { SubscriptionSchedulerService } from './subscription-scheduler.service';
 import { SubscriptionNotificationService } from './subscription-notification.service';
 import { SubscriptionAnalyticsService } from './subscription-analytics.service';
+import { FinancialAnalyticsService } from './financial-analytics.service';
+import { FinancialAnalyticsController } from './financial-analytics.controller';
 import { SubscriptionController } from './subscription.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { RemindersModule } from '../reminders/reminders.module';
@@ -14,7 +16,7 @@ import { FeatureGuard } from './guards/feature.guard';
 
 @Module({
     imports: [PrismaModule, ConfigModule, RemindersModule],
-    controllers: [SubscriptionController],
+    controllers: [SubscriptionController, FinancialAnalyticsController],
     providers: [
         SubscriptionService,
         ReceiptValidatorService,
@@ -22,6 +24,7 @@ import { FeatureGuard } from './guards/feature.guard';
         SubscriptionSchedulerService,
         SubscriptionNotificationService,
         SubscriptionAnalyticsService,
+        FinancialAnalyticsService,
         PremiumGuard,
         FeatureGuard,
     ],
@@ -32,6 +35,7 @@ import { FeatureGuard } from './guards/feature.guard';
         SubscriptionSchedulerService,
         SubscriptionNotificationService,
         SubscriptionAnalyticsService,
+        FinancialAnalyticsService,
         PremiumGuard,
         FeatureGuard,
     ],
