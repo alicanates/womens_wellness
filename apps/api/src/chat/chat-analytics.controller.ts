@@ -1,7 +1,7 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ChatAnalyticsService } from './chat-analytics.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { AdminGuard } from '../auth/guards/admin.guard';
+import { JwtAuthGuard } from '../auth/strategies/jwt-auth.guard';
+import { AdminGuard } from '../common/guards/admin.guard';
 
 @Controller('chat/analytics')
 @UseGuards(JwtAuthGuard, AdminGuard)

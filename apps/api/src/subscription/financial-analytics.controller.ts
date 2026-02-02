@@ -1,6 +1,6 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { FinancialAnalyticsService } from './financial-analytics.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/strategies/jwt-auth.guard';
 import { AdminGuard } from '../common/guards/admin.guard';
 
 @Controller('subscription/financial-analytics')

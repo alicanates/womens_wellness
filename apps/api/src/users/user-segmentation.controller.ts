@@ -1,6 +1,6 @@
 import { Controller, Get, Query, UseGuards, Post, Body } from '@nestjs/common';
 import { UserSegmentationService, SegmentFilters } from './user-segmentation.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/strategies/jwt-auth.guard';
 import { AdminGuard } from '../common/guards/admin.guard';
 import { SubscriptionStatus } from '@prisma/client';
 
