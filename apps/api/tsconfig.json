@@ -31,6 +31,8 @@
     "dist",
     "node_modules",
     "**/*test*.ts",
-    "**/*manual*.ts"
+    "**/*spec*.ts",
+    "**/*manual*.ts",
+    "**/*e2e*.ts"
   ]
 }
