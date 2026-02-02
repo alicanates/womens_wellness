@@ -6,7 +6,7 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "scripts": {
-    "build": "nest build",
+    "build": "npx nest build",
     "dev": "nest start --watch",
     "start": "node dist/src/main",
     "start:debug": "nest start --debug --watch",
