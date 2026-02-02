@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
-import { hash, compare } from 'bcryptjs';
+import { hash, compare } from 'bcrypt';
 import { randomBytes } from 'crypto';
 
 @Injectable()
