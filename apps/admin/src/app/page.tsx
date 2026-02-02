@@ -96,6 +96,7 @@ export default function Dashboard() {
 
   const quickLinks = [
     { title: 'Kullanıcılar', path: '/users', icon: <UserOutlined />, color: '#1890ff' },
+    { title: 'AI Analizi', path: '/ai-analytics', icon: <RiseOutlined />, color: '#13c2c2' },
     { title: 'Abonelikler', path: '/subscriptions', icon: <CrownOutlined />, color: '#faad14' },
     { title: 'Sorular', path: '/qna/questions', icon: <QuestionCircleOutlined />, color: '#52c41a' },
     { title: 'Cevaplar', path: '/qna/answers', icon: <MessageOutlined />, color: '#13c2c2' },
