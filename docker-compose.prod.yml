@@ -93,6 +93,21 @@ services:
       timeout: 10s
       retries: 3
 
+  # Astrology Service
+  astrology:
+    build:
+      context: .
+      dockerfile: apps/astrology-service/Dockerfile
+    container_name: wellness-astrology
+    restart: always
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
@@ -101,6 +116,7 @@ services:
     depends_on:
       - api
       - admin
+      - astrology
     ports:
       - "80:80"
       - "443:443"
